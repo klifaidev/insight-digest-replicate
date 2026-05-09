@@ -1112,10 +1112,10 @@ export default function SlidesBeta() {
           {/* Conteúdo da esteira */}
           <ScrollArea className="flex-1">
             <div className="mx-auto max-w-2xl px-4 py-5">
-              {items.length === 0 ? (
-                <EmptyFlow onAdd={addWithDefaults} />
-              ) : (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <FlowDropZone>
+                {items.length === 0 ? (
+                  <EmptyFlow onAdd={addWithDefaults} />
+                ) : (
                   <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
                       {items.map((item, idx) => (
@@ -1131,8 +1131,8 @@ export default function SlidesBeta() {
                       ))}
                     </div>
                   </SortableContext>
-                </DndContext>
-              )}
+                )}
+              </FlowDropZone>
             </div>
           </ScrollArea>
         </main>
@@ -1157,6 +1157,21 @@ export default function SlidesBeta() {
           )}
         </aside>
       </div>
+      <DragOverlay>
+        {dragging ? (() => {
+          const meta = metaOf(dragging.kind);
+          const Icon = ICON_MAP[meta.icon];
+          return (
+            <div className="flex items-center gap-2 rounded-xl border border-primary/50 bg-card px-3 py-2 shadow-xl">
+              <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg border", ACCENT_BG[meta.accent])}>
+                <Icon className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium">{meta.title}</span>
+            </div>
+          );
+        })() : null}
+      </DragOverlay>
+      </DndContext>
     </>
   );
 }
