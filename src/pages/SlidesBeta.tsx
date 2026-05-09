@@ -173,9 +173,14 @@ function uniqueValues(
 // ----------------------------------------------------------------------------
 // Drop zone vazio
 // ----------------------------------------------------------------------------
-function EmptyFlow({ onAdd }: { onAdd: (k: SlideKind) => void }) {
+function EmptyFlow({ onAdd, isOver }: { onAdd: (k: SlideKind) => void; isOver?: boolean }) {
   return (
-    <div className="relative flex flex-col items-center gap-8 overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-b from-card/40 to-card/10 px-8 py-16 text-center animate-fade-in">
+    <div
+      className={cn(
+        "relative flex flex-col items-center gap-8 overflow-hidden rounded-3xl border bg-gradient-to-b from-card/40 to-card/10 px-8 py-16 text-center animate-fade-in transition-colors",
+        isOver ? "border-primary/70 bg-primary/[0.06]" : "border-border/40",
+      )}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 -top-24 h-64 opacity-60"
@@ -187,7 +192,7 @@ function EmptyFlow({ onAdd }: { onAdd: (k: SlideKind) => void }) {
       <div className="relative max-w-md space-y-2">
         <h3 className="text-xl font-semibold tracking-tight">Comece sua apresentação</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Escolha um modelo abaixo para iniciar. Combine quantos slides quiser, configure filtros independentes e exporte tudo em um único PPTX.
+          {isOver ? "Solte aqui para adicionar à esteira." : "Arraste um modelo da coluna esquerda — ou clique abaixo — para começar. Combine quantos slides quiser, configure filtros independentes e exporte tudo em um único PPTX."}
         </p>
       </div>
       <div className="relative grid w-full max-w-2xl grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -210,6 +215,64 @@ function EmptyFlow({ onAdd }: { onAdd: (k: SlideKind) => void }) {
     </div>
   );
 }
+
+// Catálogo arrastável (sidebar esquerda)
+function DraggableCatalogItem({
+  kind,
+  onClick,
+}: {
+  kind: SlideKind;
+  onClick: () => void;
+}) {
+  const meta = metaOf(kind);
+  const Icon = ICON_MAP[meta.icon];
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `catalog:${kind}`,
+    data: { source: "catalog", kind },
+  });
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onClick}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "group relative flex items-start gap-2.5 rounded-xl border border-border/40 bg-card/40 p-2.5 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-[0_6px_16px_-10px_hsl(var(--primary)/0.5)] cursor-grab active:cursor-grabbing",
+        isDragging && "opacity-40",
+      )}
+    >
+      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[meta.accent])}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1 text-[13px] font-medium tracking-tight">
+          <span className="truncate">{meta.title}</span>
+          <Plus className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
+        </div>
+        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground line-clamp-2">
+          {meta.description}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+// Wrapper droppable da esteira (aceita drops do catálogo em qualquer posição)
+function FlowDropZone({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: "flow-dropzone" });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "rounded-2xl transition-colors",
+        isOver && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 
 // ----------------------------------------------------------------------------
 // Card sortable na esteira
