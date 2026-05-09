@@ -986,6 +986,13 @@ export default function SlidesBeta() {
         title="Slides (Beta)"
         subtitle="Monte uma apresentação combinando slides com filtros independentes"
       />
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragCancel={() => setDragging(null)}
+      >
       <div
         className={cn(
           "grid h-[calc(100vh-3.5rem)] min-h-0 gap-0 overflow-hidden",
