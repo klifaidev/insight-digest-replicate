@@ -14,7 +14,11 @@ import {
   useSensor,
   useSensors,
   closestCenter,
+  useDraggable,
+  useDroppable,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -169,9 +173,14 @@ function uniqueValues(
 // ----------------------------------------------------------------------------
 // Drop zone vazio
 // ----------------------------------------------------------------------------
-function EmptyFlow({ onAdd }: { onAdd: (k: SlideKind) => void }) {
+function EmptyFlow({ onAdd, isOver }: { onAdd: (k: SlideKind) => void; isOver?: boolean }) {
   return (
-    <div className="relative flex flex-col items-center gap-8 overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-b from-card/40 to-card/10 px-8 py-16 text-center animate-fade-in">
+    <div
+      className={cn(
+        "relative flex flex-col items-center gap-8 overflow-hidden rounded-3xl border bg-gradient-to-b from-card/40 to-card/10 px-8 py-16 text-center animate-fade-in transition-colors",
+        isOver ? "border-primary/70 bg-primary/[0.06]" : "border-border/40",
+      )}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 -top-24 h-64 opacity-60"
@@ -183,7 +192,7 @@ function EmptyFlow({ onAdd }: { onAdd: (k: SlideKind) => void }) {
       <div className="relative max-w-md space-y-2">
         <h3 className="text-xl font-semibold tracking-tight">Comece sua apresentação</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Escolha um modelo abaixo para iniciar. Combine quantos slides quiser, configure filtros independentes e exporte tudo em um único PPTX.
+          {isOver ? "Solte aqui para adicionar à esteira." : "Arraste um modelo da coluna esquerda — ou clique abaixo — para começar. Combine quantos slides quiser, configure filtros independentes e exporte tudo em um único PPTX."}
         </p>
       </div>
       <div className="relative grid w-full max-w-2xl grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -206,6 +215,64 @@ function EmptyFlow({ onAdd }: { onAdd: (k: SlideKind) => void }) {
     </div>
   );
 }
+
+// Catálogo arrastável (sidebar esquerda)
+function DraggableCatalogItem({
+  kind,
+  onClick,
+}: {
+  kind: SlideKind;
+  onClick: () => void;
+}) {
+  const meta = metaOf(kind);
+  const Icon = ICON_MAP[meta.icon];
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `catalog:${kind}`,
+    data: { source: "catalog", kind },
+  });
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onClick}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "group relative flex items-start gap-2.5 rounded-xl border border-border/40 bg-card/40 p-2.5 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-[0_6px_16px_-10px_hsl(var(--primary)/0.5)] cursor-grab active:cursor-grabbing",
+        isDragging && "opacity-40",
+      )}
+    >
+      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[meta.accent])}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1 text-[13px] font-medium tracking-tight">
+          <span className="truncate">{meta.title}</span>
+          <Plus className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
+        </div>
+        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground line-clamp-2">
+          {meta.description}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+// Wrapper droppable da esteira (aceita drops do catálogo em qualquer posição)
+function FlowDropZone({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: "flow-dropzone" });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "rounded-2xl transition-colors",
+        isOver && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 
 // ----------------------------------------------------------------------------
 // Card sortable na esteira
@@ -832,12 +899,12 @@ export default function SlidesBeta() {
     return Array.from(map.values()).sort((a, b) => a.ano - b.ano || a.mes - b.mes);
   }, [budgetRowsAll]);
 
-  const addWithDefaults = (kind: SlideKind) => {
+  const addWithDefaults = (kind: SlideKind): string | null => {
     addItem(kind);
     // O zustand atualiza items síncronamente; pegamos o último item criado.
     const state = useSlidesFlow.getState();
     const created = state.items[state.items.length - 1];
-    if (!created) return;
+    if (!created) return null;
     const def = smartDefaults(kind, { months, budgetMonths });
     if (def) {
       updateItem(created.id, (it) => ({
@@ -845,6 +912,7 @@ export default function SlidesBeta() {
         config: { ...(it as any).config, ...def },
       } as SlideItem));
     }
+    return created.id;
   };
 
 
@@ -855,16 +923,42 @@ export default function SlidesBeta() {
   const [exporting, setExporting] = useState(false);
   const [fileName, setFileName] = useState("apresentacao-pricing.pptx");
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [dragging, setDragging] = useState<{ source: "catalog"; kind: SlideKind } | null>(null);
 
   const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? null, [items, selectedId]);
   const readyAll = items.every((i) => isItemReady(i).ok);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const onDragStart = (e: DragStartEvent) => {
+    const data = e.active.data.current as { source?: string; kind?: SlideKind } | undefined;
+    if (data?.source === "catalog" && data.kind) setDragging({ source: "catalog", kind: data.kind });
+  };
   const onDragEnd = (e: DragEndEvent) => {
+    setDragging(null);
     const { active, over } = e;
-    if (!over || active.id === over.id) return;
+    if (!over) return;
+    const activeData = active.data.current as { source?: string; kind?: SlideKind } | undefined;
+
+    // Drop vindo do catálogo → adiciona à esteira
+    if (activeData?.source === "catalog" && activeData.kind) {
+      const newId = addWithDefaults(activeData.kind);
+      if (!newId) return;
+      // Se soltou sobre um item existente, move para essa posição
+      const overId = String(over.id);
+      const currentItems = useSlidesFlow.getState().items;
+      const targetIdx = currentItems.findIndex((i) => i.id === overId);
+      if (targetIdx >= 0 && overId !== newId) {
+        reorder(newId, overId);
+      }
+      select(newId);
+      return;
+    }
+
+    // Reordenação dentro da esteira
+    if (active.id === over.id) return;
     reorder(String(active.id), String(over.id));
   };
+
 
   const handleExport = async () => {
     if (items.length === 0) return;
@@ -892,6 +986,13 @@ export default function SlidesBeta() {
         title="Slides (Beta)"
         subtitle="Monte uma apresentação combinando slides com filtros independentes"
       />
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragCancel={() => setDragging(null)}
+      >
       <div
         className={cn(
           "grid h-[calc(100vh-3.5rem)] min-h-0 gap-0 overflow-hidden",
@@ -909,29 +1010,13 @@ export default function SlidesBeta() {
                   Slides disponíveis
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {SLIDE_CATALOG.map((s) => {
-                    const Icon = ICON_MAP[s.icon];
-                    return (
-                      <button
-                        key={s.kind}
-                        onClick={() => addWithDefaults(s.kind)}
-                        className="group relative flex items-start gap-2.5 rounded-xl border border-border/40 bg-card/40 p-2.5 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-[0_6px_16px_-10px_hsl(var(--primary)/0.5)]"
-                      >
-                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[s.accent])}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 text-[13px] font-medium tracking-tight">
-                            <span className="truncate">{s.title}</span>
-                            <Plus className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
-                          </div>
-                          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground line-clamp-2">
-                            {s.description}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
+                  {SLIDE_CATALOG.map((s) => (
+                    <DraggableCatalogItem
+                      key={s.kind}
+                      kind={s.kind}
+                      onClick={() => addWithDefaults(s.kind)}
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -1027,10 +1112,10 @@ export default function SlidesBeta() {
           {/* Conteúdo da esteira */}
           <ScrollArea className="flex-1">
             <div className="mx-auto max-w-2xl px-4 py-5">
-              {items.length === 0 ? (
-                <EmptyFlow onAdd={addWithDefaults} />
-              ) : (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <FlowDropZone>
+                {items.length === 0 ? (
+                  <EmptyFlow onAdd={addWithDefaults} />
+                ) : (
                   <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
                       {items.map((item, idx) => (
@@ -1046,8 +1131,8 @@ export default function SlidesBeta() {
                       ))}
                     </div>
                   </SortableContext>
-                </DndContext>
-              )}
+                )}
+              </FlowDropZone>
             </div>
           </ScrollArea>
         </main>
@@ -1072,6 +1157,21 @@ export default function SlidesBeta() {
           )}
         </aside>
       </div>
+      <DragOverlay>
+        {dragging ? (() => {
+          const meta = metaOf(dragging.kind);
+          const Icon = ICON_MAP[meta.icon];
+          return (
+            <div className="flex items-center gap-2 rounded-xl border border-primary/50 bg-card px-3 py-2 shadow-xl">
+              <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg border", ACCENT_BG[meta.accent])}>
+                <Icon className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium">{meta.title}</span>
+            </div>
+          );
+        })() : null}
+      </DragOverlay>
+      </DndContext>
     </>
   );
 }
