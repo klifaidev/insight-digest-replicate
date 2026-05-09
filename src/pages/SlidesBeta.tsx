@@ -1010,29 +1010,13 @@ export default function SlidesBeta() {
                   Slides disponíveis
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {SLIDE_CATALOG.map((s) => {
-                    const Icon = ICON_MAP[s.icon];
-                    return (
-                      <button
-                        key={s.kind}
-                        onClick={() => addWithDefaults(s.kind)}
-                        className="group relative flex items-start gap-2.5 rounded-xl border border-border/40 bg-card/40 p-2.5 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-[0_6px_16px_-10px_hsl(var(--primary)/0.5)]"
-                      >
-                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[s.accent])}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 text-[13px] font-medium tracking-tight">
-                            <span className="truncate">{s.title}</span>
-                            <Plus className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
-                          </div>
-                          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground line-clamp-2">
-                            {s.description}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
+                  {SLIDE_CATALOG.map((s) => (
+                    <DraggableCatalogItem
+                      key={s.kind}
+                      kind={s.kind}
+                      onClick={() => addWithDefaults(s.kind)}
+                    />
+                  ))}
                 </div>
               </div>
 
