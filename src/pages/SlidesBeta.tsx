@@ -899,12 +899,12 @@ export default function SlidesBeta() {
     return Array.from(map.values()).sort((a, b) => a.ano - b.ano || a.mes - b.mes);
   }, [budgetRowsAll]);
 
-  const addWithDefaults = (kind: SlideKind) => {
+  const addWithDefaults = (kind: SlideKind): string | null => {
     addItem(kind);
     // O zustand atualiza items síncronamente; pegamos o último item criado.
     const state = useSlidesFlow.getState();
     const created = state.items[state.items.length - 1];
-    if (!created) return;
+    if (!created) return null;
     const def = smartDefaults(kind, { months, budgetMonths });
     if (def) {
       updateItem(created.id, (it) => ({
@@ -912,6 +912,7 @@ export default function SlidesBeta() {
         config: { ...(it as any).config, ...def },
       } as SlideItem));
     }
+    return created.id;
   };
 
 
@@ -922,16 +923,42 @@ export default function SlidesBeta() {
   const [exporting, setExporting] = useState(false);
   const [fileName, setFileName] = useState("apresentacao-pricing.pptx");
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [dragging, setDragging] = useState<{ source: "catalog"; kind: SlideKind } | null>(null);
 
   const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? null, [items, selectedId]);
   const readyAll = items.every((i) => isItemReady(i).ok);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const onDragStart = (e: DragStartEvent) => {
+    const data = e.active.data.current as { source?: string; kind?: SlideKind } | undefined;
+    if (data?.source === "catalog" && data.kind) setDragging({ source: "catalog", kind: data.kind });
+  };
   const onDragEnd = (e: DragEndEvent) => {
+    setDragging(null);
     const { active, over } = e;
-    if (!over || active.id === over.id) return;
+    if (!over) return;
+    const activeData = active.data.current as { source?: string; kind?: SlideKind } | undefined;
+
+    // Drop vindo do catálogo → adiciona à esteira
+    if (activeData?.source === "catalog" && activeData.kind) {
+      const newId = addWithDefaults(activeData.kind);
+      if (!newId) return;
+      // Se soltou sobre um item existente, move para essa posição
+      const overId = String(over.id);
+      const currentItems = useSlidesFlow.getState().items;
+      const targetIdx = currentItems.findIndex((i) => i.id === overId);
+      if (targetIdx >= 0 && overId !== newId) {
+        reorder(newId, overId);
+      }
+      select(newId);
+      return;
+    }
+
+    // Reordenação dentro da esteira
+    if (active.id === over.id) return;
     reorder(String(active.id), String(over.id));
   };
+
 
   const handleExport = async () => {
     if (items.length === 0) return;
