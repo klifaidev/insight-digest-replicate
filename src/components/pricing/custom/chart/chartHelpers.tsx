@@ -182,8 +182,10 @@ export function ChartTooltip(props: {
   variant?: "default" | "bubble" | "scatter" | "pie" | "funnel" | "waterfall";
   pieTotal?: number;
   funnelStages?: { name: string; value: number }[];
+  /** C2 — extra row appended to the tooltip body */
+  additionalRow?: { label: string; map: Map<string, number>; fmt: ReturnType<typeof inferFormat>; measure: KpiMeasureId };
 }) {
-  const { active, payload, label, style, measureFmt, variant = "default" } = props;
+  const { active, payload, label, style, measureFmt, variant = "default", additionalRow } = props;
   if (!active || !payload || payload.length === 0) return null;
   const fmt = (v: number) => formatValue(v, style.dataLabels.format === "auto"
     ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals);
@@ -194,6 +196,16 @@ export function ChartTooltip(props: {
     padding: "8px 10px", fontSize: 11, lineHeight: 1.45,
     boxShadow: "0 4px 12px rgba(0,0,0,0.35)", minWidth: 140,
   } as const;
+
+  const extraLine = additionalRow && label != null ? (() => {
+    const v = additionalRow.map.get(String(label));
+    if (v == null) return null;
+    return (
+      <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #334155", opacity: 0.85 }}>
+        {additionalRow.label}: {formatValue(v, additionalRow.fmt, additionalRow.measure)}
+      </div>
+    );
+  })() : null;
 
   if (variant === "pie") {
     const p = payload[0];
