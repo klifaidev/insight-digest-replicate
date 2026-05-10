@@ -338,6 +338,7 @@ export function ChartInspector({
         {/* B.4 — Bridge column builder */}
         {ct === "waterfall" && (
           <BridgeColumnBuilder block={block} onChange={onChange}
+            dsRows={dsRows}
             value={style.waterfall.columns ?? []}
             setValue={(cols) => updPath("waterfall", { columns: cols })} />
         )}
