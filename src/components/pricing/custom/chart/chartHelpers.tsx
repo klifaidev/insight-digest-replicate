@@ -382,7 +382,10 @@ export function FunnelSVG({
         const prev = i > 0 ? ordered[i - 1].value : null;
         const conv = prev && prev !== 0 ? `▼ ${((d.value / prev) * 100).toFixed(0)}%` : null;
         return (
-          <g key={`${d.name}-${i}`}>
+          <g key={`${d.name}-${i}`}
+            opacity={dimmedNames && dimmedNames.has(d.name) ? 0.4 : 1}
+            style={{ cursor: onSliceClick ? "pointer" : undefined }}
+            onClick={(e) => onSliceClick?.(d.name, e)}>
             <path d={path} fill={d.color} />
             <text x={lx} y={ly + dl.size / 3} fontSize={dl.size} fill={dl.color}
               fontWeight={dl.bold ? 700 : 400}
