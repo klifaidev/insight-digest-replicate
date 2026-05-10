@@ -243,6 +243,55 @@ export function ChartInspector({
               { value: "inovacao", label: "Inovação" },
             ]} />
         </Row>
+
+        {/* B.1 — Field well: Eixo X */}
+        {["line", "area", "stackedArea", "bar", "column", "hbar",
+          "stackedColumn", "stackedBar", "combo"].includes(ct) && (
+          <Row label="Eixo X">
+            <SelectField value={block.fieldWells?.xDim ?? "period"}
+              onChange={(v) => onChange({
+                fieldWells: { ...(block.fieldWells ?? {}), xDim: v === "period" ? null : v },
+              })}
+              options={[
+                { value: "period", label: "Período" },
+                { value: "marca", label: "Marca" },
+                { value: "canalAjustado", label: "Canal" },
+                { value: "categoria", label: "Categoria" },
+                { value: "mercado", label: "Mercado" },
+                { value: "inovacao", label: "Inovação" },
+              ]} />
+          </Row>
+        )}
+
+        {/* B.5 — Sort */}
+        <Row label="Ordenar por">
+          <SelectField value={block.sortConfig?.field ?? "period"}
+            onChange={(v) => onChange({
+              sortConfig: { field: v as never, dir: block.sortConfig?.dir ?? "asc" },
+            })}
+            options={[
+              { value: "period", label: "Período" },
+              { value: "value", label: "Valor" },
+              { value: "name", label: "Nome" },
+            ]} />
+        </Row>
+        <Row label="Direção">
+          <Segmented value={block.sortConfig?.dir ?? "asc"}
+            onChange={(v) => onChange({
+              sortConfig: { field: block.sortConfig?.field ?? "period", dir: v as never },
+            })}
+            options={[
+              { value: "asc", label: "Asc" },
+              { value: "desc", label: "Desc" },
+            ]} />
+        </Row>
+
+        {/* B.4 — Bridge column builder */}
+        {ct === "waterfall" && (
+          <BridgeColumnBuilder block={block} onChange={onChange}
+            value={style.waterfall.columns ?? []}
+            setValue={(cols) => updPath("waterfall", { columns: cols })} />
+        )}
       </Section>
 
       {/* ===== General ===== */}
