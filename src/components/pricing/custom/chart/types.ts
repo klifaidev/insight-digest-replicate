@@ -302,6 +302,11 @@ export function ensureChartStyle(s?: Partial<ChartStyle>): ChartStyle {
     bubble: { ...d.bubble, ...(s.bubble ?? {}) },
     area: { ...d.area, ...(s.area ?? {}) },
     waterfall: { ...d.waterfall, ...(s.waterfall ?? {}) },
+    funnel: { ...d.funnel, ...(s.funnel ?? {}) },
+    treemap: { ...d.treemap, ...(s.treemap ?? {}) },
+    radar: { ...d.radar, ...(s.radar ?? {}) },
+    histogram: { ...d.histogram, ...(s.histogram ?? {}) },
+    boxplot: { ...d.boxplot, ...(s.boxplot ?? {}) },
     series: s.series ?? [],
   };
 }
