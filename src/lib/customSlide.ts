@@ -87,6 +87,8 @@ export interface KpiBlock extends BaseBlock {
   filters?: Filters;
   /** Formato; "auto" infere a partir da medida */
   format?: KpiFormat;
+  /** Fonte de dados — default "ke30" para retro-compatibilidade. */
+  dataSource?: BlockDataSource;
 }
 
 export interface ImageBlock extends BaseBlock {
