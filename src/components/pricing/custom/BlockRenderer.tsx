@@ -84,7 +84,12 @@ function TextRender({ block: b }: { block: TextBlock }) {
 
 function KpiRender({ block: b }: { block: KpiBlock }) {
   const pricing = usePricing((s) => s.rows);
-  const value = useMemo(() => computeKpiBlock(pricing, b), [pricing, b]);
+  const budget = useBudget((s) => s.rows);
+  const rows = useMemo(
+    () => (b.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
+    [b.dataSource, pricing, budget],
+  );
+  const value = useMemo(() => computeKpiBlock(rows, b), [rows, b]);
   const measureLabel = b.source === "dynamic"
     ? KPI_MEASURES.find((m) => m.id === b.measure)?.label
     : null;
