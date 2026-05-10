@@ -1243,6 +1243,19 @@ function WaterfallChart({
   const labelPos = style.waterfall.labelPos === "inside" ? "center"
     : style.waterfall.labelPos === "below" ? "bottom" : "top";
 
+  // Empty state for PVM when base/comp not set (after all hooks)
+  if (wfMode === "pvm" && (!pvmCfg.base || !pvmCfg.comp || pvmCfg.base === pvmCfg.comp)) {
+    return (
+      <div style={{
+        width: "100%", height: "100%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: "#64748B", fontFamily: "Calibri", fontSize: 13, textAlign: "center", padding: 12,
+      }}>
+        Configure <b style={{ margin: "0 4px" }}>base</b> e <b style={{ margin: "0 4px" }}>comparação</b> da Bridge no inspetor.
+      </div>
+    );
+  }
+
   // Compute Y domain explicitly so empty/edge cases don't render blank
   const allEnds = wfRows.flatMap((r) => [r.base, r.base + r.delta, r.end]);
   const yMin = style.yAxis.min ?? Math.min(0, ...allEnds);
