@@ -729,6 +729,16 @@ function FilteredInspector({
         (patch as Partial<TopSkuBlock>).measure = "rol";
       }
     }
+    if (block.kind === "table" && pendingSource === "budget") {
+      const tb = block as Extract<CustomBlock, { kind: "table" }>;
+      const filtered = tb.measures.filter((m) => !BUDGET_UNAVAILABLE_MEASURES.includes(m));
+      if (filtered.length !== tb.measures.length) {
+        (patch as Partial<typeof tb>).measures = filtered;
+        if (tb.sortMeasure && BUDGET_UNAVAILABLE_MEASURES.includes(tb.sortMeasure)) {
+          (patch as Partial<typeof tb>).sortMeasure = filtered[0] ?? null;
+        }
+      }
+    }
     onChange(patch);
     setPendingSource(null);
   };
