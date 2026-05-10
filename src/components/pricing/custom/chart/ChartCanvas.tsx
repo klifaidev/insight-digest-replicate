@@ -6,7 +6,7 @@ import {
   ResponsiveContainer, ComposedChart, LineChart, BarChart, AreaChart,
   PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, Sector,
   Line, Bar, Area, XAxis, YAxis, CartesianGrid, Legend, Tooltip, LabelList,
-  FunnelChart, Funnel, Treemap,
+  Treemap,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ReferenceLine,
 } from "recharts";
@@ -24,6 +24,10 @@ import { resolveChartFit } from "@/lib/customCapacity";
 import {
   ensureChartStyle, colorForSeries, DEFAULT_PALETTE, type ChartStyle,
 } from "./types";
+import {
+  ChartTooltip, applySort, evalCondColor, renderRefLines,
+  linearFit, movingAvg, resolveBridgeColumns, FunnelSVG,
+} from "./chartHelpers";
 
 // -- helpers ---------------------------------------------------------------
 function fmtVal(v: number, style: ChartStyle, fallback: ReturnType<typeof inferFormat>) {
@@ -175,8 +179,24 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           hidden.reduce((s, ser) => s + (ser.values[i] || 0), 0)),
       });
     }
-    return { periodos: raw.periodos, series: visible };
-  }, [raw, block.h, block.w, block.autoFit, block.maxSeries, block.showOthers]);
+    // B.5 — apply user-defined sort
+    return applySort(raw.periodos, visible, block.sortConfig);
+  }, [raw, block.h, block.w, block.autoFit, block.maxSeries, block.showOthers, block.sortConfig]);
+
+  // Tooltip lookup tables — previous period delta + YoY (best-effort heuristic on label match)
+  const tooltipMaps = useMemo(() => {
+    const prev = new Map<string, Map<string, number>>();
+    const yoy = new Map<string, Map<string, number>>();
+    data.series.forEach((s) => {
+      const pmap = new Map<string, number>(); const ymap = new Map<string, number>();
+      data.periodos.forEach((p, i) => {
+        if (i > 0) pmap.set(p.label, s.values[i - 1] ?? 0);
+        if (i >= 12) ymap.set(p.label, s.values[i - 12] ?? 0);
+      });
+      prev.set(s.name, pmap); yoy.set(s.name, ymap);
+    });
+    return { prev, yoy };
+  }, [data]);
 
   // Combo: optional second measure for line series
   const lineSeriesData = useMemo(() => {
@@ -317,7 +337,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = (
       <Comp data={rows}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
@@ -390,7 +411,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <BarChart data={rows} layout="horizontal"
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
@@ -429,7 +451,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           stroke={yAx.lineColor} strokeWidth={yAx.lineWidth}
           label={yAx.titleText ? { value: yAx.titleText, angle: -90, position: "insideLeft",
             style: { fontSize: yAx.titleSize, fill: yAx.titleColor } } : undefined} />
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
@@ -476,28 +499,53 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           fill={props.fill} />
       );
     };
+    const dl = style.dataLabels;
+    const pieTotal = ranking.reduce((s, r) => s + Math.abs(r.value), 0) || 1;
+    // FIX 5 — fully-styled pie label honoring size/color/bold/italic/format/position/showCategory
+    const pieLabel = dl.show ? (props: any) => {
+      const { cx, cy, midAngle, outerRadius, innerRadius, percent, value, name } = props;
+      const RAD = Math.PI / 180;
+      const inside = labelMode === "inside";
+      const r = inside
+        ? innerRadius + (outerRadius - innerRadius) * 0.55
+        : outerRadius + (isCallout ? 24 : 12);
+      const x = cx + r * Math.cos(-midAngle * RAD);
+      const y = cy + r * Math.sin(-midAngle * RAD);
+      const pct = (percent * 100).toFixed(dl.decimals ?? 1) + "%";
+      const fmt = dl.format === "auto" ? measureFmt : dl.format;
+      const valStr = formatValue(value, fmt, "rol", dl.decimals);
+      let body: string;
+      switch (labelKey) {
+        case "value": body = valStr; break;
+        case "percent": body = pct; break;
+        case "name": body = name; break;
+        case "name-value": body = `${name}: ${valStr}`; break;
+        default: body = `${name}: ${pct}`;
+      }
+      const text = dl.showCategory ? `${name} · ${body}` : body;
+      return (
+        <text x={x} y={y} fill={dl.color}
+          fontSize={dl.size}
+          fontWeight={dl.bold ? 700 : 400}
+          fontStyle={dl.italic ? "italic" : "normal"}
+          textAnchor={x > cx ? "start" : "end"}
+          dominantBaseline="central">{text}</text>
+      );
+    } : false;
     chart = (
       <PieChart>
-        <Tooltip />
+        <Tooltip content={(p: any) => (
+          <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="pie" pieTotal={pieTotal} />
+        )} />
         {renderLegend}
         <Pie data={ranking} isAnimationActive={false} dataKey="value" nameKey="name"
           startAngle={style.pie.startAngle}
           endAngle={style.pie.startAngle + 360}
           innerRadius={inner} outerRadius="80%"
-          labelLine={labelMode === "outside" || isCallout}
+          labelLine={!!pieLabel && (labelMode === "outside" || isCallout)}
           activeIndex={ranking.map((_, i) => i)}
           activeShape={renderPieShape as never}
-          label={(d: { name: string; value: number; percent: number }) => {
-            const pct = (d.percent * 100).toFixed(style.dataLabels.decimals ?? 1) + "%";
-            const valStr = formatValue(d.value, measureFmt, "rol", style.dataLabels.decimals);
-            switch (labelKey) {
-              case "value": return valStr;
-              case "percent": return pct;
-              case "name": return d.name;
-              case "name-value": return `${d.name}: ${valStr}`;
-              default: return `${d.name}: ${pct}`;
-            }
-          }}
+          label={pieLabel as never}
         >
           {ranking.map((r, i) => {
             const sl = style.pie.slices[r.name];
@@ -553,7 +601,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         {ct === "bubble" && (
           <ZAxis type="number" dataKey="z" range={[style.bubble.minSize, style.bubble.maxSize]} />
         )}
-        <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+        <Tooltip cursor={{ strokeDasharray: "3 3" }}
+          content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant={ct === "bubble" ? "bubble" : "scatter"} />} />
         {renderLegend}
         <Scatter data={points} isAnimationActive={false} fill={DEFAULT_PALETTE[0]}
           fillOpacity={style.bubble.fillOpacity}
@@ -576,47 +625,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "waterfall") {
     chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} />;
   } else if (ct === "funnel") {
-    const ordered = style.funnel.direction === "btt" ? [...ranking].reverse() : ranking;
-    const baseTotal = ordered.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
-    // A.6 — simulate gap by inserting transparent spacers between stages
-    const spacerVal = (baseTotal * (style.funnel.gapPct ?? 0)) / 100;
-    const fdata: { name: string; value: number; fill: string; __spacer?: boolean }[] = [];
-    ordered.forEach((r, i) => {
-      fdata.push({
-        name: r.name, value: r.value,
-        fill: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
-      });
-      if (spacerVal > 0 && i < ordered.length - 1) {
-        fdata.push({ name: "", value: spacerVal, fill: "transparent", __spacer: true });
-      }
-    });
-    const total = ordered.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
+    // FIX 3 — replace recharts Funnel (broken triangles) with custom SVG trapezoids
+    const fdata = ranking.map((r, i) => ({
+      name: r.name, value: r.value,
+      color: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
+    }));
     chart = (
-      <FunnelChart>
-        <Tooltip />
-        <Funnel dataKey="value" data={fdata} isAnimationActive={false}>
-          <LabelList position={style.funnel.labelPos as never}
-            fill={style.dataLabels.color}
-            stroke="none"
-            style={{ fontSize: style.dataLabels.size,
-              fontWeight: style.dataLabels.bold ? 700 : 400,
-              fontStyle: style.dataLabels.italic ? "italic" : "normal" }}
-            formatter={(_v: unknown, entry: { name?: string; value?: number; __spacer?: boolean } = {}) => {
-              if (entry.__spacer) return "";
-              const name = entry.name ?? "";
-              const value = entry.value ?? 0;
-              const pct = ((Math.abs(value) / total) * 100).toFixed(style.dataLabels.decimals ?? 1) + "%";
-              switch (style.funnel.labelMode) {
-                case "value": return formatValue(value, measureFmt, "rol", style.dataLabels.decimals);
-                case "percent": return pct;
-                case "name": return name;
-                default: return `${name}: ${pct}`;
-              }
-            }}
-          />
-        </Funnel>
-      </FunnelChart>
-    );
+      <FunnelSVG data={fdata} style={style} measureFmt={measureFmt} />
+    ) as React.ReactElement;
   } else if (ct === "treemap") {
     const total = ranking.reduce((s, r) => s + Math.abs(r.value), 0) || 1;
     const tdata = ranking.map((r, i) => {
@@ -647,17 +663,38 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }} />
         <PolarRadiusAxis tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }}
           tickFormatter={axisFmt(yAx, measureFmt)} />
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
           const color = cfg?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+          // FIX 7b — radar custom data labels via dot prop
+          const dl = style.dataLabels;
+          const dotRenderer = dl.show ? (props: any) => {
+            const { cx, cy, value } = props;
+            if (cx == null || cy == null) return <g />;
+            const off = dl.position === "below" ? 12 : -8;
+            const fmt = dl.format === "auto" ? measureFmt : dl.format;
+            return (
+              <g>
+                <circle cx={cx} cy={cy} r={2.5} fill={color} />
+                <text x={cx} y={cy + off} fontSize={dl.size} fill={dl.color}
+                  fontWeight={dl.bold ? 700 : 400}
+                  fontStyle={dl.italic ? "italic" : "normal"}
+                  textAnchor="middle">
+                  {formatValue(Number(value) || 0, fmt, "rol", dl.decimals)}
+                </text>
+              </g>
+            );
+          } : { r: 2.5, fill: color };
           return (
             <Radar key={s.name} isAnimationActive={false} dataKey={s.name}
               stroke={color} strokeWidth={cfg?.thickness ?? 2}
               strokeDasharray={dashArr(cfg?.lineStyle)}
               fill={color}
-              fillOpacity={style.radar.fillArea ? style.radar.fillOpacity : 0} />
+              fillOpacity={style.radar.fillArea ? style.radar.fillOpacity : 0}
+              dot={dotRenderer as never} />
           );
         })}
       </RadarChart>
@@ -700,7 +737,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           <YAxis yAxisId="right" orientation="right"
             tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
         )}
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {seriesList.map((s, i) => {
           const color = colorForSeries(style, s.name, i) ?? style.histogram.barColor;
@@ -710,7 +748,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               fill={seriesList.length === 1 ? style.histogram.barColor : color}
               fillOpacity={seriesList.length > 1 ? 0.55 : 1}
               stroke={style.histogram.borderColor}
-              strokeWidth={style.histogram.borderWidth} />
+              strokeWidth={style.histogram.borderWidth}>
+              {/* FIX 6 — histogram data labels (always above) */}
+              {style.dataLabels.show && (
+                <LabelList dataKey={s.name} position="top"
+                  content={makeLabelContent({ style, measureFmt,
+                    customFmt: (v) => Number.isInteger(v) ? String(v) : v.toFixed(0) }) as never} />
+              )}
+            </Bar>
           );
         })}
         {style.histogram.cumulative && seriesList.map((s, i) => (
@@ -774,18 +819,20 @@ function TreemapTile({ cfg, dl, fmt, ...props }: any) {
   );
   const fontWeight = dl?.bold ? 700 : 400;
   const fontStyle = dl?.italic ? "italic" : "normal";
+  const fs = dl?.size ?? 11;
+  const fc = dl?.color ?? "#FFFFFF";
   return (
     <g>
       <rect x={x} y={y} width={width} height={height}
         style={{ fill, stroke: cfg.borderColor, strokeWidth: cfg.borderWidth }} />
       {showCat && (
-        <text x={x + 4} y={y + cfg.labelSize + 2}
-          fontSize={cfg.labelSize} fill={cfg.labelColor}
+        <text x={x + 4} y={y + fs + 2}
+          fontSize={fs} fill={fc}
           fontWeight={fontWeight} fontStyle={fontStyle}>{name}</text>
       )}
       {showVal && (
-        <text x={x + 4} y={y + cfg.labelSize * 2 + 6}
-          fontSize={cfg.labelSize - 1} fill={cfg.labelColor}
+        <text x={x + 4} y={y + fs * 2 + 6}
+          fontSize={fs - 1} fill={fc}
           fontWeight={fontWeight} fontStyle={fontStyle}>
           {valStr}
         </text>
@@ -806,6 +853,7 @@ function mixHex(a: string, b: string, t: number): string {
 }
 
 // -- Waterfall (custom Recharts composition) -------------------------------
+// FIX 1+2 — supports both legacy per-period mode AND smart column-builder mode.
 function WaterfallChart({
   block, style, series,
 }: {
@@ -815,42 +863,65 @@ function WaterfallChart({
   series: { name: string; values: number[] }[];
 }) {
   const measureFmt = inferFormat(block.measure);
+  const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const dsRows = block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing;
+
+  // Smart column mode
+  const cols = style.waterfall.columns;
   const items = useMemo(() => {
+    if (cols && cols.length > 0) {
+      const resolved = resolveBridgeColumns(cols, dsRows, block.filters, block.measure);
+      return resolved.map((r) => ({ label: r.label, value: r.value, type: r.type }));
+    }
     const s0 = series[0];
     if (!s0) return [];
     return s0.values.map((v, i) => ({
-      name: String(block.measure),
       label: `P${i + 1}`,
       value: v,
+      type: (style.waterfall.classify[`P${i + 1}`] ?? (v >= 0 ? "positive" : "negative")) as
+        "start" | "positive" | "negative" | "total" | "subtotal",
     }));
-  }, [series, block.measure]);
+  }, [cols, dsRows, block.filters, block.measure, series, style.waterfall.classify]);
 
   const wfRows = useMemo(() => {
     let acc = 0;
     return items.map((it) => {
-      const cls = style.waterfall.classify[it.label] ?? (it.value >= 0 ? "positive" : "negative");
-      const isTotal = cls === "total";
-      const start = isTotal ? 0 : acc;
-      const end = isTotal ? it.value : acc + it.value;
-      const row = {
-        label: it.label,
-        base: Math.min(start, end),
-        delta: Math.abs(end - start),
-        cls,
-        end,
-      };
-      acc = end;
-      return row;
+      let base: number, delta: number, end: number, signed: number;
+      if (it.type === "start" || it.type === "total" || it.type === "subtotal") {
+        const target = it.type === "start" ? it.value
+          : it.type === "subtotal" ? acc
+          : it.value;
+        base = Math.min(0, target);
+        delta = Math.abs(target);
+        end = target;
+        signed = target;
+        acc = target;
+      } else {
+        const v = it.type === "negative" ? -Math.abs(it.value) : Math.abs(it.value);
+        const next = acc + v;
+        base = Math.min(acc, next);
+        delta = Math.max(0.0001, Math.abs(v)); // ensure non-zero so bar is visible
+        end = next;
+        signed = v;
+        acc = next;
+      }
+      return { label: it.label, base, delta, end, signed, type: it.type };
     });
-  }, [items, style.waterfall.classify]);
+  }, [items]);
 
-  const colorOf = (cls: string) =>
-    cls === "positive" ? style.waterfall.positiveColor
-    : cls === "negative" ? style.waterfall.negativeColor
+  const colorOf = (t: string) =>
+    t === "positive" ? style.waterfall.positiveColor
+    : t === "negative" ? style.waterfall.negativeColor
     : style.waterfall.totalColor;
 
   const labelPos = style.waterfall.labelPos === "inside" ? "center"
     : style.waterfall.labelPos === "below" ? "bottom" : "top";
+
+  // Compute Y domain explicitly so empty/edge cases don't render blank
+  const allEnds = wfRows.flatMap((r) => [r.base, r.base + r.delta, r.end]);
+  const yMin = style.yAxis.min ?? Math.min(0, ...allEnds);
+  const yMax = style.yAxis.max ?? Math.max(0, ...allEnds);
 
   return (
     <BarChart data={wfRows} barCategoryGap={`${style.waterfall.gapPct}%`}>
@@ -860,9 +931,10 @@ function WaterfallChart({
       )}
       <XAxis dataKey="label" tick={{ fontSize: style.xAxis.labelSize, fill: style.xAxis.labelColor }} />
       <YAxis tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
-        domain={[style.yAxis.min ?? "auto", style.yAxis.max ?? "auto"]}
+        domain={[yMin, yMax]}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip />
+      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="waterfall" />} />
+      {renderRefLines(style)}
       {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => (
         <ReferenceLine key={`c-${i}`} segment={[
           { x: r.label, y: r.end }, { x: wfRows[i + 1].label, y: r.end },
@@ -871,15 +943,21 @@ function WaterfallChart({
       ))}
       <Bar isAnimationActive={false} dataKey="base" stackId="wf" fill="transparent" />
       <Bar isAnimationActive={false} dataKey="delta" stackId="wf">
-        {wfRows.map((r) => <Cell key={r.label} fill={colorOf(r.cls)} />)}
+        {wfRows.map((r) => {
+          const baseFill = colorOf(r.type);
+          const fill = evalCondColor(r.signed, style.conditionalRules, baseFill);
+          return <Cell key={r.label} fill={fill} />;
+        })}
         {style.dataLabels.show && (
           <LabelList dataKey="end" position={labelPos as never}
             style={{ fontSize: style.dataLabels.size, fill: style.dataLabels.color,
-              fontWeight: style.dataLabels.bold ? 700 : 400 }}
-            formatter={(v: number) => formatValue(v, measureFmt, "rol", style.dataLabels.decimals)} />
+              fontWeight: style.dataLabels.bold ? 700 : 400,
+              fontStyle: style.dataLabels.italic ? "italic" : "normal" }}
+            formatter={(v: number) => formatValue(v,
+              style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format,
+              "rol", style.dataLabels.decimals)} />
         )}
       </Bar>
-      {/* A.5 — running total line */}
       {style.waterfall.showRunningTotal && (
         <Line type="linear" dataKey="end" isAnimationActive={false}
           stroke={style.waterfall.totalColor} strokeWidth={2}
@@ -931,7 +1009,7 @@ function BoxPlot({
       <YAxis domain={[yMin, yMax]}
         tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip />
+      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} />} />
       <Bar dataKey="q1" stackId="bp" fill="transparent" isAnimationActive={false} />
       <Bar dataKey={(r: any) => r.q3 - r.q1} stackId="bp"
         isAnimationActive={false}

@@ -122,6 +122,20 @@ export interface AreaStyleCfg {
   lineOnTop: boolean;
 }
 
+export type WaterfallColumnType = "start" | "positive" | "negative" | "total" | "subtotal";
+
+export interface WaterfallColumn {
+  id: string;
+  label: string;
+  type: WaterfallColumnType;
+  /** Optional measure id (KpiMeasureId). When omitted, manualValue is used. */
+  measure?: KpiMeasureId;
+  manualValue?: number;
+  /** Optional dimension filter applied just to this column (e.g. brand=Melken) */
+  filterDim?: string | null;
+  filterValue?: string | null;
+}
+
 export interface WaterfallStyleCfg {
   positiveColor: string;
   negativeColor: string;
@@ -134,6 +148,8 @@ export interface WaterfallStyleCfg {
   gapPct: number;
   /** per category override: positive | negative | total */
   classify: Record<string, "positive" | "negative" | "total">;
+  /** Smart bridge: explicit column list overrides automatic series */
+  columns?: WaterfallColumn[];
 }
 
 export interface FunnelStyleCfg {
@@ -184,6 +200,51 @@ export interface BoxplotStyleCfg {
   showOutliers: boolean;
 }
 
+export type ConditionalOp = ">" | "<" | "=" | "between";
+export interface ConditionalRule {
+  id: string;
+  op: ConditionalOp;
+  threshold: number;
+  threshold2?: number; // for "between"
+  color: string;
+}
+
+export interface ReferenceLineCfg {
+  id: string;
+  value: number;
+  label: string;
+  color: string;
+  style: LineStyle;
+  thickness: number;
+}
+
+export interface TrendlineCfg {
+  enabled: boolean;
+  type: "linear" | "exp" | "ma";
+  maWindow: number; // 2-12 for moving average
+  color: string;
+  thickness: number;
+  style: LineStyle;
+  showR2: boolean;
+}
+
+export interface ForecastCfg {
+  enabled: boolean;
+  periods: number; // 1-6
+  band: boolean;
+}
+
+export interface AnalyticsCfg {
+  refLines: ReferenceLineCfg[];
+  trendline: TrendlineCfg;
+  forecast: ForecastCfg;
+}
+
+export interface SortConfig {
+  field: "period" | "value" | "name";
+  dir: "asc" | "desc";
+}
+
 export interface ChartStyle {
   general: GeneralStyle;
   xAxis: AxisStyle;
@@ -208,6 +269,11 @@ export interface ChartStyle {
   measureX?: KpiMeasureId;
   /** Combo only — measure used by line series */
   measureLine?: KpiMeasureId;
+  /** Conditional formatting rules (bar/column/hbar/waterfall/treemap) */
+  conditionalRules?: ConditionalRule[];
+  conditionalDefault?: string;
+  /** Analytics overlays (cartesian charts) */
+  analytics?: AnalyticsCfg;
 }
 
 export const DEFAULT_PALETTE = [
@@ -287,6 +353,14 @@ export function defaultChartStyle(): ChartStyle {
       medianColor: "#FFFFFF", medianWidth: 2,
       showMean: false, showOutliers: true,
     },
+    conditionalRules: [],
+    conditionalDefault: "",
+    analytics: {
+      refLines: [],
+      trendline: { enabled: false, type: "linear", maWindow: 3,
+                   color: "#7C3AED", thickness: 2, style: "dashed", showR2: false },
+      forecast: { enabled: false, periods: 3, band: false },
+    },
   };
 }
 
@@ -313,6 +387,13 @@ export function ensureChartStyle(s?: Partial<ChartStyle>): ChartStyle {
     histogram: { ...d.histogram, ...(s.histogram ?? {}) },
     boxplot: { ...d.boxplot, ...(s.boxplot ?? {}) },
     series: s.series ?? [],
+    conditionalRules: s.conditionalRules ?? [],
+    conditionalDefault: s.conditionalDefault ?? "",
+    analytics: {
+      refLines: s.analytics?.refLines ?? [],
+      trendline: { ...d.analytics!.trendline, ...(s.analytics?.trendline ?? {}) },
+      forecast: { ...d.analytics!.forecast, ...(s.analytics?.forecast ?? {}) },
+    },
   };
 }
 
