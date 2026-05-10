@@ -243,6 +243,19 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     if (ownFilter.dimension !== emitDim) return false;
     return !ownFilter.values.includes(value);
   };
+  // Active own-emitted filter on the row-level dim (used for per-Cell dimming on bars/columns/hbars)
+  const ownFilterOnRowDim = !!ownFilter && ownFilter.dimension === emitDim;
+  const cellFillOpacity = (rowName: string) =>
+    ownFilterOnRowDim && !ownFilter!.values.includes(rowName) ? 0.4 : 1;
+  // Series-level dim for line/area (by series.name = colorDim/breakdown value)
+  const seriesDim_ = block.fieldWells?.colorDim ?? block.breakdown ?? null;
+  const seriesDimmed = (seriesName: string) => {
+    if (!ownFilter) return false;
+    // Only dim series when filter dimension targets the series dimension
+    if (!seriesDim_) return false;
+    if (ownFilter.dimension !== seriesDim_) return false;
+    return !ownFilter.values.includes(seriesName);
+  };
 
   const raw = useMemo(
     () => computeChartSeries(dsRows, block.filters, block.measure, seriesDim, xDim),
