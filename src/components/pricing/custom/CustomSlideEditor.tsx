@@ -831,6 +831,24 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => duplicateBlock(selected.id)} title="Duplicar">
                     <CopyIcon className="h-3.5 w-3.5" />
                   </Button>
+                  {selected.kind === "chart" && (
+                    <Button
+                      size="icon"
+                      variant={copiedStyle.hasCopy && copiedStyle.sourceId === selected.id ? "default" : "ghost"}
+                      className="h-7 w-7"
+                      onClick={() => {
+                        if (copiedStyle.hasCopy && copiedStyle.sourceId !== selected.id) {
+                          if (pasteChartStyleAction(selected.id)) toast.success("Estilo colado");
+                        } else {
+                          if (copyChartStyleAction(selected.id)) toast.success("Estilo copiado");
+                        }
+                      }}
+                      title={copiedStyle.hasCopy && copiedStyle.sourceId !== selected.id
+                        ? "Colar estilo neste gráfico"
+                        : "Copiar estilo deste gráfico"}>
+                      <Paintbrush className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   <Button size="icon" variant="ghost" className="h-7 w-7"
                     onClick={() => toggleLock(selected.id)}
                     title={selected.locked ? "Desbloquear posição" : "Bloquear posição"}>
