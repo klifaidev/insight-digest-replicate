@@ -33,13 +33,16 @@ const COMERCIAL_FIELDS: { key: FilterKey; label: string }[] = [
 ];
 
 export function BlockFilters({
-  filters, onChange,
-}: { filters: Filters; onChange: (next: Filters) => void }) {
-  const rows = usePricing((s) => s.rows);
-  const baseRows = useMemo(
-    () => applyFilters(rows, {}, null).filter((r) => getDeParaBySku(r.sku)),
-    [rows],
-  );
+  filters, onChange, dataSource = "ke30",
+}: { filters: Filters; onChange: (next: Filters) => void; dataSource?: BlockDataSource }) {
+  const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const baseRows = useMemo(() => {
+    if (dataSource === "budget") return budgetRowsAsPricing(budget);
+    return applyFilters(pricing, {}, null).filter((r) => getDeParaBySku(r.sku));
+  }, [dataSource, pricing, budget]);
+  // Em Budget só mostramos campos suportados (sem UF/Regional/Mercado Ajustado/Cliente).
+  const isBudget = dataSource === "budget";
   const setKey = (k: FilterKey, vals: string[]) => {
     const next: Filters = { ...filters };
     if (vals.length === 0) delete next[k];
