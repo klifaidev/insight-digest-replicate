@@ -854,7 +854,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       color: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
     }));
     chart = (
-      <FunnelSVG data={fdata} style={style} measureFmt={measureFmt} />
+      <FunnelSVG data={fdata} style={style} measureFmt={measureFmt}
+        onSliceClick={(name, e) => handleEmit(name, { shift: !!e.shiftKey })}
+        dimmedNames={ownFilter && ownFilter.dimension === emitDim
+          ? new Set(fdata.map(d => d.name).filter(n => !ownFilter.values.includes(n))) : null} />
     ) as React.ReactElement;
   } else if (ct === "treemap") {
     const total = ranking.reduce((s, r) => s + Math.abs(r.value), 0) || 1;
