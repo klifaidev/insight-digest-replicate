@@ -134,13 +134,22 @@ interface Props {
 }
 
 export function CustomSlideEditor({ slideId, config, onChange }: Props) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Bind the parent's config <-> internal Zustand+temporal store first so
+  // selection store reflects the right slide on initial render.
+  useEditorBinding(config, onChange, slideId);
+  const undoRedo = useUndoRedoState();
+  const { selectedIds, groupEditMemberId } = useSelection();
+  const prefs = useEditorPrefs();
+
   const [fitScale, setFitScale] = useState(1);
   const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
   const [manualScale, setManualScale] = useState(1);
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
+  // Marquee selection rectangle (canvas-space coords).
+  const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const scaleRef = useRef(1);
 
   // Calcula a escala para caber no contêiner mantendo a proporção 16:9
   useEffect(() => {
@@ -159,7 +168,6 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // Registra o canvas para o exporter capturar
   useEffect(() => {
     if (!slideId) return;
     registerCustomCanvas(slideId, canvasRef.current);
@@ -167,20 +175,20 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   }, [slideId]);
 
   const scale = zoomMode === "fit" ? fitScale : manualScale;
+  scaleRef.current = scale;
   const setZoom = (s: number) => {
     setZoomMode("manual");
     setManualScale(Math.max(0.1, Math.min(3, s)));
   };
 
-  const selected = config.blocks.find((b) => b.id === selectedId) ?? null;
-  const zTop = config.blocks.reduce((m, b) => Math.max(m, b.z), 0);
-
-  // Bind the parent's config <-> internal Zustand+temporal store.
-  useEditorBinding(config, onChange, slideId);
-  const undoRedo = useUndoRedoState();
+  const selected = selectedIds.length === 1
+    ? (config.blocks.find((b) => b.id === selectedIds[0]) ?? null)
+    : null;
+  const multiSelected = selectedIds.length > 1
+    ? config.blocks.filter((b) => selectedIds.includes(b.id))
+    : [];
 
   const updateBlock = (id: string, patch: Partial<CustomBlock>) => {
-    // Decide undo bucket based on which fields changed.
     const keys = Object.keys(patch);
     const isMove = keys.every((k) => k === "x" || k === "y");
     const isResize = keys.some((k) => k === "w" || k === "h");
@@ -195,19 +203,19 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   };
   const addBlock = (kind: CustomBlockKind) => {
     const id = addBlockAction(kind);
-    if (id) setSelectedId(id);
+    if (id) setSelection([id]);
   };
   const addChart = (chartType: CustomChartType) => {
     const id = addChartBlockAction(chartType);
-    if (id) setSelectedId(id);
+    if (id) setSelection([id]);
   };
   const removeBlock = (id: string) => {
     deleteBlockAction(id);
-    setSelectedId((cur) => (cur === id ? null : cur));
+    if (selectedIds.includes(id)) clearSelection();
   };
   const duplicateBlock = (id: string) => {
     const newId = duplicateBlockAction(id);
-    if (newId) setSelectedId(newId);
+    if (newId) setSelection([newId]);
   };
   const bringForward = (id: string) => bringForwardAction(id);
   const sendBack = (id: string) => sendBackAction(id);
@@ -215,56 +223,96 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const sendToBack = (id: string) => sendToBackAction(id);
   const toggleLock = (id: string) => toggleLockAction(id);
 
+  // Helper: ids that move together when dragging `id`.
+  // If id belongs to a group (and we're not in group-edit mode for it),
+  // and the selection includes any group member, drag the whole group.
+  const draggableSiblings = useCallback((id: string): string[] => {
+    if (groupEditMemberId === id) return [id];
+    const blk = config.blocks.find((b) => b.id === id);
+    if (!blk) return [id];
+    if (blk.groupId) {
+      const grp = (config.groups ?? []).find((g) => g.id === blk.groupId);
+      if (grp) return grp.memberIds;
+    }
+    // Multi-selection move: if id is in selection and selection > 1, move all selected.
+    if (selectedIds.includes(id) && selectedIds.length > 1) return selectedIds;
+    return [id];
+  }, [config.blocks, config.groups, groupEditMemberId, selectedIds]);
+
   // Atalhos de teclado
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
       const inField = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
 
-      // Undo / redo work even without a selection and outside text fields only.
       if (!inField && (e.metaKey || e.ctrlKey)) {
         const k = e.key.toLowerCase();
         if (k === "z" && !e.shiftKey) { e.preventDefault(); undoAction(); return; }
         if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); redoAction(); return; }
+        if (k === "a") { e.preventDefault(); selectAllOnSlide(); return; }
+        if (k === "g" && !e.shiftKey) {
+          e.preventDefault();
+          if (selectedIds.length >= 2) { groupBlocksAction(selectedIds); toast.success("Blocos agrupados"); }
+          return;
+        }
+        if (k === "g" && e.shiftKey) {
+          e.preventDefault();
+          if (selectedIds.length > 0) { ungroupBlocksAction(selectedIds); toast.success("Grupo desfeito"); }
+          return;
+        }
       }
       if (inField) return;
-      if (!selectedId) return;
-      const cur = config.blocks.find((b) => b.id === selectedId);
-      if (!cur) return;
-      const isLocked = !!cur.locked;
-      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeBlock(selectedId); return; }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") { e.preventDefault(); duplicateBlock(selectedId); return; }
-      if ((e.metaKey || e.ctrlKey) && e.key === "]") { e.preventDefault(); bringForward(selectedId); return; }
-      if ((e.metaKey || e.ctrlKey) && e.key === "[") { e.preventDefault(); sendBack(selectedId); return; }
-      if (e.key === "Escape") { setSelectedId(null); return; }
-      if (isLocked) return; // Locked blocks ignore arrow-key nudges.
-      const step = e.shiftKey ? 10 : 1;
-      if (e.key === "ArrowUp")    { e.preventDefault(); updateBlock(selectedId, { y: Math.max(0, cur.y - step) }); }
-      if (e.key === "ArrowDown")  { e.preventDefault(); updateBlock(selectedId, { y: Math.min(CANVAS_H - cur.h, cur.y + step) }); }
-      if (e.key === "ArrowLeft")  { e.preventDefault(); updateBlock(selectedId, { x: Math.max(0, cur.x - step) }); }
-      if (e.key === "ArrowRight") { e.preventDefault(); updateBlock(selectedId, { x: Math.min(CANVAS_W - cur.w, cur.x + step) }); }
+      if (e.key === "Escape") {
+        if (groupEditMemberId) exitGroupEdit();
+        else clearSelection();
+        return;
+      }
+      if (selectedIds.length === 0) return;
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        if (selectedIds.length === 1) removeBlock(selectedIds[0]);
+        else deleteBlocksAction(selectedIds);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        if (selectedIds.length === 1) duplicateBlock(selectedIds[0]);
+        else duplicateBlocksAction(selectedIds);
+        return;
+      }
+      if (selectedIds.length === 1) {
+        if ((e.metaKey || e.ctrlKey) && e.key === "]") { e.preventDefault(); bringForward(selectedIds[0]); return; }
+        if ((e.metaKey || e.ctrlKey) && e.key === "[") { e.preventDefault(); sendBack(selectedIds[0]); return; }
+      }
+
+      // Arrow nudge — works for single or multi.
+      const step = e.shiftKey ? 40 : 4;
+      const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+      const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+      if (dx !== 0 || dy !== 0) {
+        e.preventDefault();
+        nudgeBlocksAction(
+          selectedIds,
+          dx, dy,
+          selectedIds.length > 1 ? "Mover blocos" : "Mover bloco",
+        );
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, config.blocks]);
+  }, [selectedIds, groupEditMemberId, config.blocks]);
 
-  // Snap guides — calcula linhas vermelhas quando alinhamento ≤ 6px
-  function computeGuides(activeId: string, x: number, y: number, w: number, h: number) {
-    const others = config.blocks.filter((b) => b.id !== activeId);
-    const TH = 6;
-    const v: number[] = [], hh: number[] = [];
-    const candidatesX = [0, CANVAS_W / 2, CANVAS_W];
-    const candidatesY = [0, CANVAS_H / 2, CANVAS_H];
-    others.forEach((b) => {
-      candidatesX.push(b.x, b.x + b.w / 2, b.x + b.w);
-      candidatesY.push(b.y, b.y + b.h / 2, b.y + b.h);
-    });
-    const checks = [x, x + w / 2, x + w];
-    const checksY = [y, y + h / 2, y + h];
-    for (const cx of candidatesX) for (const c of checks) if (Math.abs(cx - c) <= TH) v.push(cx);
-    for (const cy of candidatesY) for (const c of checksY) if (Math.abs(cy - c) <= TH) hh.push(cy);
-    setGuides({ v: Array.from(new Set(v)), h: Array.from(new Set(hh)) });
-  }
+  // Smart guides — compute lines + snap target for the dragging block.
+  // Snap is applied by react-rnd via onDrag's returned coords; we mutate
+  // d.x / d.y directly which Rnd respects on next frame.
+  const computeGuides = useCallback((activeIds: string[], x: number, y: number, w: number, h: number) => {
+    const excl = new Set(activeIds);
+    const others = boundsOf(config.blocks, excl);
+    const snap = computeSnap({ x, y, w, h }, others);
+    setGuides(snap.guides);
+    return snap;
+  }, [config.blocks]);
 
   // Templates
   const [tplOpen, setTplOpen] = useState(false);
