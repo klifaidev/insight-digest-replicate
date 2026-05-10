@@ -652,7 +652,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     );
   } else if (ct === "bubble" || ct === "scatter") {
     // A.4 — bubble/scatter use measureX/measureY/measure(size) when set
-    const dim = block.breakdown ?? "marca";
+    const dim = seriesDim ?? "marca";
     const sizeRanking = ranking; // ranks by primary measure (drives size)
     const xRanking = style.measureX
       ? computeTopRanking(dsRows, block.filters, dim, style.measureX, 50, "all", null)
