@@ -584,9 +584,11 @@ function BlockSpecificEditor({ block, onChange }: {
 
     case "kpi":
       return <FilteredInspector
+        block={selected!}
         design={<KpiInspector block={block} onChange={onChange} />}
         filters={block.filters ?? {}}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
 
     case "image":
@@ -640,30 +642,38 @@ function BlockSpecificEditor({ block, onChange }: {
 
     case "bridge":
       return <FilteredInspector
+        block={block}
         design={<BridgeBlockEditor block={block} onChange={onChange} />}
         filters={block.filters}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
 
     case "table":
       return <FilteredInspector
+        block={block}
         design={<TableBlockEditor block={block} onChange={onChange} />}
         filters={block.filters}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
 
     case "chart":
       return <FilteredInspector
+        block={block}
         design={<ChartBlockEditor block={block} onChange={onChange} />}
         filters={block.filters}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
 
     case "topSku":
       return <FilteredInspector
+        block={block}
         design={<TopSkuBlockEditor block={block} onChange={onChange} />}
         filters={block.filters}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
   }
 }
