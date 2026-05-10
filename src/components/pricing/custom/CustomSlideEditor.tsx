@@ -83,6 +83,8 @@ import {
   deleteBlocksAction, duplicateBlocksAction,
   patchBlocksAction, nudgeBlocksAction,
   alignBlocksAction, groupBlocksAction, ungroupBlocksAction,
+  resizeGroupAction,
+  copyChartStyleAction, pasteChartStyleAction, useCopiedStyle,
   type AlignKind,
 } from "./editorStore";
 import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
