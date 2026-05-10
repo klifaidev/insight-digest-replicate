@@ -134,6 +134,53 @@ export interface WaterfallStyleCfg {
   classify: Record<string, "positive" | "negative" | "total">;
 }
 
+export interface FunnelStyleCfg {
+  direction: "ttb" | "btt";
+  gapPct: number;
+  labelMode: "value" | "percent" | "name" | "name-percent";
+  slices: Record<string, { color?: string }>;
+}
+
+export interface TreemapStyleCfg {
+  colorScheme: "categorical" | "gradient";
+  gradientFrom: string;
+  gradientTo: string;
+  showCategoryLabel: boolean;
+  showValueLabel: boolean;
+  labelSize: number;
+  labelColor: string;
+  borderColor: string;
+  borderWidth: number;
+}
+
+export interface RadarStyleCfg {
+  fillArea: boolean;
+  fillOpacity: number; // 0..1
+  gridShape: "polygon" | "circle";
+  gridColor: string;
+  axisLabelSize: number;
+  axisLabelColor: string;
+}
+
+export interface HistogramStyleCfg {
+  bins: number;
+  binWidth: number | null;
+  barColor: string;
+  borderColor: string;
+  borderWidth: number;
+  cumulative: boolean;
+}
+
+export interface BoxplotStyleCfg {
+  boxFillColor: string;
+  whiskerColor: string;
+  whiskerWidth: number;
+  medianColor: string;
+  medianWidth: number;
+  showMean: boolean;
+  showOutliers: boolean;
+}
+
 export interface ChartStyle {
   general: GeneralStyle;
   xAxis: AxisStyle;
@@ -147,6 +194,11 @@ export interface ChartStyle {
   bubble: BubbleStyleCfg;
   area: AreaStyleCfg;
   waterfall: WaterfallStyleCfg;
+  funnel: FunnelStyleCfg;
+  treemap: TreemapStyleCfg;
+  radar: RadarStyleCfg;
+  histogram: HistogramStyleCfg;
+  boxplot: BoxplotStyleCfg;
   /** Bubble/scatter only — second measure for Y when X is the first */
   measureY?: KpiMeasureId;
   /** Combo only — measure used by line series */
