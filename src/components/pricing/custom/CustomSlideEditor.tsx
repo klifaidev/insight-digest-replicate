@@ -90,6 +90,7 @@ import {
 } from "./editorStore";
 import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
 import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
+import { PresentationMode } from "./PresentationMode";
 
 type Icon = React.ComponentType<{ className?: string }>;
 
