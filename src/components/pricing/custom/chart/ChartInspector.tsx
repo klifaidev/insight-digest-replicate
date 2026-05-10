@@ -52,8 +52,21 @@ export function ChartInspector({
         <Row label="Medida">
           <SelectField value={block.measure}
             onChange={(v) => onChange({ measure: v as KpiMeasureId })}
-            options={KPI_MEASURES.map((m) => ({ value: m.id, label: m.label }))} />
+            options={KPI_MEASURES.map((m) => ({
+              value: m.id,
+              label: m.label,
+              disabled: block.dataSource === "budget"
+                && BUDGET_UNAVAILABLE_MEASURES.includes(m.id),
+              title: block.dataSource === "budget"
+                && BUDGET_UNAVAILABLE_MEASURES.includes(m.id)
+                ? BUDGET_UNAVAILABLE_HINT : undefined,
+            }))} />
         </Row>
+        {block.dataSource === "budget" && (
+          <p className="text-[10px] leading-snug text-muted-foreground">
+            {BUDGET_UNAVAILABLE_HINT}
+          </p>
+        )}
         <Row label="Quebrar por">
           <SelectField value={block.breakdown ?? "__none__"}
             onChange={(v) => onChange({ breakdown: v === "__none__" ? null : v })}
