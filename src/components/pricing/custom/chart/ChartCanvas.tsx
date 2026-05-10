@@ -12,6 +12,8 @@ import {
 } from "recharts";
 import type { ChartBlock } from "@/lib/customSlide";
 import { KPI_MEASURES } from "@/lib/customSlide";
+import type { PricingRow } from "@/lib/types";
+import { applyFilters, calcPVM } from "@/lib/analytics";
 
 const KPI_MEASURES_LABEL: Record<string, string> = Object.fromEntries(
   KPI_MEASURES.map((m) => [m.id, m.label]),
