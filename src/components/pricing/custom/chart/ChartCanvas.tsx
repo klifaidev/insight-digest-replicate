@@ -226,7 +226,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         })}
       </BarChart>
     );
-  } else if (block.chartType === "hbar") {
+  } else if (ct === "hbar" || ct === "stackedBar") {
+    const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
       <BarChart data={rows} layout="vertical"
         barCategoryGap={`${style.bar.gapPct}%`}>
@@ -241,14 +242,15 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const color = colorForSeries(style, s.name, i);
           return (
             <Bar key={s.name} dataKey={s.name} fill={color}
+              stackId={stacked ? "stack" : undefined}
               radius={style.bar.cornerRadius}
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth} />
           );
         })}
       </BarChart>
     );
-  } else if (block.chartType === "pie" || block.chartType === "donut") {
-    const inner = block.chartType === "donut"
+  } else if (ct === "pie" || ct === "donut") {
+    const inner = ct === "donut"
       ? `${Math.max(0, Math.min(80, style.pie.donutHolePct))}%` : 0;
     const labelKey = style.pie.labelMode;
     chart = (
@@ -278,7 +280,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         </Pie>
       </PieChart>
     );
-  } else if (block.chartType === "bubble" || block.chartType === "scatter") {
+  } else if (ct === "bubble" || ct === "scatter") {
     const points = ranking.map((r, i) => ({ x: i + 1, y: r.value, z: r.value, name: r.name }));
     chart = (
       <ScatterChart>
@@ -288,7 +290,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         <YAxis type="number" dataKey="y" name="valor"
           tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }}
           tickFormatter={axisFmt(yAx, measureFmt)} />
-        {block.chartType === "bubble" && (
+        {ct === "bubble" && (
           <ZAxis type="number" dataKey="z" range={[style.bubble.minSize, style.bubble.maxSize]} />
         )}
         <Tooltip cursor={{ strokeDasharray: "3 3" }} />
@@ -302,8 +304,95 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         </Scatter>
       </ScatterChart>
     );
-  } else if (block.chartType === "waterfall") {
+  } else if (ct === "waterfall") {
     chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} />;
+  } else if (ct === "funnel") {
+    const fdata = ranking.map((r, i) => ({
+      name: r.name, value: r.value,
+      fill: DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
+    }));
+    chart = (
+      <FunnelChart>
+        <Tooltip />
+        <Funnel dataKey="value" data={fdata} isAnimationActive>
+          <LabelList position="right" fill={style.dataLabels.color}
+            stroke="none" dataKey="name" style={{ fontSize: style.dataLabels.size }} />
+        </Funnel>
+      </FunnelChart>
+    );
+  } else if (ct === "treemap") {
+    const tdata = ranking.map((r, i) => ({
+      name: r.name, size: Math.abs(r.value),
+      fill: DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
+    }));
+    chart = (
+      <Treemap data={tdata} dataKey="size" nameKey="name" stroke="#fff"
+        fill={DEFAULT_PALETTE[0]} aspectRatio={4 / 3} />
+    );
+  } else if (ct === "radar") {
+    chart = (
+      <RadarChart data={rows} outerRadius="80%">
+        <PolarGrid stroke={style.grid.color} />
+        <PolarAngleAxis dataKey="__period"
+          tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }} />
+        <PolarRadiusAxis tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }}
+          tickFormatter={axisFmt(yAx, measureFmt)} />
+        <Tooltip />
+        {renderLegend}
+        {data.series.map((s, i) => {
+          const color = colorForSeries(style, s.name, i);
+          return (
+            <Radar key={s.name} dataKey={s.name} stroke={color} fill={color}
+              fillOpacity={0.35} />
+          );
+        })}
+      </RadarChart>
+    );
+  } else if (ct === "histogram") {
+    const s0 = data.series[0];
+    const vals = s0 ? s0.values.filter((v) => isFinite(v)) : [];
+    const min = vals.length ? Math.min(...vals) : 0;
+    const max = vals.length ? Math.max(...vals) : 1;
+    const bins = 10;
+    const w = (max - min) / bins || 1;
+    const buckets = Array.from({ length: bins }, (_, i) => ({
+      bin: `${(min + i * w).toFixed(0)}`,
+      count: 0,
+    }));
+    vals.forEach((v) => {
+      const idx = Math.min(bins - 1, Math.floor((v - min) / w));
+      buckets[idx].count++;
+    });
+    chart = (
+      <BarChart data={buckets} barCategoryGap="2%">
+        {renderGrid}
+        <XAxis dataKey="bin" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }} />
+        <YAxis tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
+        <Tooltip />
+        <Bar dataKey="count" fill={DEFAULT_PALETTE[0]}
+          stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth} />
+      </BarChart>
+    );
+  } else if (ct === "boxplot") {
+    const stats = data.series.map((s) => {
+      const sorted = [...s.values].filter((v) => isFinite(v)).sort((a, b) => a - b);
+      const q = (p: number) => sorted[Math.floor((sorted.length - 1) * p)] ?? 0;
+      return {
+        name: s.name, q1: q(0.25), iqr: q(0.75) - q(0.25),
+      };
+    });
+    chart = (
+      <ComposedChart data={stats}>
+        {renderGrid}
+        <XAxis dataKey="name" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }} />
+        <YAxis tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }}
+          tickFormatter={axisFmt(yAx, measureFmt)} />
+        <Tooltip />
+        {renderLegend}
+        <Bar dataKey="q1" stackId="bp" fill="transparent" />
+        <Bar dataKey="iqr" stackId="bp" fill={DEFAULT_PALETTE[0]} name="IQR" />
+      </ComposedChart>
+    );
   }
 
   return (
