@@ -226,6 +226,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const refreshUserTpls = () => setUserTpls(loadUserTemplates());
 
   return (
+    <SlideFilterProvider slideKey={slideId}>
     <div className="grid h-full min-h-0 grid-cols-[180px_minmax(0,1fr)_300px] gap-3">
       {/* ====== Paleta ====== */}
       <ScrollArea className="rounded-lg border border-border/40 bg-card/40">
