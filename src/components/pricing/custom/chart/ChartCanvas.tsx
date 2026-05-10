@@ -162,9 +162,11 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     [block.dataSource, pricing, budget],
   );
   const xDim = block.fieldWells?.xDim ?? null;
+  // C1 — colorDim overrides breakdown as series-key generator
+  const seriesDim = block.fieldWells?.colorDim ?? block.breakdown;
   const raw = useMemo(
-    () => computeChartSeries(dsRows, block.filters, block.measure, block.breakdown, xDim),
-    [dsRows, block.filters, block.measure, block.breakdown, xDim],
+    () => computeChartSeries(dsRows, block.filters, block.measure, seriesDim, xDim),
+    [dsRows, block.filters, block.measure, seriesDim, xDim],
   );
   const data = useMemo(() => {
     const ranked = [...raw.series].sort((a, z) =>
