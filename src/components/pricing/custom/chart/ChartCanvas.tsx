@@ -71,11 +71,11 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const ranking = useMemo(() => {
     if (!rankingTypes.includes(block.chartType)) return [];
     return computeTopRanking(
-      pricing, block.filters,
+      rows, block.filters,
       block.breakdown ?? "marca",
       block.measure, 50, "all", null,
     );
-  }, [pricing, block.filters, block.breakdown, block.measure, block.chartType]);
+  }, [rows, block.filters, block.breakdown, block.measure, block.chartType]);
 
   // ---- empty states ----
   const seriesEmpty = data.periodos.length === 0 || data.series.length === 0;
