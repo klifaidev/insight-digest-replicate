@@ -205,8 +205,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // Combo: optional second measure for line series
   const lineSeriesData = useMemo(() => {
     if (block.chartType !== "combo" || !style.measureLine) return null;
-    return computeChartSeries(dsRows, block.filters, style.measureLine, block.breakdown);
-  }, [block.chartType, style.measureLine, dsRows, block.filters, block.breakdown]);
+    return computeChartSeries(dsRows, block.filters, style.measureLine, seriesDim);
+  }, [block.chartType, style.measureLine, dsRows, block.filters, seriesDim]);
 
   // ---- ranking-style data for pie/donut/bubble/scatter/funnel/treemap ----
   const rankingTypes = ["pie", "donut", "bubble", "scatter", "funnel", "treemap"];
