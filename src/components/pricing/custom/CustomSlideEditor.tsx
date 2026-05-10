@@ -20,16 +20,22 @@ import {
   ArrowDown, ArrowUp, Copy as CopyIcon, GitBranch, Image as ImageIcon,
   Layers as LayersIcon, Plus, Square, Table as TableIcon,
   Trash2, Type as TypeIcon, AlignLeft, ZoomIn, ZoomOut, Maximize2,
-  BarChart3, Trophy, BookOpen, Save, X,
+  BarChart3, Trophy, BookOpen, Save, X, ChevronDown,
+  LineChart as LineChartIcon, BarChart as BarIcon, BarChartHorizontal,
+  AreaChart as AreaIcon, PieChart as PieIcon, CircleDot,
+  ScatterChart as ScatterIcon, Circle, Filter as FunnelIcon,
+  Combine, Network, Radar as RadarIcon, Box as BoxIcon,
+  BarChart2, Hash,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 
 import {
   CANVAS_W, CANVAS_H, FOOTER_H,
-  newBlock, BLOCK_LABELS, KPI_MEASURES,
-  type CustomBlock, type CustomBlockKind, type CustomSlideConfig,
+  newBlock, newChartBlock, BLOCK_LABELS, KPI_MEASURES,
+  type CustomBlock, type CustomBlockKind, type CustomChartType, type CustomSlideConfig,
   type KpiBlock, type ChartBlock, type TopSkuBlock,
 } from "@/lib/customSlide";
 import { BlockRenderer, CUSTOM_TABLE_MEASURES, CUSTOM_TABLE_DIMS } from "./BlockRenderer";
@@ -52,16 +58,42 @@ import { buildUnifiedRows } from "@/lib/pivotData";
 import type { Filters } from "@/lib/types";
 import { BlockFilters } from "./BlockFilters";
 
-const BLOCK_KINDS: { kind: CustomBlockKind; icon: React.ComponentType<{ className?: string }> }[] = [
-  { kind: "title",  icon: TypeIcon },
-  { kind: "text",   icon: AlignLeft },
-  { kind: "kpi",    icon: LayersIcon },
-  { kind: "chart",  icon: BarChart3 },
-  { kind: "topSku", icon: Trophy },
-  { kind: "bridge", icon: GitBranch },
-  { kind: "table",  icon: TableIcon },
-  { kind: "image",  icon: ImageIcon },
-  { kind: "shape",  icon: Square },
+type Icon = React.ComponentType<{ className?: string }>;
+
+// Group 1 — Charts (and chart-like data viz: KPI Card + Table + Bridge)
+const CHART_PALETTE: ({ id: string; label: string; icon: Icon } & (
+  | { kind: "chart"; chartType: CustomChartType }
+  | { kind: Exclude<CustomBlockKind, "chart"> }
+))[] = [
+  { id: "line",          kind: "chart", chartType: "line",          label: "Linha",            icon: LineChartIcon },
+  { id: "column",        kind: "chart", chartType: "column",        label: "Coluna",           icon: BarChart3 },
+  { id: "stackedColumn", kind: "chart", chartType: "stackedColumn", label: "Coluna Empilhada", icon: BarChart3 },
+  { id: "hbar",          kind: "chart", chartType: "hbar",          label: "Barra",            icon: BarChartHorizontal },
+  { id: "stackedBar",    kind: "chart", chartType: "stackedBar",    label: "Barra Empilhada",  icon: BarChartHorizontal },
+  { id: "area",          kind: "chart", chartType: "area",          label: "Área",             icon: AreaIcon },
+  { id: "stackedArea",   kind: "chart", chartType: "stackedArea",   label: "Área Empilhada",   icon: AreaIcon },
+  { id: "pie",           kind: "chart", chartType: "pie",           label: "Pizza",            icon: PieIcon },
+  { id: "donut",         kind: "chart", chartType: "donut",         label: "Rosca",            icon: CircleDot },
+  { id: "scatter",       kind: "chart", chartType: "scatter",       label: "Dispersão",        icon: ScatterIcon },
+  { id: "bubble",        kind: "chart", chartType: "bubble",        label: "Bolha",            icon: Circle },
+  { id: "funnel",        kind: "chart", chartType: "funnel",        label: "Funil",            icon: FunnelIcon },
+  { id: "combo",         kind: "chart", chartType: "combo",         label: "Combinado",        icon: Combine },
+  { id: "treemap",       kind: "chart", chartType: "treemap",       label: "Mapa de Árvore",   icon: Network },
+  { id: "radar",         kind: "chart", chartType: "radar",         label: "Radar",            icon: RadarIcon },
+  { id: "boxplot",       kind: "chart", chartType: "boxplot",       label: "Caixa",            icon: BoxIcon },
+  { id: "histogram",     kind: "chart", chartType: "histogram",     label: "Histograma",       icon: BarChart2 },
+  { id: "waterfall",     kind: "chart", chartType: "waterfall",     label: "Bridge",           icon: GitBranch },
+  { id: "table",         kind: "table", label: "Tabela",                                       icon: TableIcon },
+  { id: "kpi",           kind: "kpi",   label: "KPI Card",                                     icon: Hash },
+];
+
+// Group 2 — Visual elements
+const ELEMENT_PALETTE: { id: string; kind: CustomBlockKind; label: string; icon: Icon }[] = [
+  { id: "title",  kind: "title",  label: "Título",      icon: TypeIcon },
+  { id: "text",   kind: "text",   label: "Texto",       icon: AlignLeft },
+  { id: "image",  kind: "image",  label: "Imagem",      icon: ImageIcon },
+  { id: "shape",  kind: "shape",  label: "Forma",       icon: Square },
+  { id: "topSku", kind: "topSku", label: "Top Ranking", icon: Trophy },
 ];
 
 interface Props {
@@ -118,6 +150,11 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
     update(config.blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as CustomBlock) : b)));
   const addBlock = (kind: CustomBlockKind) => {
     const blk = newBlock(kind, zTop);
+    update([...config.blocks, blk]);
+    setSelectedId(blk.id);
+  };
+  const addChart = (chartType: CustomChartType) => {
+    const blk = newChartBlock(chartType, zTop);
     update([...config.blocks, blk]);
     setSelectedId(blk.id);
   };
@@ -204,19 +241,31 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             <Save className="h-3.5 w-3.5" /> Salvar como modelo
           </Button>
           <Separator className="my-2" />
-          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Adicionar bloco
-          </div>
-          {BLOCK_KINDS.map(({ kind, icon: Icon }) => (
-            <button
-              key={kind}
-              onClick={() => addBlock(kind)}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-left hover:bg-secondary"
-            >
-              <Icon className="h-3.5 w-3.5 text-primary" />
-              {BLOCK_LABELS[kind]}
-            </button>
-          ))}
+
+          <PaletteGroup title="Gráficos" defaultOpen>
+            {CHART_PALETTE.map((it) => (
+              <PaletteButton
+                key={it.id}
+                icon={it.icon}
+                label={it.label}
+                onClick={() => it.kind === "chart" ? addChart(it.chartType) : addBlock(it.kind)}
+              />
+            ))}
+          </PaletteGroup>
+
+          <Separator className="my-2" />
+
+          <PaletteGroup title="Elementos" defaultOpen>
+            {ELEMENT_PALETTE.map((it) => (
+              <PaletteButton
+                key={it.id}
+                icon={it.icon}
+                label={it.label}
+                onClick={() => addBlock(it.kind)}
+              />
+            ))}
+          </PaletteGroup>
+
           <Separator className="my-2" />
           <div className="flex items-center justify-between px-2 text-[11px]">
             <span className="text-muted-foreground">Faixa Harald</span>
@@ -1073,3 +1122,33 @@ function TruncationAlert({ blockId, fit, unitPlural }: {
   );
 }
 
+function PaletteGroup({
+  title, defaultOpen = true, children,
+}: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex w-full items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+        <span>{title}</span>
+        <ChevronDown className={cn("h-3 w-3 transition-transform", open ? "" : "-rotate-90")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex flex-col gap-0.5 pt-1">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function PaletteButton({
+  icon: Icon, label, onClick,
+}: { icon: Icon; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-medium text-left hover:bg-secondary"
+    >
+      <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
