@@ -215,6 +215,7 @@ export function ChartTooltip(props: {
       <div style={card}>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>{p?.name}</div>
         <div>{fmt(v)} <span style={{ opacity: 0.7 }}>({((v / total) * 100).toFixed(1)}%)</span></div>
+        {extraLine}
       </div>
     );
   }
@@ -234,6 +235,7 @@ export function ChartTooltip(props: {
         {prev != null && prev !== 0 && (
           <div style={{ opacity: 0.75 }}>{((v / prev) * 100).toFixed(1)}% do anterior</div>
         )}
+        {extraLine}
       </div>
     );
   }
@@ -245,6 +247,7 @@ export function ChartTooltip(props: {
         <div>X: {fmt(p?.x ?? 0)}</div>
         <div>Y: {fmt(p?.y ?? 0)}</div>
         {variant === "bubble" && <div>Tamanho: {fmt(p?.z ?? 0)}</div>}
+        {extraLine}
       </div>
     );
   }
@@ -256,6 +259,7 @@ export function ChartTooltip(props: {
         <div style={{ fontWeight: 700, marginBottom: 4 }}>{label ?? r.label}</div>
         <div>Δ {fmt(r.signed ?? r.delta ?? 0)}</div>
         <div style={{ opacity: 0.75 }}>Acumulado: {fmt(r.end ?? 0)}</div>
+        {extraLine}
       </div>
     );
   }
@@ -291,6 +295,7 @@ export function ChartTooltip(props: {
             </div>
           );
         })}
+      {extraLine}
     </div>
   );
 }
