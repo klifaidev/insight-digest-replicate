@@ -414,7 +414,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = (
       <Comp data={chartRows}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
@@ -516,7 +516,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <BarChart data={rows} layout="horizontal"
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
@@ -560,7 +560,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           stroke={yAx.lineColor} strokeWidth={yAx.lineWidth}
           label={yAx.titleText ? { value: yAx.titleText, angle: -90, position: "insideLeft",
             style: { fontSize: yAx.titleSize, fill: yAx.titleColor } } : undefined} />
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
@@ -647,7 +647,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = (
       <PieChart>
         <Tooltip content={(p: any) => (
-          <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="pie" pieTotal={pieTotal} />
+          <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="pie" pieTotal={pieTotal} additionalRow={tooltipExtra ?? undefined} />
         )} />
         {renderLegend}
         <Pie data={ranking} isAnimationActive={false} dataKey="value" nameKey="name"
@@ -714,7 +714,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           <ZAxis type="number" dataKey="z" range={[style.bubble.minSize, style.bubble.maxSize]} />
         )}
         <Tooltip cursor={{ strokeDasharray: "3 3" }}
-          content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant={ct === "bubble" ? "bubble" : "scatter"} />} />
+          content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant={ct === "bubble" ? "bubble" : "scatter"} additionalRow={tooltipExtra ?? undefined} />} />
         {renderLegend}
         <Scatter data={points} isAnimationActive={false} fill={DEFAULT_PALETTE[0]}
           fillOpacity={style.bubble.fillOpacity}
@@ -779,7 +779,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }} />
         <PolarRadiusAxis tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }}
           tickFormatter={axisFmt(yAx, measureFmt)} />
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
@@ -853,7 +853,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           <YAxis yAxisId="right" orientation="right"
             tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
         )}
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {seriesList.map((s, i) => {
@@ -1049,7 +1049,7 @@ function WaterfallChart({
       <YAxis tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
         domain={[yMin, yMax]}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="waterfall" />} />
+      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="waterfall" additionalRow={tooltipExtra ?? undefined} />} />
       {renderRefLines(style)}
       {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => (
         <ReferenceLine key={`c-${i}`} segment={[
