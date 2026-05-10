@@ -633,6 +633,7 @@ export function ChartInspector({
       {/* ===== Type-specific: Waterfall ===== */}
       {ct === "waterfall" && (
         <Section title="Waterfall">
+          <PvmBridgePicker block={block} style={style} dsRows={dsRows} updPath={updPath} />
           <Row label="Cor positiva"><ColorField value={style.waterfall.positiveColor}
             onChange={(c) => updPath("waterfall", { positiveColor: c })} /></Row>
           <Row label="Cor negativa"><ColorField value={style.waterfall.negativeColor}
