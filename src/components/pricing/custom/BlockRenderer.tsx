@@ -199,7 +199,9 @@ function TableRender({ block: b }: { block: TableBlock }) {
   const budget = useBudget((s) => s.rows);
 
   const data = useMemo(() => {
-    const unified = buildUnifiedRows(pricing, budget, "real");
+    const isBudget = b.dataSource === "budget";
+    const realRows = isBudget ? budgetRowsAsPricing(budget) : pricing;
+    const unified = buildUnifiedRows(realRows, [], "real");
     const measures = CUSTOM_TABLE_MEASURES.filter((m) => b.measures.includes(m.id));
     if (measures.length === 0) return null;
     const cfg: PivotConfig = {
