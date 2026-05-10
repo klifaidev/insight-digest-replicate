@@ -506,6 +506,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         </DialogContent>
       </Dialog>
     </div>
+    </SlideFilterProvider>
   );
 }
 
