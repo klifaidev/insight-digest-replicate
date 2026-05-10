@@ -26,6 +26,7 @@ import {
   ScatterChart as ScatterIcon, Circle, Filter as FunnelIcon,
   Combine, Network, Radar as RadarIcon, Box as BoxIcon,
   BarChart2, Hash,
+  Undo2, Redo2, Lock, Unlock, ChevronUp, ChevronsUp, ChevronsDown,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -59,6 +60,20 @@ import { computePivot, type PivotConfig } from "@/lib/pivot";
 import { buildUnifiedRows } from "@/lib/pivotData";
 import type { Filters } from "@/lib/types";
 import { BlockFilters } from "./BlockFilters";
+import {
+  ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem,
+  ContextMenuSeparator, ContextMenuShortcut,
+} from "@/components/ui/context-menu";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  useEditorBinding, useUndoRedoState,
+  addBlockAction, addChartBlockAction, deleteBlockAction, duplicateBlockAction,
+  patchBlockAction, bringForwardAction, sendBackAction, bringToFrontAction,
+  sendToBackAction, toggleLockAction, undo as undoAction, redo as redoAction,
+  setShowHaraldFooter as setShowHaraldFooterAction,
+} from "./editorStore";
 
 type Icon = React.ComponentType<{ className?: string }>;
 
@@ -147,49 +162,69 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const selected = config.blocks.find((b) => b.id === selectedId) ?? null;
   const zTop = config.blocks.reduce((m, b) => Math.max(m, b.z), 0);
 
-  const update = (next: CustomBlock[]) => onChange({ ...config, blocks: next });
-  const updateBlock = (id: string, patch: Partial<CustomBlock>) =>
-    update(config.blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as CustomBlock) : b)));
+  // Bind the parent's config <-> internal Zustand+temporal store.
+  useEditorBinding(config, onChange, slideId);
+  const undoRedo = useUndoRedoState();
+
+  const updateBlock = (id: string, patch: Partial<CustomBlock>) => {
+    // Decide undo bucket based on which fields changed.
+    const keys = Object.keys(patch);
+    const isMove = keys.every((k) => k === "x" || k === "y");
+    const isResize = keys.some((k) => k === "w" || k === "h");
+    const isOrder = keys.length === 1 && keys[0] === "z";
+    const isLock = keys.length === 1 && keys[0] === "locked";
+    const label = isLock ? "Bloquear / Desbloquear"
+      : isOrder ? "Alterar ordem"
+      : isResize ? "Redimensionar bloco"
+      : isMove ? "Mover bloco"
+      : "Alterar dados";
+    patchBlockAction(id, patch, label);
+  };
   const addBlock = (kind: CustomBlockKind) => {
-    const blk = newBlock(kind, zTop);
-    update([...config.blocks, blk]);
-    setSelectedId(blk.id);
+    const id = addBlockAction(kind);
+    if (id) setSelectedId(id);
   };
   const addChart = (chartType: CustomChartType) => {
-    const blk = newChartBlock(chartType, zTop);
-    update([...config.blocks, blk]);
-    setSelectedId(blk.id);
+    const id = addChartBlockAction(chartType);
+    if (id) setSelectedId(id);
   };
   const removeBlock = (id: string) => {
-    update(config.blocks.filter((b) => b.id !== id));
-    setSelectedId(null);
+    deleteBlockAction(id);
+    setSelectedId((cur) => (cur === id ? null : cur));
   };
   const duplicateBlock = (id: string) => {
-    const orig = config.blocks.find((b) => b.id === id);
-    if (!orig) return;
-    const clone = { ...JSON.parse(JSON.stringify(orig)), id: crypto.randomUUID(),
-      x: orig.x + 20, y: orig.y + 20, z: zTop + 1 } as CustomBlock;
-    update([...config.blocks, clone]);
-    setSelectedId(clone.id);
+    const newId = duplicateBlockAction(id);
+    if (newId) setSelectedId(newId);
   };
-  const bringForward = (id: string) =>
-    updateBlock(id, { z: zTop + 1 } as Partial<CustomBlock>);
-  const sendBack = (id: string) => {
-    const minZ = config.blocks.reduce((m, b) => Math.min(m, b.z), 0);
-    updateBlock(id, { z: minZ - 1 } as Partial<CustomBlock>);
-  };
+  const bringForward = (id: string) => bringForwardAction(id);
+  const sendBack = (id: string) => sendBackAction(id);
+  const bringToFront = (id: string) => bringToFrontAction(id);
+  const sendToBack = (id: string) => sendToBackAction(id);
+  const toggleLock = (id: string) => toggleLockAction(id);
 
   // Atalhos de teclado
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const inField = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+
+      // Undo / redo work even without a selection and outside text fields only.
+      if (!inField && (e.metaKey || e.ctrlKey)) {
+        const k = e.key.toLowerCase();
+        if (k === "z" && !e.shiftKey) { e.preventDefault(); undoAction(); return; }
+        if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); redoAction(); return; }
+      }
+      if (inField) return;
       if (!selectedId) return;
       const cur = config.blocks.find((b) => b.id === selectedId);
       if (!cur) return;
+      const isLocked = !!cur.locked;
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeBlock(selectedId); return; }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") { e.preventDefault(); duplicateBlock(selectedId); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key === "]") { e.preventDefault(); bringForward(selectedId); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key === "[") { e.preventDefault(); sendBack(selectedId); return; }
       if (e.key === "Escape") { setSelectedId(null); return; }
+      if (isLocked) return; // Locked blocks ignore arrow-key nudges.
       const step = e.shiftKey ? 10 : 1;
       if (e.key === "ArrowUp")    { e.preventDefault(); updateBlock(selectedId, { y: Math.max(0, cur.y - step) }); }
       if (e.key === "ArrowDown")  { e.preventDefault(); updateBlock(selectedId, { y: Math.min(CANVAS_H - cur.h, cur.y + step) }); }
@@ -274,11 +309,11 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             <span className="text-muted-foreground">Faixa Harald</span>
             <Switch
               checked={config.showHaraldFooter}
-              onCheckedChange={(v) => onChange({ ...config, showHaraldFooter: v })}
+              onCheckedChange={(v) => setShowHaraldFooterAction(v)}
             />
           </div>
           <p className="mt-2 px-2 text-[10px] leading-relaxed text-muted-foreground">
-            Atalhos: <kbd>Del</kbd> excluir · <kbd>⌘D</kbd> duplicar · <kbd>setas</kbd> mover (Shift = 10px)
+            Atalhos: <kbd>⌘Z</kbd> desfazer · <kbd>⌘⇧Z</kbd> refazer · <kbd>Del</kbd> excluir · <kbd>⌘D</kbd> duplicar · <kbd>⌘]</kbd>/<kbd>⌘[</kbd> ordem · <kbd>setas</kbd> mover (Shift = 10px)
           </p>
         </div>
       </ScrollArea>
@@ -322,44 +357,99 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
               }}
             >
               {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => (
-                <Rnd
-                  key={blk.id}
-                  size={{ width: blk.w, height: blk.h }}
-                  position={{ x: blk.x, y: blk.y }}
-                  bounds="parent"
-                  dragGrid={[5, 5]}
-                  resizeGrid={[5, 5]}
-                  scale={scale}
-                  onDrag={(_, d) => computeGuides(blk.id, d.x, d.y, blk.w, blk.h)}
-                  onResize={(_, __, refEl, ___, pos) =>
-                    computeGuides(blk.id, pos.x, pos.y, parseInt(refEl.style.width, 10), parseInt(refEl.style.height, 10))
-                  }
-                  onDragStop={(_, d) => { setGuides({ v: [], h: [] }); updateBlock(blk.id, { x: d.x, y: d.y }); }}
-                  onResizeStop={(_, __, refEl, ___, pos) => {
-                    setGuides({ v: [], h: [] });
-                    updateBlock(blk.id, {
-                      w: parseInt(refEl.style.width, 10),
-                      h: parseInt(refEl.style.height, 10),
-                      x: pos.x, y: pos.y,
-                    });
-                  }}
-                  onMouseDown={(e) => { e.stopPropagation(); setSelectedId(blk.id); }}
-                  style={{ zIndex: blk.z }}
-                  className={cn(
-                    "group/block",
-                    selectedId === blk.id
-                      ? "outline outline-2 outline-offset-1 outline-primary"
-                      : "outline outline-1 outline-transparent hover:outline-primary/40",
-                  )}
-                >
-                  <div data-block-id={blk.id} data-block-kind={blk.kind} style={{
-                    width: "100%", height: "100%",
-                    pointerEvents: blk.kind === "chart" ? "auto" : "none",
-                  }}>
-                    <BlockRenderer block={blk} />
-                  </div>
-                  <DataSourceBadge block={blk} />
-                </Rnd>
+                <ContextMenu key={blk.id}>
+                  <ContextMenuTrigger asChild>
+                    <Rnd
+                      size={{ width: blk.w, height: blk.h }}
+                      position={{ x: blk.x, y: blk.y }}
+                      bounds="parent"
+                      dragGrid={[5, 5]}
+                      resizeGrid={[5, 5]}
+                      scale={scale}
+                      disableDragging={!!blk.locked}
+                      enableResizing={!blk.locked}
+                      onDrag={(_, d) => computeGuides(blk.id, d.x, d.y, blk.w, blk.h)}
+                      onResize={(_, __, refEl, ___, pos) =>
+                        computeGuides(blk.id, pos.x, pos.y, parseInt(refEl.style.width, 10), parseInt(refEl.style.height, 10))
+                      }
+                      onDragStop={(_, d) => { setGuides({ v: [], h: [] }); updateBlock(blk.id, { x: d.x, y: d.y }); }}
+                      onResizeStop={(_, __, refEl, ___, pos) => {
+                        setGuides({ v: [], h: [] });
+                        updateBlock(blk.id, {
+                          w: parseInt(refEl.style.width, 10),
+                          h: parseInt(refEl.style.height, 10),
+                          x: pos.x, y: pos.y,
+                        });
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        const wasSelected = selectedId === blk.id;
+                        setSelectedId(blk.id);
+                        // Only nag on locked blocks that were already focused —
+                        // otherwise every selection click would toast.
+                        if (blk.locked && wasSelected && e.button === 0) {
+                          toast("Bloco bloqueado. Clique com botão direito para desbloquear.", { duration: 1800 });
+                        }
+                      }}
+                      style={{ zIndex: blk.z }}
+                      className={cn(
+                        "group/block",
+                        selectedId === blk.id
+                          ? "outline outline-2 outline-offset-1 outline-primary"
+                          : "outline outline-1 outline-transparent hover:outline-primary/40",
+                      )}
+                    >
+                      <div data-block-id={blk.id} data-block-kind={blk.kind} style={{
+                        width: "100%", height: "100%",
+                        pointerEvents: blk.kind === "chart" ? "auto" : "none",
+                      }}>
+                        <BlockRenderer block={blk} />
+                      </div>
+                      <DataSourceBadge block={blk} />
+                      {blk.locked && (
+                        <div
+                          data-export-hide="true"
+                          style={{
+                            position: "absolute", top: 4, right: 4,
+                            width: 18, height: 18, borderRadius: 4,
+                            background: "hsl(var(--background) / 0.9)",
+                            border: "1px solid hsl(var(--border))",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            zIndex: 999990, pointerEvents: "none",
+                          }}
+                          title="Bloco bloqueado"
+                        >
+                          <Lock className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      )}
+                    </Rnd>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-56">
+                    <ContextMenuItem onSelect={() => duplicateBlock(blk.id)}>
+                      Duplicar <ContextMenuShortcut>⌘D</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => removeBlock(blk.id)} className="text-destructive focus:text-destructive">
+                      Excluir <ContextMenuShortcut>Del</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={() => bringForward(blk.id)}>
+                      Trazer para frente <ContextMenuShortcut>⌘]</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => bringToFront(blk.id)}>
+                      Trazer para a frente de tudo
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => sendBack(blk.id)}>
+                      Enviar para trás <ContextMenuShortcut>⌘[</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => sendToBack(blk.id)}>
+                      Enviar para o fundo
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={() => toggleLock(blk.id)}>
+                      {blk.locked ? "Desbloquear posição" : "Bloquear posição"}
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))}
 
               {/* Snap guides overlay */}
@@ -393,8 +483,19 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
           </div>
         </div>
 
-        {/* Barra de zoom */}
+        {/* Barra de zoom + undo/redo */}
         <div className="flex shrink-0 items-center justify-center gap-1 rounded-lg border border-border/40 bg-card/40 px-2 py-1">
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={undoAction} disabled={!undoRedo.canUndo}
+            title={undoRedo.undoLabel ? `Desfazer: ${undoRedo.undoLabel.toLowerCase()}` : "Desfazer (⌘Z)"}>
+            <Undo2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={redoAction} disabled={!undoRedo.canRedo}
+            title={undoRedo.redoLabel ? `Refazer: ${undoRedo.redoLabel.toLowerCase()}` : "Refazer (⌘⇧Z)"}>
+            <Redo2 className="h-3.5 w-3.5" />
+          </Button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
           <Button size="icon" variant="ghost" className="h-7 w-7"
             onClick={() => setZoom(scale - 0.1)} title="Diminuir zoom">
             <ZoomOut className="h-3.5 w-3.5" />
@@ -446,6 +547,13 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                   </Button>
                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => duplicateBlock(selected.id)} title="Duplicar">
                     <CopyIcon className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7"
+                    onClick={() => toggleLock(selected.id)}
+                    title={selected.locked ? "Desbloquear posição" : "Bloquear posição"}>
+                    {selected.locked
+                      ? <Unlock className="h-3.5 w-3.5" />
+                      : <Lock className="h-3.5 w-3.5" />}
                   </Button>
                   <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => removeBlock(selected.id)} title="Remover">
                     <Trash2 className="h-3.5 w-3.5" />

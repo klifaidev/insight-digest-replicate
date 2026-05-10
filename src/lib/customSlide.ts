@@ -25,6 +25,8 @@ export interface BaseBlock {
   kind: CustomBlockKind;
   x: number; y: number; w: number; h: number;
   z: number;
+  /** Posição/tamanho bloqueados (move/resize desabilitados). Default false. */
+  locked?: boolean;
 }
 
 export interface TitleBlock extends BaseBlock {
