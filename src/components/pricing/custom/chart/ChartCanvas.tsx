@@ -876,7 +876,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <Treemap data={tdata} isAnimationActive={false} dataKey="size" nameKey="name"
         stroke={style.treemap.borderColor}
         aspectRatio={4 / 3}
-        content={<TreemapTile cfg={style.treemap} dl={style.dataLabels} fmt={measureFmt} />} />
+        onClick={(node: any) => handleEmit(node?.name)}
+        content={<TreemapTile cfg={style.treemap} dl={style.dataLabels} fmt={measureFmt} dimmedNames={ownFilter && ownFilter.dimension === emitDim ? new Set(ranking.map(r => r.name).filter(n => !ownFilter.values.includes(n))) : null} />} />
     );
   } else if (ct === "radar") {
     const polarGrid = (
