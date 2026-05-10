@@ -264,6 +264,34 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
   }
 }
 
+/** Cria um ChartBlock já com chartType específico (para a paleta de gráficos). */
+export function newChartBlock(chartType: CustomChartType, zTop: number): ChartBlock {
+  const base = newBlock("chart", zTop) as ChartBlock;
+  return { ...base, chartType, title: CHART_TYPE_LABELS[chartType] };
+}
+
+export const CHART_TYPE_LABELS: Record<CustomChartType, string> = {
+  line: "Linha",
+  area: "Área",
+  stackedArea: "Área Empilhada",
+  bar: "Coluna",
+  column: "Coluna Agrupada",
+  stackedColumn: "Coluna Empilhada",
+  hbar: "Barra",
+  stackedBar: "Barra Empilhada",
+  combo: "Combinado",
+  pie: "Pizza",
+  donut: "Rosca",
+  bubble: "Bolha",
+  scatter: "Dispersão",
+  waterfall: "Bridge",
+  funnel: "Funil",
+  treemap: "Mapa de Árvore",
+  radar: "Radar",
+  boxplot: "Caixa",
+  histogram: "Histograma",
+};
+
 export const BLOCK_LABELS: Record<CustomBlockKind, string> = {
   title: "Título",
   text: "Texto",
