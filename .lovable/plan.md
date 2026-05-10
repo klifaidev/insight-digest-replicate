@@ -1,66 +1,92 @@
-## Objetivo
+## Goal
 
-Resolver dois problemas no slide Personalizado:
+Transform the current chart block in the slide editor into a PowerPoint-grade chart system: more chart types, a dedicated **Design** panel per chart type with rich, dynamic, real-time controls, and exports that respect every setting.
 
-1. **Título cortado à direita** quando exportado (a captura PNG está estourando ou o canvas excede a largura útil).
-2. **Elementos não editáveis no PowerPoint** — hoje o slide vai como uma única imagem PNG. Quero que cada bloco vire um elemento nativo do PPTX (caixa de texto editável, tabela editável, forma, imagem) que possa ser movido, redimensionado e ter texto alterado direto no PowerPoint.
+Given the size of the request, I'll deliver this in **4 phases** so you can validate as we go. We can ship each phase independently.
 
-## Estratégia
+---
 
-Reescrever `src/lib/exportCustomSlide.tsx` para emitir **elementos nativos do pptxgenjs por bloco**, em vez de um único PNG. Isso resolve ambos os problemas: o título passa a ser uma caixa de texto real (sem corte por captura), e tudo fica editável.
+## Phase 1 — Foundation (data model + new editor architecture)
 
-Manter o sistema de coordenadas atual (1333×750 → 13.33"×7.5", divisor de 100).
+**Files touched:** `src/lib/customSlide.ts`, `src/components/pricing/custom/CustomSlideEditor.tsx`, new `src/components/pricing/custom/chart/*`
 
-## Mapeamento bloco → elemento PPTX
+1. Extend `ChartBlock` to a discriminated union by `chartType`:
+   `line | bar | column | hbar | pie | donut | bubble | area | scatter | combo | waterfall`.
+2. Add a shared `ChartStyle` object on every chart block:
+   - `general`: title (text, size, color, bold, italic, show), background, border (color, width), padding, legend (show, position).
+   - `axes`: x/y `{ show, labelSize, labelColor, titleText, titleSize, titleColor, ticks, lineColor, lineWidth, min, max, format }`, plus `secondaryY` for combo.
+   - `gridlines`: `{ show, color, style: solid|dashed }`.
+   - `dataLabels`: `{ show, position, size, color, autoContrast, bold, italic, format, showSeries, showCategory, bgColor, bgOpacity, borderColor, borderWidth }`.
+   - `series[]`: per-series overrides (color, lineStyle, thickness, marker, fillOpacity, smooth, areaFill, etc.).
+3. New right-panel architecture:
+   - Replace the current flat **Design** tab with a **chart inspector**: collapsible sections (`General`, `Axes`, `Series`, `Data Labels`, `Type-specific`).
+   - Sections render dynamically based on selected `chartType`.
+   - Reusable `ColorPicker` (HEX + opacity slider + brand palette from `index.css` tokens), `NumberStepper` (typing + ± buttons), `Toggle`, `Select`.
+4. State persisted per block (already the case); migration ensures old blocks get sensible defaults.
 
-| Bloco | Elemento PPTX | Editável? |
-|---|---|---|
-| `title` | `slide.addText` (bold, cor, alinhamento, tamanho) | ✅ texto + caixa |
-| `text` | `slide.addText` | ✅ texto + caixa |
-| `kpi` | 1 `addShape` (rect arredondado de fundo) + 2 `addText` (label e valor calculado) | ✅ tudo |
-| `shape` (rect) | `addShape` (rect/roundRect com fill e radius) | ✅ |
-| `shape` (line) | `addShape` line | ✅ |
-| `image` | `addImage` com data URL | ✅ (mover/redimensionar) |
-| `table` | `slide.addTable` com linhas/colunas calculadas via `computePivot` (mesmas medidas/dims do editor) | ✅ tabela nativa, células editáveis |
-| `chart` | `slide.addChart` (LINE ou BAR) com séries calculadas via `computeChartSeries` | ✅ gráfico nativo do PPT |
-| `topSku` | `slide.addTable` com ranking calculado via `computeTopRanking` | ✅ tabela nativa |
-| `bridge` | `slide.addChart` BAR empilhada (waterfall manual) usando dados do `calcPVM`. *Fallback*: se a montagem ficar ruim, capturar **apenas o bounding box do bloco** como PNG via host off-screen e inserir como imagem dimensionada — assim só a Bridge vira imagem, não o slide inteiro. | Parcial (gráfico nativo) ou imagem (fallback) |
+**Deliverable:** new chart inspector UI working for the existing `line`/`bar` types, no regressions.
 
-Footer Harald continua como `addImage` no rodapé.
+---
 
-## Detalhes do título cortado
+## Phase 2 — New chart types in the canvas (renderer)
 
-Hoje o título usa `w: 900, h: 70` em x=40, mas com `overflow: hidden` no DOM e `whiteSpace: nowrap` implícito quando vai pra captura escalada. Ao virar `addText` nativo, o PowerPoint controla wrap/auto-fit nativamente. Adicionalmente, ajustar default do título novo para `w: 1200` (margem segura ≈ 60 de cada lado).
+**Files touched:** `src/components/pricing/custom/BlockRenderer.tsx`, new `src/components/pricing/custom/chart/Renderers.tsx`
 
-## Cálculo dos dados no export
+Implement each renderer with **Recharts** (already in repo) + a custom Waterfall:
 
-A função export precisa ler os stores Zustand (`usePricing.getState()`, `useBudget.getState()`) — fora de componentes — para alimentar tabela/chart/bridge/topSku/kpi sem montar React. Reusar:
-- `computeKpiBlock` (já existe em `customKpi.ts`)
-- `computePivot` + `buildUnifiedRows`
-- `computeChartSeries`
-- `computeTopRanking`
-- `applyFilters` + `calcPVM` para Bridge
+- Pie / Donut (`PieChart`, donut via `innerRadius`).
+- Horizontal bar (`BarChart layout="vertical"`).
+- Bubble (`ScatterChart` with `ZAxis`).
+- Area (`AreaChart`, stacked/overlapping).
+- Scatter (`ScatterChart`).
+- Combo (line + bar via `ComposedChart`, secondary Y).
+- Waterfall (custom: stacked invisible base + colored deltas + connector segments).
 
-## Arquivos a editar
+All renderers consume the unified `ChartStyle` so design settings apply live.
 
-- `src/lib/exportCustomSlide.tsx` — reescrita completa: nova função `addCustomSlide` que itera blocos e mapeia cada um para chamadas nativas pptxgenjs. Remover dependência de `html-to-image`/`createRoot` para o caminho principal.
-- `src/lib/customSlide.ts` — ajustar default do `TitleBlock` em `defaultCustomSlide` e `newBlock("title")` para `w: 1200` (evita corte mesmo na pré-visualização).
-- (Opcional) `src/components/pricing/custom/CustomSlideEditor.tsx` — pequenos ajustes visuais se necessário, mas a captura ao vivo deixa de ser o caminho principal.
+---
 
-Não mexer em `BlockRenderer.tsx` (continua sendo a fonte da renderização visual no editor).
+## Phase 3 — Type-specific design controls
 
-## Validação
+For each chart type, expose the controls listed in your spec:
 
-1. Criar um slide com título longo + KPI + tabela + bridge.
-2. Exportar PPT, abrir e confirmar:
-   - Título inteiro visível, sem corte.
-   - Clicar no título e editar texto.
-   - Selecionar tabela e arrastar célula/redimensionar.
-   - Mover blocos livremente.
-3. Verificar que valores numéricos batem com o que o editor mostra.
+- **Line:** style/thickness/color per series, marker (shape/size/colors), smooth, area fill, hover highlight.
+- **Bar / Column:** mode (grouped / stacked / 100%), gap width, overlap, per-category color override, border, corner radius.
+- **Pie / Donut:** slice explosion, donut hole size, start angle, per-slice color, label composition (value / % / name).
+- **Bubble:** min/max bubble size, fill+opacity, border, show size as label, axis mapping.
+- **Area:** fill opacity per series, stacked toggle, line-on-top.
+- **Waterfall:** classify each bar (positive/negative/total), color per category, connector lines, running total, label position, gap width.
+- **Combo:** per-series choice between bar/line, secondary Y assignment.
 
-## Não-objetivo
+---
 
-- Não vou redesenhar o editor.
-- Não vou trocar pptxgenjs por outra lib.
-- Bridge nativa pode ficar como gráfico de barras simplificado; se ficar visualmente ruim, usar fallback de imagem só para esse bloco.
+## Phase 4 — Export parity (PPTX)
+
+**File touched:** `src/lib/exportCustomSlide.tsx`
+
+- Today the export captures the live canvas DOM (good for fidelity).
+- Update offscreen renderer to read the same `ChartStyle`, ensuring exports match the canvas exactly for every new chart type.
+- For waterfall, keep using the DOM/PNG capture path (PPTX has no native waterfall).
+- Where possible, also emit native PPTX charts (`pptxgen` `addChart`) using the style — gives editable charts in PowerPoint. This is a stretch goal; if a setting can't be expressed natively, fall back to PNG.
+
+---
+
+## UX details (apply across phases)
+
+- Collapsible sections via existing `Collapsible` component.
+- Real-time updates: every control writes to the block via the existing `update(id, patch)` flow.
+- Color picker: HEX text input + opacity slider + 8 brand swatches from `--primary`, `--accent`, etc.
+- Number inputs: `<input type="number">` + ± buttons + unit suffix.
+- Tab structure stays **Design | Filtros**; chart inspector lives inside Design.
+
+---
+
+## Scope check before I start
+
+This is large (~2-3k new LOC across renderers and controls). I propose to:
+
+1. Ship **Phase 1 + 2** in this turn (foundation + all new renderers wired with sensible defaults).
+2. Ship **Phase 3** (rich per-type controls) in the next turn so you can review the inspector UX before we expand it for every type.
+3. Ship **Phase 4** (export parity) once the canvas is approved.
+
+If you'd rather I do everything in one go, say so and I'll proceed straight through.
