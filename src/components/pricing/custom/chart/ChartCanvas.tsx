@@ -201,7 +201,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         })}
       </Comp>
     );
-  } else if (block.chartType === "bar" || block.chartType === "column") {
+  } else if (ct === "bar" || ct === "column" || ct === "stackedColumn") {
+    const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
       <BarChart data={rows} layout="horizontal"
         barCategoryGap={`${style.bar.gapPct}%`}>
@@ -212,7 +213,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const color = colorForSeries(style, s.name, i);
           return (
             <Bar key={s.name} dataKey={s.name} fill={color}
-              stackId={style.bar.mode === "stacked" || style.bar.mode === "stacked100" ? "stack" : undefined}
+              stackId={stacked ? "stack" : undefined}
               radius={style.bar.cornerRadius}
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
               {style.dataLabels.show && (
