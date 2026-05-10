@@ -268,7 +268,7 @@ export const BLOCK_LABELS: Record<CustomBlockKind, string> = {
   kpi: "KPI",
   image: "Imagem",
   shape: "Forma",
-  bridge: "Bridge PVM",
+  bridge: "Bridge",
   table: "Tabela",
   chart: "Gráfico",
   topSku: "Top Ranking",
