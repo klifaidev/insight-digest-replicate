@@ -40,6 +40,8 @@ import {
   type KpiBlock, type ChartBlock, type TopSkuBlock,
 } from "@/lib/customSlide";
 import { BlockRenderer, CUSTOM_TABLE_MEASURES, CUSTOM_TABLE_DIMS } from "./BlockRenderer";
+import { SlideFilterProvider, useSlideFilters, dimensionLabel } from "./SlideFilterContext";
+import { Filter as FilterIcon } from "lucide-react";
 import { useMonthsInfo, useFyList } from "@/store/selectors";
 import { cn } from "@/lib/utils";
 import haraldFooterPng from "@/assets/harald-footer-bar.png";
