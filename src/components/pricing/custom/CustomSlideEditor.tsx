@@ -20,16 +20,22 @@ import {
   ArrowDown, ArrowUp, Copy as CopyIcon, GitBranch, Image as ImageIcon,
   Layers as LayersIcon, Plus, Square, Table as TableIcon,
   Trash2, Type as TypeIcon, AlignLeft, ZoomIn, ZoomOut, Maximize2,
-  BarChart3, Trophy, BookOpen, Save, X,
+  BarChart3, Trophy, BookOpen, Save, X, ChevronDown,
+  LineChart as LineChartIcon, BarChart as BarIcon, BarChartHorizontal,
+  AreaChart as AreaIcon, PieChart as PieIcon, CircleDot,
+  ScatterChart as ScatterIcon, Circle, Filter as FunnelIcon,
+  Combine, Network, Radar as RadarIcon, Box as BoxIcon,
+  BarChart2, Hash,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 
 import {
   CANVAS_W, CANVAS_H, FOOTER_H,
-  newBlock, BLOCK_LABELS, KPI_MEASURES,
-  type CustomBlock, type CustomBlockKind, type CustomSlideConfig,
+  newBlock, newChartBlock, BLOCK_LABELS, KPI_MEASURES,
+  type CustomBlock, type CustomBlockKind, type CustomChartType, type CustomSlideConfig,
   type KpiBlock, type ChartBlock, type TopSkuBlock,
 } from "@/lib/customSlide";
 import { BlockRenderer, CUSTOM_TABLE_MEASURES, CUSTOM_TABLE_DIMS } from "./BlockRenderer";
@@ -52,16 +58,42 @@ import { buildUnifiedRows } from "@/lib/pivotData";
 import type { Filters } from "@/lib/types";
 import { BlockFilters } from "./BlockFilters";
 
-const BLOCK_KINDS: { kind: CustomBlockKind; icon: React.ComponentType<{ className?: string }> }[] = [
-  { kind: "title",  icon: TypeIcon },
-  { kind: "text",   icon: AlignLeft },
-  { kind: "kpi",    icon: LayersIcon },
-  { kind: "chart",  icon: BarChart3 },
-  { kind: "topSku", icon: Trophy },
-  { kind: "bridge", icon: GitBranch },
-  { kind: "table",  icon: TableIcon },
-  { kind: "image",  icon: ImageIcon },
-  { kind: "shape",  icon: Square },
+type Icon = React.ComponentType<{ className?: string }>;
+
+// Group 1 — Charts (and chart-like data viz: KPI Card + Table + Bridge)
+const CHART_PALETTE: ({ id: string; label: string; icon: Icon } & (
+  | { kind: "chart"; chartType: CustomChartType }
+  | { kind: Exclude<CustomBlockKind, "chart"> }
+))[] = [
+  { id: "line",          kind: "chart", chartType: "line",          label: "Linha",            icon: LineChartIcon },
+  { id: "column",        kind: "chart", chartType: "column",        label: "Coluna",           icon: BarChart3 },
+  { id: "stackedColumn", kind: "chart", chartType: "stackedColumn", label: "Coluna Empilhada", icon: BarChart3 },
+  { id: "hbar",          kind: "chart", chartType: "hbar",          label: "Barra",            icon: BarChartHorizontal },
+  { id: "stackedBar",    kind: "chart", chartType: "stackedBar",    label: "Barra Empilhada",  icon: BarChartHorizontal },
+  { id: "area",          kind: "chart", chartType: "area",          label: "Área",             icon: AreaIcon },
+  { id: "stackedArea",   kind: "chart", chartType: "stackedArea",   label: "Área Empilhada",   icon: AreaIcon },
+  { id: "pie",           kind: "chart", chartType: "pie",           label: "Pizza",            icon: PieIcon },
+  { id: "donut",         kind: "chart", chartType: "donut",         label: "Rosca",            icon: CircleDot },
+  { id: "scatter",       kind: "chart", chartType: "scatter",       label: "Dispersão",        icon: ScatterIcon },
+  { id: "bubble",        kind: "chart", chartType: "bubble",        label: "Bolha",            icon: Circle },
+  { id: "funnel",        kind: "chart", chartType: "funnel",        label: "Funil",            icon: FunnelIcon },
+  { id: "combo",         kind: "chart", chartType: "combo",         label: "Combinado",        icon: Combine },
+  { id: "treemap",       kind: "chart", chartType: "treemap",       label: "Mapa de Árvore",   icon: Network },
+  { id: "radar",         kind: "chart", chartType: "radar",         label: "Radar",            icon: RadarIcon },
+  { id: "boxplot",       kind: "chart", chartType: "boxplot",       label: "Caixa",            icon: BoxIcon },
+  { id: "histogram",     kind: "chart", chartType: "histogram",     label: "Histograma",       icon: BarChart2 },
+  { id: "waterfall",     kind: "chart", chartType: "waterfall",     label: "Bridge",           icon: GitBranch },
+  { id: "table",         kind: "table", label: "Tabela",                                       icon: TableIcon },
+  { id: "kpi",           kind: "kpi",   label: "KPI Card",                                     icon: Hash },
+];
+
+// Group 2 — Visual elements
+const ELEMENT_PALETTE: { id: string; kind: CustomBlockKind; label: string; icon: Icon }[] = [
+  { id: "title",  kind: "title",  label: "Título",      icon: TypeIcon },
+  { id: "text",   kind: "text",   label: "Texto",       icon: AlignLeft },
+  { id: "image",  kind: "image",  label: "Imagem",      icon: ImageIcon },
+  { id: "shape",  kind: "shape",  label: "Forma",       icon: Square },
+  { id: "topSku", kind: "topSku", label: "Top Ranking", icon: Trophy },
 ];
 
 interface Props {
