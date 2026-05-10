@@ -170,6 +170,61 @@ export default function Upload() {
     });
   };
 
+  // Guard: avisar se sair sem aplicar
+  const navigate = useNavigate();
+  const promptingRef = useRef(false);
+  useEffect(() => {
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if (useUploadGuard.getState().pending > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    const onClick = (e: MouseEvent) => {
+      const { pending, apply } = useUploadGuard.getState();
+      if (pending === 0 || promptingRef.current) return;
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const anchor = (e.target as HTMLElement | null)?.closest("a") as HTMLAnchorElement | null;
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("http") || anchor.target === "_blank") return;
+      if (href === window.location.pathname) return;
+      e.preventDefault();
+      e.stopPropagation();
+      promptingRef.current = true;
+      const toastId = toast.warning("Você tem arquivos não aplicados", {
+        description: `${pending} arquivo(s) na fila ainda não foram aplicados. Deseja sair mesmo assim?`,
+        duration: 15000,
+        onDismiss: () => { promptingRef.current = false; },
+        onAutoClose: () => { promptingRef.current = false; },
+        action: {
+          label: "Aplicar e sair",
+          onClick: async () => {
+            try { if (apply) await apply(); } finally {
+              promptingRef.current = false;
+              toast.dismiss(toastId);
+              navigate(href);
+            }
+          },
+        },
+        cancel: {
+          label: "Sair sem aplicar",
+          onClick: () => {
+            promptingRef.current = false;
+            toast.dismiss(toastId);
+            navigate(href);
+          },
+        },
+      });
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, [navigate]);
+
   return (
     <>
       <Topbar title="Upload / Bases" subtitle="Gerencie os arquivos de dados Real e Budget" />
