@@ -328,10 +328,15 @@ function ChartRender({ block }: { block: ChartBlock }) {
 // ---------------------------------------------------------------------------
 function TopSkuRender({ block: b }: { block: TopSkuBlock }) {
   const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const rows = useMemo(
+    () => (b.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
+    [b.dataSource, pricing, budget],
+  );
   // Sempre busca todos para podermos calcular o efetivo + Outros
   const allItems = useMemo(
-    () => computeTopRanking(pricing, b.filters, b.dim, b.measure, 9999, b.periodMode, b.periodValue),
-    [pricing, b.filters, b.dim, b.measure, b.periodMode, b.periodValue],
+    () => computeTopRanking(rows, b.filters, b.dim, b.measure, 9999, b.periodMode, b.periodValue),
+    [rows, b.filters, b.dim, b.measure, b.periodMode, b.periodValue],
   );
   const fit = resolveTopSkuFit(b, allItems.length);
   const visible = allItems.slice(0, fit.shown);
