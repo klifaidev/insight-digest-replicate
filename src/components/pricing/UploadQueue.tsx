@@ -213,6 +213,20 @@ export function UploadQueue() {
     }
   };
 
+  // Expose pending state + apply handler globally for navigation guard
+  const setGuardPending = useUploadGuard((s) => s.setPending);
+  const setGuardApply = useUploadGuard((s) => s.setApply);
+  useEffect(() => {
+    setGuardPending(readyItems.length);
+    setGuardApply(readyItems.length > 0 ? applyAll : null);
+  });
+  useEffect(() => {
+    return () => {
+      setGuardPending(0);
+      setGuardApply(null);
+    };
+  }, [setGuardPending, setGuardApply]);
+
   return (
     <div className="space-y-4">
       {/* Drop zones lado a lado */}
