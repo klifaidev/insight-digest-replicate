@@ -919,6 +919,13 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         </DialogContent>
       </Dialog>
     </div>
+    {presentOpen && (
+      <PresentationMode
+        currentSlideId={slideId}
+        currentConfig={config}
+        onClose={() => setPresentOpen(false)}
+      />
+    )}
     </SlideFilterProvider>
   );
 }
