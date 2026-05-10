@@ -487,7 +487,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
     chart = (
-      <Comp data={chartRows}>
+      <Comp data={chartRows} onClick={chartOnClick}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
@@ -588,7 +588,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "bar" || ct === "column" || ct === "stackedColumn") {
     const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
-      <BarChart data={rows} layout="horizontal"
+      <BarChart data={rows} layout="horizontal" onClick={chartOnClick}
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
@@ -621,7 +621,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "hbar" || ct === "stackedBar") {
     const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
-      <BarChart data={rows} layout="vertical"
+      <BarChart data={rows} layout="vertical" onClick={chartOnClick}
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}
         <XAxis type="number" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }}
@@ -720,7 +720,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       );
     } : false;
     chart = (
-      <PieChart>
+      <PieChart onClick={chartOnClick}>
         <Tooltip content={(p: any) => (
           <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="pie" pieTotal={pieTotal} additionalRow={tooltipExtra ?? undefined} />
         )} />
@@ -779,7 +779,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const xFmt = style.measureX ? inferFormat(style.measureX) : measureFmt;
     const yFmt = style.measureY ? inferFormat(style.measureY) : measureFmt;
     chart = (
-      <ScatterChart>
+      <ScatterChart onClick={chartOnClick}>
         {renderGrid}
         <XAxis type="number" dataKey="x" name={xLabel}
           domain={xDomain}
@@ -876,7 +876,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         gridType={style.radar.gridShape === "circle" ? "circle" : "polygon"} />
     );
     chart = (
-      <RadarChart data={rows} outerRadius="80%">
+      <RadarChart data={rows} outerRadius="80%" onClick={chartOnClick}>
         {polarGrid}
         <PolarAngleAxis dataKey="__period"
           tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }} />
