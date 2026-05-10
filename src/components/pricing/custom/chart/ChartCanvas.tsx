@@ -679,11 +679,23 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       : null;
     const xByName = new Map(xRanking?.map((r) => [r.name, r.value]) ?? []);
     const yByName = new Map(yRanking?.map((r) => [r.name, r.value]) ?? []);
+    // C3 — labelDim: pick representative dimension value per point
+    const labelDim = block.fieldWells?.labelDim ?? null;
+    const labelByName = new Map<string, string>();
+    if (labelDim) {
+      for (const r of dsRows) {
+        const k = String((r as unknown as Record<string, unknown>)[dim] ?? "—");
+        if (labelByName.has(k)) continue;
+        const lv = String((r as unknown as Record<string, unknown>)[labelDim] ?? "");
+        if (lv) labelByName.set(k, lv);
+      }
+    }
     const points = sizeRanking.map((r, i) => ({
       x: xRanking ? (xByName.get(r.name) ?? 0) : (i + 1),
       y: yRanking ? (yByName.get(r.name) ?? 0) : r.value,
       z: r.value,
       name: r.name,
+      __label: labelDim ? (labelByName.get(r.name) ?? "") : "",
     }));
     const xLabel = style.measureX
       ? KPI_MEASURES_LABEL[style.measureX] : "Índice";
