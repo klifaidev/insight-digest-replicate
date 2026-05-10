@@ -153,6 +153,11 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
     update([...config.blocks, blk]);
     setSelectedId(blk.id);
   };
+  const addChart = (chartType: CustomChartType) => {
+    const blk = newChartBlock(chartType, zTop);
+    update([...config.blocks, blk]);
+    setSelectedId(blk.id);
+  };
   const removeBlock = (id: string) => {
     update(config.blocks.filter((b) => b.id !== id));
     setSelectedId(null);
