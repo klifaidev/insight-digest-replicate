@@ -3,7 +3,9 @@
 // handled by FilteredInspector wrapper outside).
 
 import type { ChartBlock, KpiMeasureId } from "@/lib/customSlide";
-import { KPI_MEASURES } from "@/lib/customSlide";
+import {
+  KPI_MEASURES, BUDGET_UNAVAILABLE_MEASURES, BUDGET_UNAVAILABLE_HINT,
+} from "@/lib/customSlide";
 import { ensureChartStyle, type ChartStyle } from "./types";
 import {
   Section, Row, ToggleField, NumberStepper, ColorField, SelectField,
