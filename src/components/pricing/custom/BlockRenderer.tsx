@@ -222,7 +222,7 @@ function TableRender({ block: b }: { block: TableBlock }) {
       return vz - va;
     });
     return { result, measures, sortedHeaders };
-  }, [pricing, budget, b.rowDims, b.colDim, b.measures, b.filters, b.sortMeasure]);
+  }, [pricing, budget, b.dataSource, b.rowDims, b.colDim, b.measures, b.filters, b.sortMeasure]);
 
   if (!data || data.sortedHeaders.length === 0) {
     return (
