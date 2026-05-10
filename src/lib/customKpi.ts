@@ -89,8 +89,41 @@ export function computeChartSeries(
   filters: Filters,
   measure: KpiMeasureId,
   breakdown: string | null,
+  xDim?: string | null,
 ): { periodos: { key: string; label: string }[]; series: { name: string; values: number[] }[] } {
   const filtered = applyFilters(rows, filters, null);
+
+  // Part B.1 / C3 — When xDim is set and not "period", group X axis by dimension.
+  if (xDim && xDim !== "period") {
+    const xMap = new Map<string, { ord: number }>();
+    const seriesMap = new Map<string, Map<string, KpiAgg>>();
+    let ord = 0;
+    for (const r of filtered) {
+      const xKey = String((r as unknown as Record<string, unknown>)[xDim] ?? "—");
+      if (!xMap.has(xKey)) xMap.set(xKey, { ord: ord++ });
+      const seriesName = breakdown
+        ? String((r as unknown as Record<string, unknown>)[breakdown] ?? "—")
+        : "Total";
+      let pm = seriesMap.get(seriesName);
+      if (!pm) { pm = new Map(); seriesMap.set(seriesName, pm); }
+      let a = pm.get(xKey);
+      if (!a) { a = { rol: 0, volume: 0, cm: 0, mb: 0, cv: 0, frete: 0, comissao: 0 }; pm.set(xKey, a); }
+      a.rol += r.rol; a.volume += r.volumeKg; a.cm += r.contribMarginal;
+      a.mb += r.margemBruta; a.cv += r.custoVariavel;
+      a.frete += r.frete; a.comissao += r.comissao;
+    }
+    const xs = Array.from(xMap.entries())
+      .sort((a, b) => a[1].ord - b[1].ord)
+      .map(([k]) => ({ key: k, label: k }));
+    const series = Array.from(seriesMap.entries()).map(([name, pm]) => ({
+      name,
+      values: xs.map((p) => {
+        const a = pm.get(p.key);
+        return a ? pickMeasure(a, measure) : 0;
+      }),
+    }));
+    return { periodos: xs, series };
+  }
 
   // group by periodo + breakdown
   const periodoMap = new Map<string, { mes: number; ano: number }>();
