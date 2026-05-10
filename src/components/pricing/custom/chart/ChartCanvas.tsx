@@ -157,7 +157,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           if (ct === "area" || ct === "stackedArea") {
             const stacked = forceStack || style.area.stacked;
             return (
-              <Area key={s.name} dataKey={s.name} type={cfg?.smooth ? "monotone" : "linear"}
+              <Area key={s.name} isAnimationActive={false} dataKey={s.name} type={cfg?.smooth ? "monotone" : "linear"}
                 stroke={color} fill={color}
                 fillOpacity={style.area.lineOnTop ? (cfg?.areaOpacity ?? 0.35) : 0.5}
                 stackId={stacked ? "stack" : undefined}
@@ -171,7 +171,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           }
           if (ct === "combo" && !cfg?.asLine) {
             return (
-              <Bar key={s.name} dataKey={s.name} fill={color}
+              <Bar key={s.name} isAnimationActive={false} dataKey={s.name} fill={color}
                 radius={style.bar.cornerRadius} stroke={style.bar.borderColor}
                 strokeWidth={style.bar.borderWidth}
                 yAxisId={cfg?.secondaryAxis ? "right" : undefined}>
@@ -184,7 +184,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             );
           }
           return (
-            <Line key={s.name} dataKey={s.name} type={cfg?.smooth ? "monotone" : "linear"}
+            <Line key={s.name} isAnimationActive={false} dataKey={s.name} type={cfg?.smooth ? "monotone" : "linear"}
               stroke={color} strokeWidth={cfg?.thickness ?? 2.5}
               strokeDasharray={dash}
               dot={cfg?.marker?.show !== false ? {
@@ -212,7 +212,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
           return (
-            <Bar key={s.name} dataKey={s.name} fill={color}
+            <Bar key={s.name} isAnimationActive={false} dataKey={s.name} fill={color}
               stackId={stacked ? "stack" : undefined}
               radius={style.bar.cornerRadius}
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
@@ -241,7 +241,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
           return (
-            <Bar key={s.name} dataKey={s.name} fill={color}
+            <Bar key={s.name} isAnimationActive={false} dataKey={s.name} fill={color}
               stackId={stacked ? "stack" : undefined}
               radius={style.bar.cornerRadius}
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth} />
@@ -257,7 +257,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <PieChart>
         <Tooltip />
         {renderLegend}
-        <Pie data={ranking} dataKey="value" nameKey="name"
+        <Pie data={ranking} isAnimationActive={false} dataKey="value" nameKey="name"
           startAngle={style.pie.startAngle}
           endAngle={style.pie.startAngle + 360}
           innerRadius={inner} outerRadius="80%"
@@ -295,7 +295,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         )}
         <Tooltip cursor={{ strokeDasharray: "3 3" }} />
         {renderLegend}
-        <Scatter data={points} fill={DEFAULT_PALETTE[0]}
+        <Scatter data={points} isAnimationActive={false} fill={DEFAULT_PALETTE[0]}
           fillOpacity={style.bubble.fillOpacity}
           stroke={style.bubble.borderColor} strokeWidth={style.bubble.borderWidth}>
           {points.map((p, i) => (
@@ -314,7 +314,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = (
       <FunnelChart>
         <Tooltip />
-        <Funnel dataKey="value" data={fdata} isAnimationActive>
+        <Funnel dataKey="value" data={fdata} isAnimationActive={false}>
           <LabelList position="right" fill={style.dataLabels.color}
             stroke="none" dataKey="name" style={{ fontSize: style.dataLabels.size }} />
         </Funnel>
@@ -326,7 +326,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       fill: DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
     }));
     chart = (
-      <Treemap data={tdata} dataKey="size" nameKey="name" stroke="#fff"
+      <Treemap data={tdata} isAnimationActive={false} dataKey="size" nameKey="name" stroke="#fff"
         fill={DEFAULT_PALETTE[0]} aspectRatio={4 / 3} />
     );
   } else if (ct === "radar") {
@@ -342,7 +342,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
           return (
-            <Radar key={s.name} dataKey={s.name} stroke={color} fill={color}
+            <Radar key={s.name} isAnimationActive={false} dataKey={s.name} stroke={color} fill={color}
               fillOpacity={0.35} />
           );
         })}
@@ -369,7 +369,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         <XAxis dataKey="bin" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }} />
         <YAxis tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
         <Tooltip />
-        <Bar dataKey="count" fill={DEFAULT_PALETTE[0]}
+        <Bar isAnimationActive={false} dataKey="count" fill={DEFAULT_PALETTE[0]}
           stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth} />
       </BarChart>
     );
@@ -389,8 +389,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           tickFormatter={axisFmt(yAx, measureFmt)} />
         <Tooltip />
         {renderLegend}
-        <Bar dataKey="q1" stackId="bp" fill="transparent" />
-        <Bar dataKey="iqr" stackId="bp" fill={DEFAULT_PALETTE[0]} name="IQR" />
+        <Bar isAnimationActive={false} dataKey="q1" stackId="bp" fill="transparent" />
+        <Bar isAnimationActive={false} dataKey="iqr" stackId="bp" fill={DEFAULT_PALETTE[0]} name="IQR" />
       </ComposedChart>
     );
   }
@@ -486,8 +486,8 @@ function WaterfallChart({
       <YAxis tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
       <Tooltip />
-      <Bar dataKey="base" stackId="wf" fill="transparent" />
-      <Bar dataKey="delta" stackId="wf">
+      <Bar isAnimationActive={false} dataKey="base" stackId="wf" fill="transparent" />
+      <Bar isAnimationActive={false} dataKey="delta" stackId="wf">
         {wfRows.map((r) => <Cell key={r.label} fill={colorOf(r.cls)} />)}
         {style.dataLabels.show && (
           <LabelList dataKey="end" position={style.waterfall.labelPos === "inside" ? "center" : "top"}
