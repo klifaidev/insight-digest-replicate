@@ -58,13 +58,15 @@ export function inferFormat(measure: KpiMeasureId): Exclude<KpiFormat, "auto"> {
   return "currency";
 }
 
-export function formatValue(v: number, format: KpiFormat, measure: KpiMeasureId): string {
+export function formatValue(
+  v: number, format: KpiFormat, measure: KpiMeasureId, decimals?: number,
+): string {
   if (!isFinite(v)) return "—";
   const f = format === "auto" ? inferFormat(measure) : format;
-  if (f === "currency") return formatBRL(v, { digits: 0 });
-  if (f === "percent") return formatPct(v, 1);
-  if (f === "tons") return `${formatNum(v / 1000, 1)} t`;
-  return formatNum(v, 0);
+  if (f === "currency") return formatBRL(v, { digits: decimals ?? 0 });
+  if (f === "percent") return formatPct(v, decimals ?? 1);
+  if (f === "tons") return `${formatNum(v / 1000, decimals ?? 1)} t`;
+  return formatNum(v, decimals ?? 0);
 }
 
 export function computeKpiBlock(rows: PricingRow[], block: KpiBlock): string {

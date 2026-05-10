@@ -5,8 +5,10 @@ import type { KpiMeasureId } from "@/lib/customSlide";
 
 export type ChartType =
   | "line" | "bar" | "column" | "hbar"
+  | "stackedColumn" | "stackedBar" | "stackedArea"
   | "pie" | "donut" | "bubble" | "area"
-  | "scatter" | "combo" | "waterfall";
+  | "scatter" | "combo" | "waterfall"
+  | "funnel" | "treemap" | "radar" | "histogram" | "boxplot";
 
 export type LineStyle = "solid" | "dashed" | "dotted";
 export type GridStyle = "solid" | "dashed";
@@ -199,8 +201,10 @@ export interface ChartStyle {
   radar: RadarStyleCfg;
   histogram: HistogramStyleCfg;
   boxplot: BoxplotStyleCfg;
-  /** Bubble/scatter only — second measure for Y when X is the first */
+  /** Bubble/scatter only — measure on Y axis */
   measureY?: KpiMeasureId;
+  /** Bubble/scatter only — measure on X axis */
+  measureX?: KpiMeasureId;
   /** Combo only — measure used by line series */
   measureLine?: KpiMeasureId;
 }
