@@ -1361,3 +1361,25 @@ function DataSourceBadge({ block }: { block: CustomBlock }) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// ClearFiltersToolbar — slide-level cross-filter clear button (Part B.6)
+// ---------------------------------------------------------------------------
+function ClearFiltersToolbar() {
+  const { filters, clearAll } = useSlideFilters();
+  if (filters.length === 0) return null;
+  const summary = filters
+    .map((f) => `${dimensionLabel(f.dimension)}: ${f.values.join(", ")}`)
+    .join(" · ");
+  return (
+    <div className="flex shrink-0 items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5">
+      <FunnelIcon className="h-3.5 w-3.5 text-primary" />
+      <span className="flex-1 truncate text-[11px] text-foreground/90" title={summary}>
+        Filtros cruzados ativos · {summary}
+      </span>
+      <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={clearAll}>
+        Limpar filtros ({filters.length})
+      </Button>
+    </div>
+  );
+}
