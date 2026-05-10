@@ -117,19 +117,27 @@ export interface TableBlock extends BaseBlock {
 }
 
 // ---------------------------------------------------------------------------
-// Chart — gráfico de linha/barra ao longo do tempo
+// Chart — gráfico ao longo do tempo / categorias
 // ---------------------------------------------------------------------------
+export type CustomChartType =
+  | "line" | "bar" | "column" | "hbar"
+  | "pie" | "donut" | "bubble" | "area"
+  | "scatter" | "combo" | "waterfall";
+
+// Importação tardia para evitar ciclo
+import type { ChartStyle } from "@/components/pricing/custom/chart/types";
+
 export interface ChartBlock extends BaseBlock {
   kind: "chart";
-  chartType: "line" | "bar";
+  chartType: CustomChartType;
   measure: KpiMeasureId;
   /** Quebra opcional por dimensão (ex.: marca, canal). null = série única */
   breakdown: string | null;
-  /** Mostrar grade/eixos */
+  /** @deprecated — usar style.grid.show */
   showGrid: boolean;
-  /** Mostrar legenda */
+  /** @deprecated — usar style.general.legendShow */
   showLegend: boolean;
-  /** Mostrar valores nos pontos/barras */
+  /** @deprecated — usar style.dataLabels.show */
   showLabels: boolean;
   filters: Filters;
   title?: string;
@@ -141,6 +149,8 @@ export interface ChartBlock extends BaseBlock {
   showOthers?: boolean;
   /** Imprime nota "Mostrando X de Y" no PPT. Default: false */
   exportNote?: boolean;
+  /** Estilo PowerPoint-grade — opcional p/ retro-compatibilidade. */
+  style?: Partial<ChartStyle>;
 }
 
 // ---------------------------------------------------------------------------
