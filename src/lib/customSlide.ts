@@ -270,7 +270,7 @@ export const BLOCK_LABELS: Record<CustomBlockKind, string> = {
   shape: "Forma",
   bridge: "Bridge",
   table: "Tabela",
-  chart: "Gráfico",
+  chart: "Linha",
   topSku: "Top Ranking",
 };
 
