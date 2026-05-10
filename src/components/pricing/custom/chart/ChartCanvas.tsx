@@ -1049,7 +1049,7 @@ function WaterfallChart({
       <YAxis tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
         domain={[yMin, yMax]}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="waterfall" additionalRow={tooltipExtra ?? undefined} />} />
+      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="waterfall" />} />
       {renderRefLines(style)}
       {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => (
         <ReferenceLine key={`c-${i}`} segment={[
