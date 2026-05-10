@@ -387,6 +387,13 @@ export function ensureChartStyle(s?: Partial<ChartStyle>): ChartStyle {
     histogram: { ...d.histogram, ...(s.histogram ?? {}) },
     boxplot: { ...d.boxplot, ...(s.boxplot ?? {}) },
     series: s.series ?? [],
+    conditionalRules: s.conditionalRules ?? [],
+    conditionalDefault: s.conditionalDefault ?? "",
+    analytics: {
+      refLines: s.analytics?.refLines ?? [],
+      trendline: { ...d.analytics!.trendline, ...(s.analytics?.trendline ?? {}) },
+      forecast: { ...d.analytics!.forecast, ...(s.analytics?.forecast ?? {}) },
+    },
   };
 }
 
