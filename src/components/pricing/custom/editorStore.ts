@@ -33,6 +33,7 @@ export type EditorActionLabel =
   | "Mover bloco"
   | "Mover blocos"
   | "Redimensionar bloco"
+  | "Redimensionar grupo"
   | "Alterar estilo"
   | "Alterar dados"
   | "Duplicar bloco"
@@ -42,7 +43,8 @@ export type EditorActionLabel =
   | "Alterar slide"
   | "Alinhar blocos"
   | "Agrupar blocos"
-  | "Desagrupar blocos";
+  | "Desagrupar blocos"
+  | "Colar estilo";
 
 interface EditorState {
   config: CustomSlideConfig | null;
