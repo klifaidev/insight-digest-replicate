@@ -385,19 +385,58 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         <div
           ref={wrapperRef}
           className="relative min-h-0 flex-1 overflow-auto rounded-lg border border-border/40 bg-secondary/20"
-          onClick={() => setSelectedId(null)}
+          onMouseDown={(e) => {
+            // Marquee selection — only if mousedown is on the wrapper itself
+            // (i.e. canvas background, not a block / Rnd handle / inspector).
+            if (e.target !== e.currentTarget && !(e.target as HTMLElement).dataset?.canvasBg) return;
+            // Begin marquee in canvas-space coords.
+            const startCanvas = clientToCanvas(canvasRef.current, e.clientX, e.clientY, scaleRef.current);
+            if (!startCanvas) return;
+            const startX = startCanvas.x;
+            const startY = startCanvas.y;
+            setMarquee({ x: startX, y: startY, w: 0, h: 0 });
+            const move = (ev: MouseEvent) => {
+              const cur = clientToCanvas(canvasRef.current, ev.clientX, ev.clientY, scaleRef.current);
+              if (!cur) return;
+              setMarquee({
+                x: Math.min(startX, cur.x),
+                y: Math.min(startY, cur.y),
+                w: Math.abs(cur.x - startX),
+                h: Math.abs(cur.y - startY),
+              });
+            };
+            const up = (ev: MouseEvent) => {
+              window.removeEventListener("mousemove", move);
+              window.removeEventListener("mouseup", up);
+              const end = clientToCanvas(canvasRef.current, ev.clientX, ev.clientY, scaleRef.current);
+              setMarquee(null);
+              if (!end) { clearSelection(); return; }
+              const rect = {
+                x: Math.min(startX, end.x), y: Math.min(startY, end.y),
+                w: Math.abs(end.x - startX), h: Math.abs(end.y - startY),
+              };
+              if (rect.w < 4 && rect.h < 4) { clearSelection(); return; }
+              const hitIds = config.blocks
+                .filter((b) => b.x < rect.x + rect.w && b.x + b.w > rect.x
+                            && b.y < rect.y + rect.h && b.y + b.h > rect.y)
+                .map((b) => b.id);
+              setSelection(hitIds);
+            };
+            window.addEventListener("mousemove", move);
+            window.addEventListener("mouseup", up);
+          }}
         >
           <div
             className="relative"
+            data-canvas-bg="true"
             style={{
               width: CANVAS_W * scale,
               height: CANVAS_H * scale,
               margin: "12px auto",
             }}
           >
-            {/* Wrapper escala visualmente o canvas. O canvas em si NÃO recebe
-                transform — assim o export captura o DOM em 1:1 sem distorção. */}
             <div
+              data-canvas-bg="true"
               style={{
                 position: "absolute", top: 0, left: 0,
                 width: CANVAS_W, height: CANVAS_H,
@@ -408,7 +447,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             >
             <div
               ref={canvasRef}
-              onClick={(e) => e.stopPropagation()}
+              data-canvas-bg="true"
               style={{
                 width: CANVAS_W,
                 height: CANVAS_H,
@@ -417,45 +456,114 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 overflow: "hidden",
               }}
             >
-              {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => (
+              {/* Snap-to-grid background — dot pattern, behind blocks. */}
+              {prefs.gridEnabled && (
+                <svg
+                  data-export-hide="true"
+                  width={CANVAS_W} height={CANVAS_H}
+                  style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}
+                >
+                  <defs>
+                    <pattern id="harald-grid-dots" x={0} y={0}
+                      width={prefs.gridSize} height={prefs.gridSize}
+                      patternUnits="userSpaceOnUse">
+                      <circle cx={prefs.gridSize / 2} cy={prefs.gridSize / 2}
+                        r={0.75} fill="rgba(0,0,0,0.12)" />
+                    </pattern>
+                  </defs>
+                  <rect width={CANVAS_W} height={CANVAS_H} fill="url(#harald-grid-dots)" />
+                </svg>
+              )}
+
+              {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => {
+                const isSelected = selectedIds.includes(blk.id);
+                return (
                 <ContextMenu key={blk.id}>
                   <ContextMenuTrigger asChild>
                     <Rnd
                       size={{ width: blk.w, height: blk.h }}
                       position={{ x: blk.x, y: blk.y }}
                       bounds="parent"
-                      dragGrid={[5, 5]}
-                      resizeGrid={[5, 5]}
                       scale={scale}
                       disableDragging={!!blk.locked}
                       enableResizing={!blk.locked}
-                      onDrag={(_, d) => computeGuides(blk.id, d.x, d.y, blk.w, blk.h)}
-                      onResize={(_, __, refEl, ___, pos) =>
-                        computeGuides(blk.id, pos.x, pos.y, parseInt(refEl.style.width, 10), parseInt(refEl.style.height, 10))
-                      }
-                      onDragStop={(_, d) => { setGuides({ v: [], h: [] }); updateBlock(blk.id, { x: d.x, y: d.y }); }}
+                      onDragStart={(_e, _d) => {
+                        // If shift wasn't held and this block isn't already
+                        // selected, select it before drag begins.
+                        if (!selectedIds.includes(blk.id)) selectBlock(blk.id);
+                      }}
+                      onDrag={(_, d) => {
+                        const ids = draggableSiblings(blk.id);
+                        // Snap to alignment guides (with tolerance).
+                        const snap = computeGuides(ids, d.x, d.y, blk.w, blk.h);
+                        // If guide didn't fire (no v/h), fall back to grid snap during drag? No — grid snaps on stop only.
+                        if (snap.guides.v.length || snap.guides.h.length) {
+                          d.x = snap.x; d.y = snap.y;
+                        }
+                      }}
+                      onResize={(_, __, refEl, ___, pos) => {
+                        const w = parseInt(refEl.style.width, 10);
+                        const h = parseInt(refEl.style.height, 10);
+                        const snap = computeGuides([blk.id], pos.x, pos.y, w, h);
+                        // For resize we just visualise guides; keep size raw.
+                        void snap;
+                      }}
+                      onDragStop={(_, d) => {
+                        setGuides({ v: [], h: [] });
+                        const ids = draggableSiblings(blk.id);
+                        let dx = d.x - blk.x;
+                        let dy = d.y - blk.y;
+                        // Snap to grid on mouseup (B8.4) — only if no guides fired.
+                        if (prefs.gridEnabled) {
+                          const sx = snapToGrid(d.x, prefs.gridSize);
+                          const sy = snapToGrid(d.y, prefs.gridSize);
+                          dx = sx - blk.x;
+                          dy = sy - blk.y;
+                        }
+                        if (ids.length === 1) {
+                          updateBlock(blk.id, { x: blk.x + dx, y: blk.y + dy });
+                        } else {
+                          const patches = ids
+                            .map((id) => config.blocks.find((b) => b.id === id))
+                            .filter((b): b is CustomBlock => !!b && !b.locked)
+                            .map((b) => ({ id: b.id, patch: { x: b.x + dx, y: b.y + dy } as Partial<CustomBlock> }));
+                          patchBlocksAction(patches, "Mover blocos");
+                        }
+                      }}
                       onResizeStop={(_, __, refEl, ___, pos) => {
                         setGuides({ v: [], h: [] });
-                        updateBlock(blk.id, {
-                          w: parseInt(refEl.style.width, 10),
-                          h: parseInt(refEl.style.height, 10),
-                          x: pos.x, y: pos.y,
-                        });
+                        let w = parseInt(refEl.style.width, 10);
+                        let h = parseInt(refEl.style.height, 10);
+                        let x = pos.x, y = pos.y;
+                        if (prefs.gridEnabled) {
+                          x = snapToGrid(x, prefs.gridSize);
+                          y = snapToGrid(y, prefs.gridSize);
+                          w = Math.max(prefs.gridSize, snapToGrid(w, prefs.gridSize));
+                          h = Math.max(prefs.gridSize, snapToGrid(h, prefs.gridSize));
+                        }
+                        updateBlock(blk.id, { w, h, x, y });
                       }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
-                        const wasSelected = selectedId === blk.id;
-                        setSelectedId(blk.id);
-                        // Only nag on locked blocks that were already focused —
-                        // otherwise every selection click would toast.
-                        if (blk.locked && wasSelected && e.button === 0) {
+                        const wasSelected = selectedIds.includes(blk.id);
+                        const shift = (e as MouseEvent).shiftKey;
+                        // Click on a single member of a group while group is
+                        // already selected → keep group selected.
+                        selectBlock(blk.id, { additive: shift });
+                        if (blk.locked && wasSelected && !shift && (e as MouseEvent).button === 0) {
                           toast("Bloco bloqueado. Clique com botão direito para desbloquear.", { duration: 1800 });
+                        }
+                      }}
+                      onDoubleClick={(e) => {
+                        if (blk.groupId) {
+                          e.stopPropagation();
+                          enterGroupEdit(blk.id);
                         }
                       }}
                       style={{ zIndex: blk.z }}
                       className={cn(
                         "group/block",
-                        selectedId === blk.id
+                        isSelected
                           ? "outline outline-2 outline-offset-1 outline-primary"
                           : "outline outline-1 outline-transparent hover:outline-primary/40",
                       )}
@@ -509,23 +617,79 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                     <ContextMenuItem onSelect={() => toggleLock(blk.id)}>
                       {blk.locked ? "Desbloquear posição" : "Bloquear posição"}
                     </ContextMenuItem>
+                    {selectedIds.length >= 2 && (
+                      <>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => { groupBlocksAction(selectedIds); toast.success("Blocos agrupados"); }}>
+                          Agrupar <ContextMenuShortcut>⌘G</ContextMenuShortcut>
+                        </ContextMenuItem>
+                      </>
+                    )}
+                    {blk.groupId && (
+                      <ContextMenuItem onSelect={() => { ungroupBlocksAction([blk.id]); toast.success("Grupo desfeito"); }}>
+                        Desagrupar <ContextMenuShortcut>⌘⇧G</ContextMenuShortcut>
+                      </ContextMenuItem>
+                    )}
                   </ContextMenuContent>
                 </ContextMenu>
-              ))}
+                );
+              })}
 
-              {/* Snap guides overlay */}
-              {guides.v.map((x, i) => (
-                <div key={`gv-${i}`} style={{
-                  position: "absolute", left: x, top: 0, width: 1, height: CANVAS_H,
-                  background: "#C8102E", pointerEvents: "none", zIndex: 999998,
-                }} />
-              ))}
-              {guides.h.map((y, i) => (
-                <div key={`gh-${i}`} style={{
-                  position: "absolute", top: y, left: 0, height: 1, width: CANVAS_W,
-                  background: "#C8102E", pointerEvents: "none", zIndex: 999998,
-                }} />
-              ))}
+              {/* Group outlines for visual feedback. */}
+              {(config.groups ?? []).map((g) => {
+                const members = g.memberIds
+                  .map((id) => config.blocks.find((b) => b.id === id))
+                  .filter((b): b is CustomBlock => !!b);
+                const bb = groupBounds(members);
+                if (!bb) return null;
+                const active = members.some((b) => selectedIds.includes(b.id));
+                return (
+                  <div key={`grp-${g.id}`}
+                    data-export-hide="true"
+                    style={{
+                      position: "absolute",
+                      left: bb.x - 4, top: bb.y - 4,
+                      width: bb.w + 8, height: bb.h + 8,
+                      border: `1px dashed ${active ? "#3B82F6" : "rgba(59,130,246,0.35)"}`,
+                      borderRadius: 4,
+                      pointerEvents: "none",
+                      zIndex: 0,
+                    }}
+                  />
+                );
+              })}
+
+              {/* Smart guides overlay (B8.3). */}
+              <svg
+                data-export-hide="true"
+                width={CANVAS_W} height={CANVAS_H}
+                style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 999998 }}
+              >
+                {guides.v.map((x, i) => (
+                  <line key={`gv-${i}`} x1={x} x2={x} y1={0} y2={CANVAS_H}
+                    stroke="#3B82F6" strokeWidth={1} />
+                ))}
+                {guides.h.map((y, i) => (
+                  <line key={`gh-${i}`} y1={y} y2={y} x1={0} x2={CANVAS_W}
+                    stroke="#3B82F6" strokeWidth={1} />
+                ))}
+              </svg>
+
+              {/* Marquee selection rectangle (B8.2). */}
+              {marquee && (
+                <div
+                  data-export-hide="true"
+                  style={{
+                    position: "absolute",
+                    left: marquee.x, top: marquee.y,
+                    width: marquee.w, height: marquee.h,
+                    border: "1px dashed #3B82F6",
+                    background: "rgba(59,130,246,0.08)",
+                    pointerEvents: "none",
+                    zIndex: 999999,
+                  }}
+                />
+              )}
 
               {/* Faixa Harald (não editável, sempre por cima) */}
               {config.showHaraldFooter && (
