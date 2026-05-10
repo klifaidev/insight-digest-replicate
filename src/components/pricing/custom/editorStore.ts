@@ -698,22 +698,11 @@ export function clearCopiedStyle() { _copiedStyle = null; emitCopy(); }
 
 /** Hook: returns { hasCopy, sourceId } and re-renders when copy changes. */
 export function useCopiedStyle() {
-  const [, setT] = useStateForce();
+  const [, setT] = useState(0);
   useEffect(() => {
     const fn = () => setT((n) => n + 1);
     copyListeners.add(fn);
     return () => { copyListeners.delete(fn); };
-  }, [setT]);
+  }, []);
   return { hasCopy: !!_copiedStyle, sourceId: _copiedStyle?.sourceId ?? null };
-}
-
-// Tiny helper to avoid an extra import.
-function useStateForce() {
-  return require_useState();
-}
-function require_useState(): [number, React.Dispatch<React.SetStateAction<number>>] {
-  // Re-export React's useState lazily without polluting top of file.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-  const { useState } = require("react") as typeof import("react");
-  return useState(0);
 }
