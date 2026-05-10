@@ -9,6 +9,7 @@ import {
 import {
   ensureChartStyle, defaultChartStyle, DEFAULT_PALETTE,
   type ChartStyle, type SeriesStyle,
+  type ConditionalRule, type ReferenceLineCfg, type WaterfallColumn,
 } from "./types";
 import {
   Section, Row, ToggleField, NumberStepper, ColorField, SelectField,
@@ -21,8 +22,14 @@ import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
+import { Trash2, Plus } from "lucide-react";
 
 type Patch = Partial<ChartBlock>;
+
+function rid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 // Position options per chart family
 function positionOptions(ct: ChartBlock["chartType"]) {
@@ -236,6 +243,55 @@ export function ChartInspector({
               { value: "inovacao", label: "Inovação" },
             ]} />
         </Row>
+
+        {/* B.1 — Field well: Eixo X */}
+        {["line", "area", "stackedArea", "bar", "column", "hbar",
+          "stackedColumn", "stackedBar", "combo"].includes(ct) && (
+          <Row label="Eixo X">
+            <SelectField value={block.fieldWells?.xDim ?? "period"}
+              onChange={(v) => onChange({
+                fieldWells: { ...(block.fieldWells ?? {}), xDim: v === "period" ? null : v },
+              })}
+              options={[
+                { value: "period", label: "Período" },
+                { value: "marca", label: "Marca" },
+                { value: "canalAjustado", label: "Canal" },
+                { value: "categoria", label: "Categoria" },
+                { value: "mercado", label: "Mercado" },
+                { value: "inovacao", label: "Inovação" },
+              ]} />
+          </Row>
+        )}
+
+        {/* B.5 — Sort */}
+        <Row label="Ordenar por">
+          <SelectField value={block.sortConfig?.field ?? "period"}
+            onChange={(v) => onChange({
+              sortConfig: { field: v as never, dir: block.sortConfig?.dir ?? "asc" },
+            })}
+            options={[
+              { value: "period", label: "Período" },
+              { value: "value", label: "Valor" },
+              { value: "name", label: "Nome" },
+            ]} />
+        </Row>
+        <Row label="Direção">
+          <Segmented value={block.sortConfig?.dir ?? "asc"}
+            onChange={(v) => onChange({
+              sortConfig: { field: block.sortConfig?.field ?? "period", dir: v as never },
+            })}
+            options={[
+              { value: "asc", label: "Asc" },
+              { value: "desc", label: "Desc" },
+            ]} />
+        </Row>
+
+        {/* B.4 — Bridge column builder */}
+        {ct === "waterfall" && (
+          <BridgeColumnBuilder block={block} onChange={onChange}
+            value={style.waterfall.columns ?? []}
+            setValue={(cols) => updPath("waterfall", { columns: cols })} />
+        )}
       </Section>
 
       {/* ===== General ===== */}
@@ -337,11 +393,14 @@ export function ChartInspector({
           onChange={(v) => updPath("dataLabels", { bold: v })} />
         <ToggleField label="Itálico" value={style.dataLabels.italic}
           onChange={(v) => updPath("dataLabels", { italic: v })} />
-        <Row label="Posição">
-          <SelectField value={style.dataLabels.position}
-            onChange={(v) => updPath("dataLabels", { position: v as never })}
-            options={positionOptions(ct) as never} />
-        </Row>
+        {/* Cleanup: histogram has fixed "above" position; pie/donut handled below */}
+        {ct !== "histogram" && (
+          <Row label="Posição">
+            <SelectField value={style.dataLabels.position}
+              onChange={(v) => updPath("dataLabels", { position: v as never })}
+              options={positionOptions(ct) as never} />
+          </Row>
+        )}
         <Row label="Formato">
           <SelectField value={style.dataLabels.format}
             onChange={(v) => updPath("dataLabels", { format: v as never })}
@@ -359,8 +418,10 @@ export function ChartInspector({
         </Row>
         <ToggleField label="Auto-contraste" value={style.dataLabels.autoContrast}
           onChange={(v) => updPath("dataLabels", { autoContrast: v })} />
-        <ToggleField label="Mostrar nome série" value={style.dataLabels.showSeries}
-          onChange={(v) => updPath("dataLabels", { showSeries: v })} />
+        {ct !== "pie" && ct !== "donut" && (
+          <ToggleField label="Mostrar nome série" value={style.dataLabels.showSeries}
+            onChange={(v) => updPath("dataLabels", { showSeries: v })} />
+        )}
         <ToggleField label="Mostrar categoria" value={style.dataLabels.showCategory}
           onChange={(v) => updPath("dataLabels", { showCategory: v })} />
         <Row label="Fundo rótulo">
@@ -654,14 +715,7 @@ export function ChartInspector({
             onChange={(v) => updPath("treemap", { showCategoryLabel: v })} />
           <ToggleField label="Mostrar valor" value={style.treemap.showValueLabel}
             onChange={(v) => updPath("treemap", { showValueLabel: v })} />
-          <Row label="Tam. fonte">
-            <NumberStepper value={style.treemap.labelSize} min={6} max={24}
-              onChange={(v) => updPath("treemap", { labelSize: v })} suffix="pt" />
-          </Row>
-          <Row label="Cor fonte">
-            <ColorField value={style.treemap.labelColor}
-              onChange={(c) => updPath("treemap", { labelColor: c })} />
-          </Row>
+          {/* Cleanup: tamanho e cor agora controlados pela seção "Rótulos de dados" */}
           <Row label="Cor borda">
             <ColorField value={style.treemap.borderColor}
               onChange={(c) => updPath("treemap", { borderColor: c })} />
@@ -861,6 +915,344 @@ export function ChartInspector({
           <ResetButton onClick={() => updStyle({ series: [] })} />
         </Section>
       )}
+
+      {/* B.2 — Conditional formatting */}
+      {["bar", "column", "hbar", "waterfall", "treemap"].includes(ct) && (
+        <ConditionalSection
+          rules={style.conditionalRules ?? []}
+          defaultColor={style.conditionalDefault ?? ""}
+          onRules={(rules) => updStyle({ conditionalRules: rules })}
+          onDefault={(c) => updStyle({ conditionalDefault: c })} />
+      )}
+
+      {/* B.1 — Analytics (refLines/trendline/forecast) */}
+      {["line", "area", "combo", "bar", "column", "hbar", "scatter", "bubble"].includes(ct) && (
+        <AnalyticsSection
+          analytics={style.analytics!}
+          onChange={(p) => updPath("analytics", p as never)} />
+      )}
+    </div>
+  );
+}
+
+// =============================================================
+// B.1 Analytics Section — refLines + trendline + forecast
+// =============================================================
+function AnalyticsSection({ analytics, onChange }: {
+  analytics: NonNullable<ChartStyle["analytics"]>;
+  onChange: (p: Partial<NonNullable<ChartStyle["analytics"]>>) => void;
+}) {
+  const refs = analytics.refLines ?? [];
+  const trend = analytics.trendline;
+  const fc = analytics.forecast;
+
+  const addRef = () => {
+    if (refs.length >= 3) return;
+    const nrl: ReferenceLineCfg = {
+      id: rid(), value: 0, label: `Linha ${refs.length + 1}`,
+      color: "#7C3AED", style: "dashed", thickness: 1.5,
+    };
+    onChange({ refLines: [...refs, nrl] });
+  };
+  const updRef = (i: number, p: Partial<ReferenceLineCfg>) => {
+    const next = [...refs]; next[i] = { ...next[i], ...p };
+    onChange({ refLines: next });
+  };
+  const delRef = (i: number) => {
+    onChange({ refLines: refs.filter((_, j) => j !== i) });
+  };
+
+  return (
+    <Section title="Análises">
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label className="text-[10px] uppercase text-muted-foreground">Linhas de referência</Label>
+          <button type="button" onClick={addRef} disabled={refs.length >= 3}
+            className="flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[10px] hover:bg-secondary disabled:opacity-40">
+            <Plus className="h-3 w-3" /> Adicionar
+          </button>
+        </div>
+        {refs.map((rl, i) => (
+          <div key={rl.id} className="space-y-1 rounded border border-border/30 p-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium">#{i + 1}</span>
+              <button type="button" onClick={() => delRef(i)}
+                className="text-muted-foreground hover:text-destructive">
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+            <Row label="Valor Y">
+              <Input type="number" className="h-7 text-[11px]" value={rl.value}
+                onChange={(e) => updRef(i, { value: parseFloat(e.target.value) || 0 })} />
+            </Row>
+            <Row label="Rótulo">
+              <Input className="h-7 text-[11px]" value={rl.label}
+                onChange={(e) => updRef(i, { label: e.target.value })} />
+            </Row>
+            <Row label="Cor"><ColorField value={rl.color} onChange={(c) => updRef(i, { color: c })} /></Row>
+            <Row label="Estilo">
+              <Segmented value={rl.style} onChange={(v) => updRef(i, { style: v as never })}
+                options={[
+                  { value: "solid", label: "Sólida" },
+                  { value: "dashed", label: "Tracej." },
+                  { value: "dotted", label: "Pont." },
+                ]} />
+            </Row>
+            <Row label="Espessura">
+              <NumberStepper value={rl.thickness} min={0.5} max={6} step={0.5}
+                onChange={(v) => updRef(i, { thickness: v })} suffix="px" />
+            </Row>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2 space-y-1.5 rounded border border-border/30 p-1.5">
+        <div className="text-[10px] font-semibold uppercase text-muted-foreground">Tendência</div>
+        <ToggleField label="Habilitar" value={trend.enabled}
+          onChange={(v) => onChange({ trendline: { ...trend, enabled: v } })} />
+        <Row label="Tipo">
+          <SelectField value={trend.type}
+            onChange={(v) => onChange({ trendline: { ...trend, type: v as never } })}
+            options={[
+              { value: "linear", label: "Linear" },
+              { value: "exp", label: "Exponencial" },
+              { value: "ma", label: "Média móvel" },
+            ]} />
+        </Row>
+        {trend.type === "ma" && (
+          <Row label="Janela (N)">
+            <NumberStepper value={trend.maWindow} min={2} max={12}
+              onChange={(v) => onChange({ trendline: { ...trend, maWindow: v } })} />
+          </Row>
+        )}
+        <Row label="Cor"><ColorField value={trend.color}
+          onChange={(c) => onChange({ trendline: { ...trend, color: c } })} /></Row>
+        <Row label="Espessura">
+          <NumberStepper value={trend.thickness} min={0.5} max={6} step={0.5}
+            onChange={(v) => onChange({ trendline: { ...trend, thickness: v } })} suffix="px" />
+        </Row>
+        <Row label="Estilo">
+          <Segmented value={trend.style}
+            onChange={(v) => onChange({ trendline: { ...trend, style: v as never } })}
+            options={[
+              { value: "solid", label: "Sólida" },
+              { value: "dashed", label: "Tracej." },
+              { value: "dotted", label: "Pont." },
+            ]} />
+        </Row>
+        <ToggleField label="Mostrar R²" value={trend.showR2}
+          onChange={(v) => onChange({ trendline: { ...trend, showR2: v } })} />
+      </div>
+
+      <div className="mt-2 space-y-1.5 rounded border border-border/30 p-1.5">
+        <div className="text-[10px] font-semibold uppercase text-muted-foreground">Previsão</div>
+        <ToggleField label="Habilitar" value={fc.enabled}
+          onChange={(v) => onChange({ forecast: { ...fc, enabled: v } })} />
+        <Row label="Períodos à frente">
+          <NumberStepper value={fc.periods} min={1} max={6}
+            onChange={(v) => onChange({ forecast: { ...fc, periods: v } })} />
+        </Row>
+        <ToggleField label="Banda de confiança" value={fc.band}
+          onChange={(v) => onChange({ forecast: { ...fc, band: v } })} />
+      </div>
+    </Section>
+  );
+}
+
+function ConditionalSection({ rules, defaultColor, onRules, onDefault }: {
+  rules: ConditionalRule[];
+  defaultColor: string;
+  onRules: (r: ConditionalRule[]) => void;
+  onDefault: (c: string) => void;
+}) {
+  const add = () => {
+    if (rules.length >= 5) return;
+    onRules([...rules, { id: rid(), op: ">", threshold: 0, color: "#16A34A" }]);
+  };
+  const upd = (i: number, p: Partial<ConditionalRule>) => {
+    const next = [...rules]; next[i] = { ...next[i], ...p };
+    onRules(next);
+  };
+  const del = (i: number) => onRules(rules.filter((_, j) => j !== i));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= rules.length) return;
+    const next = [...rules]; [next[i], next[j]] = [next[j], next[i]];
+    onRules(next);
+  };
+
+  return (
+    <Section title="Formatação condicional">
+      <div className="flex items-center justify-between">
+        <Label className="text-[10px] uppercase text-muted-foreground">Regras</Label>
+        <button type="button" onClick={add} disabled={rules.length >= 5}
+          className="flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[10px] hover:bg-secondary disabled:opacity-40">
+          <Plus className="h-3 w-3" /> Adicionar
+        </button>
+      </div>
+      {rules.map((r, i) => (
+        <div key={r.id} className="space-y-1 rounded border border-border/30 p-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium">#{i + 1}</span>
+            <div className="flex gap-1">
+              <button type="button" onClick={() => move(i, -1)}
+                className="text-[10px] text-muted-foreground hover:text-foreground">↑</button>
+              <button type="button" onClick={() => move(i, 1)}
+                className="text-[10px] text-muted-foreground hover:text-foreground">↓</button>
+              <button type="button" onClick={() => del(i)}
+                className="text-muted-foreground hover:text-destructive">
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+          <Row label="Operador">
+            <SelectField value={r.op} onChange={(v) => upd(i, { op: v as never })}
+              options={[
+                { value: ">", label: ">" },
+                { value: "<", label: "<" },
+                { value: "=", label: "=" },
+                { value: "between", label: "Entre" },
+              ]} />
+          </Row>
+          <Row label="Valor">
+            <Input type="number" className="h-7 text-[11px]" value={r.threshold}
+              onChange={(e) => upd(i, { threshold: parseFloat(e.target.value) || 0 })} />
+          </Row>
+          {r.op === "between" && (
+            <Row label="Valor 2">
+              <Input type="number" className="h-7 text-[11px]" value={r.threshold2 ?? 0}
+                onChange={(e) => upd(i, { threshold2: parseFloat(e.target.value) || 0 })} />
+            </Row>
+          )}
+          <Row label="Cor"><ColorField value={r.color} onChange={(c) => upd(i, { color: c })} /></Row>
+        </div>
+      ))}
+      <Row label="Cor padrão">
+        <ColorField value={defaultColor || "#94A3B8"} onChange={onDefault} />
+      </Row>
+    </Section>
+  );
+}
+
+function BridgeColumnBuilder({ block, value, setValue }: {
+  block: ChartBlock;
+  onChange: (p: Patch) => void;
+  value: WaterfallColumn[];
+  setValue: (cols: WaterfallColumn[]) => void;
+}) {
+  const upd = (i: number, p: Partial<WaterfallColumn>) => {
+    const next = [...value]; next[i] = { ...next[i], ...p };
+    setValue(next);
+  };
+  const del = (i: number) => setValue(value.filter((_, j) => j !== i));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= value.length) return;
+    const next = [...value]; [next[i], next[j]] = [next[j], next[i]];
+    setValue(next);
+  };
+  const presets: { label: string; build: () => WaterfallColumn[] }[] = [
+    { label: "Por mês", build: () => [] },
+    { label: "Por efeito", build: () => [
+      { id: rid(), label: "Início", type: "start", measure: block.measure },
+      { id: rid(), label: "Volume", type: "positive", measure: "volume" },
+      { id: rid(), label: "Preço", type: "positive", measure: "precoMedio" },
+      { id: rid(), label: "Mix", type: "negative", measure: block.measure },
+      { id: rid(), label: "Final", type: "total", measure: block.measure },
+    ]},
+    { label: "Por categoria", build: () => [] },
+    { label: "Por marca", build: () => [] },
+    { label: "Por canal", build: () => [] },
+    { label: "Em branco", build: () => [] },
+  ];
+  const addBlank = () => setValue([...value, {
+    id: rid(), label: "Nova coluna", type: "positive", measure: block.measure,
+  }]);
+
+  return (
+    <div className="mt-2 space-y-1.5 rounded border border-border/30 p-1.5">
+      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Colunas (Bridge)</div>
+      <div className="flex flex-wrap gap-1">
+        {presets.map((p) => (
+          <button key={p.label} type="button" onClick={() => setValue(p.build())}
+            className="rounded border border-input px-1.5 py-0.5 text-[10px] hover:bg-secondary">
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {value.length === 0 && (
+        <p className="text-[10px] text-muted-foreground">
+          Sem colunas — usando o modo automático (uma coluna por período).
+        </p>
+      )}
+      {value.map((c, i) => (
+        <div key={c.id} className="space-y-1 rounded border border-border/30 p-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium">#{i + 1}</span>
+            <div className="flex gap-1">
+              <button type="button" onClick={() => move(i, -1)}
+                className="text-[10px] text-muted-foreground hover:text-foreground">↑</button>
+              <button type="button" onClick={() => move(i, 1)}
+                className="text-[10px] text-muted-foreground hover:text-foreground">↓</button>
+              <button type="button" onClick={() => del(i)}
+                className="text-muted-foreground hover:text-destructive">
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+          <Row label="Rótulo">
+            <Input className="h-7 text-[11px]" value={c.label}
+              onChange={(e) => upd(i, { label: e.target.value })} />
+          </Row>
+          <Row label="Tipo">
+            <SelectField value={c.type} onChange={(v) => upd(i, { type: v as never })}
+              options={[
+                { value: "start", label: "Início" },
+                { value: "positive", label: "Positivo" },
+                { value: "negative", label: "Negativo" },
+                { value: "total", label: "Total" },
+                { value: "subtotal", label: "Subtotal" },
+              ]} />
+          </Row>
+          <Row label="Medida">
+            <SelectField value={c.measure ?? "__manual__"}
+              onChange={(v) => upd(i, v === "__manual__"
+                ? { measure: undefined }
+                : { measure: v as KpiMeasureId, manualValue: undefined })}
+              options={[
+                { value: "__manual__", label: "— Manual —" },
+                ...KPI_MEASURES.map((m) => ({ value: m.id, label: m.label })),
+              ]} />
+          </Row>
+          {c.measure == null && (
+            <Row label="Valor">
+              <Input type="number" className="h-7 text-[11px]" value={c.manualValue ?? 0}
+                onChange={(e) => upd(i, { manualValue: parseFloat(e.target.value) || 0 })} />
+            </Row>
+          )}
+          <Row label="Filtrar dim.">
+            <SelectField value={c.filterDim ?? "__none__"}
+              onChange={(v) => upd(i, { filterDim: v === "__none__" ? null : v })}
+              options={[
+                { value: "__none__", label: "— Nenhum —" },
+                { value: "marca", label: "Marca" },
+                { value: "canalAjustado", label: "Canal" },
+                { value: "categoria", label: "Categoria" },
+                { value: "mercado", label: "Mercado" },
+              ]} />
+          </Row>
+          {c.filterDim && (
+            <Row label="Valor filtro">
+              <Input className="h-7 text-[11px]" value={c.filterValue ?? ""}
+                onChange={(e) => upd(i, { filterValue: e.target.value })} />
+            </Row>
+          )}
+        </div>
+      ))}
+      <button type="button" onClick={addBlank}
+        className="flex w-full items-center justify-center gap-1 rounded border border-dashed border-input py-1 text-[10px] text-muted-foreground hover:bg-secondary">
+        <Plus className="h-3 w-3" /> Adicionar coluna
+      </button>
     </div>
   );
 }

@@ -27,6 +27,7 @@ import {
 import {
   ChartTooltip, applySort, evalCondColor, renderRefLines,
   linearFit, movingAvg, resolveBridgeColumns, FunnelSVG,
+  computeTrendlineSeries,
 } from "./chartHelpers";
 
 // -- helpers ---------------------------------------------------------------
@@ -160,9 +161,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     () => (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
     [block.dataSource, pricing, budget],
   );
+  const xDim = block.fieldWells?.xDim ?? null;
   const raw = useMemo(
-    () => computeChartSeries(dsRows, block.filters, block.measure, block.breakdown),
-    [dsRows, block.filters, block.measure, block.breakdown],
+    () => computeChartSeries(dsRows, block.filters, block.measure, block.breakdown, xDim),
+    [dsRows, block.filters, block.measure, block.breakdown, xDim],
   );
   const data = useMemo(() => {
     const ranked = [...raw.series].sort((a, z) =>
@@ -334,8 +336,34 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   if (ct === "line" || ct === "area" || ct === "stackedArea" || ct === "combo") {
     const Comp = (ct === "area" || ct === "stackedArea") ? AreaChart
       : ct === "combo" ? ComposedChart : LineChart;
+
+    // C2 — trendline + forecast overlay
+    const trendCfg = style.analytics?.trendline;
+    const fcCfg = style.analytics?.forecast;
+    const trendOn = !!trendCfg?.enabled;
+    const trendOut = trendOn ? computeTrendlineSeries(
+      data.series, cats,
+      { enabled: true, type: trendCfg!.type, maWindow: trendCfg!.maWindow },
+      { enabled: !!fcCfg?.enabled, periods: fcCfg?.periods ?? 0 },
+    ) : null;
+    let chartRows = rows as Record<string, number | string | null>[];
+    if (trendOut && trendOut.rows.length > 0) {
+      // merge by index; extend with future-only rows
+      const merged: Record<string, number | string | null>[] = rows.map((r) => ({ ...r }));
+      const fwd = (fcCfg?.enabled ? Math.max(0, Math.min(6, fcCfg.periods ?? 0)) : 0);
+      for (let i = 0; i < fwd; i++) merged.push({ __period: `+${i + 1}` });
+      trendOut.rows.forEach((tr, i) => {
+        Object.keys(tr).forEach((k) => {
+          if (k === "__period") return;
+          if (merged[i]) merged[i][k] = tr[k];
+        });
+      });
+      chartRows = merged;
+    }
+    const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
+
     chart = (
-      <Comp data={rows}>
+      <Comp data={chartRows}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
         {renderRefLines(style)}
@@ -368,6 +396,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 radius={style.bar.cornerRadius} stroke={style.bar.borderColor}
                 strokeWidth={style.bar.borderWidth}
                 yAxisId={cfg?.secondaryAxis ? "right" : "left"}>
+                {(style.conditionalRules?.length ?? 0) > 0 && chartRows.map((r, ri) => (
+                  <Cell key={`${s.name}-${ri}`} fill={evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)} />
+                ))}
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
                     content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
@@ -385,12 +416,29 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 r: cfg?.marker?.size ?? 3,
                 fill: cfg?.marker?.fill ?? color,
                 stroke: cfg?.marker?.border ?? color,
-              } : false}>
+              } : false}
+              connectNulls>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("line", dlPos) as never}
                   content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
               )}
             </Line>
+          );
+        })}
+        {/* C2 — trendline overlay (one Line per series) */}
+        {trendOut && data.series.map((s) => {
+          const tk = trendOut.trendKey(s.name);
+          const tcolor = trendCfg!.color;
+          const r2 = trendOut.r2ByName[s.name];
+          const showR2 = trendCfg!.showR2 && isFinite(r2);
+          return (
+            <Line key={tk} isAnimationActive={false} dataKey={tk}
+              name={showR2 ? `${s.name} (tend. R²=${r2.toFixed(2)})` : `${s.name} (tendência)`}
+              type="monotone" stroke={tcolor}
+              strokeWidth={trendCfg!.thickness}
+              strokeDasharray={trendDash(trendCfg!.style)}
+              dot={false} connectNulls
+              yAxisId="left" />
           );
         })}
         {/* Combo: line series from second measure */}
@@ -422,6 +470,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               yAxisId="left"
               radius={style.bar.cornerRadius}
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
+              {/* C1 — conditional formatting per cell */}
+              {(style.conditionalRules?.length ?? 0) > 0 && rows.map((r, ri) => (
+                <Cell key={`${s.name}-${ri}`} fill={evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)} />
+              ))}
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
                   content={makeLabelContent({
@@ -461,6 +513,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stackId={stacked ? "stack" : undefined}
               radius={style.bar.cornerRadius}
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
+              {(style.conditionalRules?.length ?? 0) > 0 && rows.map((r, ri) => (
+                <Cell key={`${s.name}-${ri}`} fill={evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)} />
+              ))}
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("bar-horizontal", dlPos) as never}
                   content={makeLabelContent({
@@ -642,6 +697,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         fill = mixHex(style.treemap.gradientFrom, style.treemap.gradientTo, t);
       } else {
         fill = DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+      }
+      // C1 — conditional formatting overrides palette/gradient
+      if ((style.conditionalRules?.length ?? 0) > 0) {
+        fill = evalCondColor(r.value, style.conditionalRules, style.conditionalDefault || fill);
       }
       return { name: r.name, size: Math.abs(r.value), value: r.value, pct: (Math.abs(r.value) / total) * 100, fill };
     });
