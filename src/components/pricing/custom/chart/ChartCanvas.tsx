@@ -11,6 +11,11 @@ import {
   ReferenceLine,
 } from "recharts";
 import type { ChartBlock } from "@/lib/customSlide";
+import { KPI_MEASURES } from "@/lib/customSlide";
+
+const KPI_MEASURES_LABEL: Record<string, string> = Object.fromEntries(
+  KPI_MEASURES.map((m) => [m.id, m.label]),
+);
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
