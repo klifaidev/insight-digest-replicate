@@ -630,10 +630,13 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               yAxisId="left"
               radius={style.bar.cornerRadius}
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
-              {/* C1 — conditional formatting per cell */}
-              {(style.conditionalRules?.length ?? 0) > 0 && rows.map((r, ri) => (
-                <Cell key={`${s.name}-${ri}`} fill={evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)} />
-              ))}
+              {/* C1 — conditional formatting + per-row dim cells */}
+              {((style.conditionalRules?.length ?? 0) > 0 || ownFilterOnRowDim) && rows.map((r, ri) => {
+                const baseFill = (style.conditionalRules?.length ?? 0) > 0
+                  ? evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)
+                  : color;
+                return <Cell key={`${s.name}-${ri}`} fill={baseFill} fillOpacity={cellFillOpacity(String(r.__period ?? ""))} />;
+              })}
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
                   content={makeLabelContent({
