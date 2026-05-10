@@ -1122,3 +1122,33 @@ function TruncationAlert({ blockId, fit, unitPlural }: {
   );
 }
 
+function PaletteGroup({
+  title, defaultOpen = true, children,
+}: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex w-full items-center justify-between px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+        <span>{title}</span>
+        <ChevronDown className={cn("h-3 w-3 transition-transform", open ? "" : "-rotate-90")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex flex-col gap-0.5 pt-1">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function PaletteButton({
+  icon: Icon, label, onClick,
+}: { icon: Icon; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-medium text-left hover:bg-secondary"
+    >
+      <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+      <span className="truncate">{label}</span>
+    </button>
+  );
+}
