@@ -154,12 +154,13 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const color = cfg?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const dash = cfg?.lineStyle === "dashed" ? "5 5"
             : cfg?.lineStyle === "dotted" ? "2 4" : "0";
-          if (block.chartType === "area") {
+          if (ct === "area" || ct === "stackedArea") {
+            const stacked = forceStack || style.area.stacked;
             return (
               <Area key={s.name} dataKey={s.name} type={cfg?.smooth ? "monotone" : "linear"}
                 stroke={color} fill={color}
                 fillOpacity={style.area.lineOnTop ? (cfg?.areaOpacity ?? 0.35) : 0.5}
-                stackId={style.area.stacked ? "stack" : undefined}
+                stackId={stacked ? "stack" : undefined}
                 strokeWidth={cfg?.thickness ?? 2}>
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position="top" style={labelStyle}
@@ -168,7 +169,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               </Area>
             );
           }
-          if (block.chartType === "combo" && !cfg?.asLine) {
+          if (ct === "combo" && !cfg?.asLine) {
             return (
               <Bar key={s.name} dataKey={s.name} fill={color}
                 radius={style.bar.cornerRadius} stroke={style.bar.borderColor}
