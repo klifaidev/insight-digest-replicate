@@ -1716,3 +1716,15 @@ function ClearFiltersToolbar() {
     </div>
   );
 }
+
+// Convert client mouse coords to canvas-space coords (accounting for scale).
+function clientToCanvas(
+  canvasEl: HTMLDivElement | null,
+  clientX: number,
+  clientY: number,
+  scale: number,
+): { x: number; y: number } | null {
+  if (!canvasEl) return null;
+  const r = canvasEl.getBoundingClientRect();
+  return { x: (clientX - r.left) / scale, y: (clientY - r.top) / scale };
+}
