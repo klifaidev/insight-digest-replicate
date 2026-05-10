@@ -548,6 +548,13 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => duplicateBlock(selected.id)} title="Duplicar">
                     <CopyIcon className="h-3.5 w-3.5" />
                   </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7"
+                    onClick={() => toggleLock(selected.id)}
+                    title={selected.locked ? "Desbloquear posição" : "Bloquear posição"}>
+                    {selected.locked
+                      ? <Unlock className="h-3.5 w-3.5" />
+                      : <Lock className="h-3.5 w-3.5" />}
+                  </Button>
                   <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => removeBlock(selected.id)} title="Remover">
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
