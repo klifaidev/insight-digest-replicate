@@ -7,9 +7,12 @@ import { Package, Briefcase, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 import { usePricing } from "@/store/pricing";
+import { useBudget } from "@/store/budget";
 import { uniqueValues, applyFilters } from "@/lib/analytics";
+import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { getDeParaBySku } from "@/lib/depara";
 import type { Filters, FilterKey, PricingRow } from "@/lib/types";
+import type { BlockDataSource } from "@/lib/customSlide";
 
 const SKU_FIELDS: { key: FilterKey; label: string }[] = [
   { key: "categoria", label: "Categoria" },
@@ -30,13 +33,16 @@ const COMERCIAL_FIELDS: { key: FilterKey; label: string }[] = [
 ];
 
 export function BlockFilters({
-  filters, onChange,
-}: { filters: Filters; onChange: (next: Filters) => void }) {
-  const rows = usePricing((s) => s.rows);
-  const baseRows = useMemo(
-    () => applyFilters(rows, {}, null).filter((r) => getDeParaBySku(r.sku)),
-    [rows],
-  );
+  filters, onChange, dataSource = "ke30",
+}: { filters: Filters; onChange: (next: Filters) => void; dataSource?: BlockDataSource }) {
+  const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const baseRows = useMemo(() => {
+    if (dataSource === "budget") return budgetRowsAsPricing(budget);
+    return applyFilters(pricing, {}, null).filter((r) => getDeParaBySku(r.sku));
+  }, [dataSource, pricing, budget]);
+  // Em Budget só mostramos campos suportados (sem UF/Regional/Mercado Ajustado/Cliente).
+  const isBudget = dataSource === "budget";
   const setKey = (k: FilterKey, vals: string[]) => {
     const next: Filters = { ...filters };
     if (vals.length === 0) delete next[k];
@@ -116,8 +122,16 @@ export function BlockFilters({
           <div className="h-px flex-1 bg-success/20" />
         </div>
         <div className="grid grid-cols-1 gap-2">
-          {COMERCIAL_FIELDS.map((f) => renderField(f, "comercial"))}
+          {(isBudget
+            ? COMERCIAL_FIELDS.filter((f) => f.key === "canalAjustado")
+            : COMERCIAL_FIELDS
+          ).map((f) => renderField(f, "comercial"))}
         </div>
+        {isBudget && (
+          <p className="mt-1 text-[9px] text-muted-foreground">
+            Base Budget só expõe Canal Ajustado.
+          </p>
+        )}
       </section>
     </div>
   );

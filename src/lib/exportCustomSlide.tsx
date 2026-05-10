@@ -131,6 +131,7 @@ async function captureNode(node: HTMLElement): Promise<string> {
     },
     filter: (n) => {
       if (!(n instanceof Element)) return true;
+      if (n.getAttribute("data-edit-only") === "true") return false;
       const cls = n.getAttribute("class") ?? "";
       return !/react-resizable-handle|outline-primary/.test(cls);
     },

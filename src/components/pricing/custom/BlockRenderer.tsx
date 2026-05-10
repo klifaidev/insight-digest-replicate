@@ -17,6 +17,7 @@ import {
 } from "@/lib/customKpi";
 import { KPI_MEASURES } from "@/lib/customSlide";
 import { resolveTableFit, resolveTopSkuFit } from "@/lib/customCapacity";
+import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 
 export const CUSTOM_TABLE_MEASURES: PivotMeasure[] = [
   { id: "rol_real",  label: "ROL",            field: "rol_real",         agg: "sum", format: "currency", tone: "real" },
@@ -83,7 +84,12 @@ function TextRender({ block: b }: { block: TextBlock }) {
 
 function KpiRender({ block: b }: { block: KpiBlock }) {
   const pricing = usePricing((s) => s.rows);
-  const value = useMemo(() => computeKpiBlock(pricing, b), [pricing, b]);
+  const budget = useBudget((s) => s.rows);
+  const rows = useMemo(
+    () => (b.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
+    [b.dataSource, pricing, budget],
+  );
+  const value = useMemo(() => computeKpiBlock(rows, b), [rows, b]);
   const measureLabel = b.source === "dynamic"
     ? KPI_MEASURES.find((m) => m.id === b.measure)?.label
     : null;
@@ -193,7 +199,9 @@ function TableRender({ block: b }: { block: TableBlock }) {
   const budget = useBudget((s) => s.rows);
 
   const data = useMemo(() => {
-    const unified = buildUnifiedRows(pricing, budget, "real");
+    const isBudget = b.dataSource === "budget";
+    const realRows = isBudget ? budgetRowsAsPricing(budget) : pricing;
+    const unified = buildUnifiedRows(realRows, [], "real");
     const measures = CUSTOM_TABLE_MEASURES.filter((m) => b.measures.includes(m.id));
     if (measures.length === 0) return null;
     const cfg: PivotConfig = {
@@ -214,7 +222,7 @@ function TableRender({ block: b }: { block: TableBlock }) {
       return vz - va;
     });
     return { result, measures, sortedHeaders };
-  }, [pricing, budget, b.rowDims, b.colDim, b.measures, b.filters, b.sortMeasure]);
+  }, [pricing, budget, b.dataSource, b.rowDims, b.colDim, b.measures, b.filters, b.sortMeasure]);
 
   if (!data || data.sortedHeaders.length === 0) {
     return (
@@ -320,10 +328,15 @@ function ChartRender({ block }: { block: ChartBlock }) {
 // ---------------------------------------------------------------------------
 function TopSkuRender({ block: b }: { block: TopSkuBlock }) {
   const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const rows = useMemo(
+    () => (b.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
+    [b.dataSource, pricing, budget],
+  );
   // Sempre busca todos para podermos calcular o efetivo + Outros
   const allItems = useMemo(
-    () => computeTopRanking(pricing, b.filters, b.dim, b.measure, 9999, b.periodMode, b.periodValue),
-    [pricing, b.filters, b.dim, b.measure, b.periodMode, b.periodValue],
+    () => computeTopRanking(rows, b.filters, b.dim, b.measure, 9999, b.periodMode, b.periodValue),
+    [rows, b.filters, b.dim, b.measure, b.periodMode, b.periodValue],
   );
   const fit = resolveTopSkuFit(b, allItems.length);
   const visible = allItems.slice(0, fit.shown);

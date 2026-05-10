@@ -11,6 +11,8 @@ import {
 } from "recharts";
 import type { ChartBlock } from "@/lib/customSlide";
 import { usePricing } from "@/store/pricing";
+import { useBudget } from "@/store/budget";
+import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking, formatValue, inferFormat } from "@/lib/customKpi";
 import { resolveChartFit } from "@/lib/customCapacity";
 import {
@@ -37,9 +39,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   // ---- common series fetch (line/bar/column/hbar/area/combo) ----
   const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const dsRows = useMemo(
+    () => (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
+    [block.dataSource, pricing, budget],
+  );
   const raw = useMemo(
-    () => computeChartSeries(pricing, block.filters, block.measure, block.breakdown),
-    [pricing, block.filters, block.measure, block.breakdown],
+    () => computeChartSeries(dsRows, block.filters, block.measure, block.breakdown),
+    [dsRows, block.filters, block.measure, block.breakdown],
   );
   const data = useMemo(() => {
     const ranked = [...raw.series].sort((a, z) =>
@@ -64,11 +71,11 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const ranking = useMemo(() => {
     if (!rankingTypes.includes(block.chartType)) return [];
     return computeTopRanking(
-      pricing, block.filters,
+      dsRows, block.filters,
       block.breakdown ?? "marca",
       block.measure, 50, "all", null,
     );
-  }, [pricing, block.filters, block.breakdown, block.measure, block.chartType]);
+  }, [dsRows, block.filters, block.breakdown, block.measure, block.chartType]);
 
   // ---- empty states ----
   const seriesEmpty = data.periodos.length === 0 || data.series.length === 0;

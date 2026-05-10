@@ -351,6 +351,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                   <div data-block-id={blk.id} data-block-kind={blk.kind} style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
                     <BlockRenderer block={blk} />
                   </div>
+                  <DataSourceBadge block={blk} />
                 </Rnd>
               ))}
 
@@ -584,9 +585,11 @@ function BlockSpecificEditor({ block, onChange }: {
 
     case "kpi":
       return <FilteredInspector
+        block={block}
         design={<KpiInspector block={block} onChange={onChange} />}
         filters={block.filters ?? {}}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
 
     case "image":
@@ -640,56 +643,174 @@ function BlockSpecificEditor({ block, onChange }: {
 
     case "bridge":
       return <FilteredInspector
+        block={block}
         design={<BridgeBlockEditor block={block} onChange={onChange} />}
         filters={block.filters}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
 
     case "table":
       return <FilteredInspector
+        block={block}
         design={<TableBlockEditor block={block} onChange={onChange} />}
         filters={block.filters}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
 
     case "chart":
       return <FilteredInspector
+        block={block}
         design={<ChartBlockEditor block={block} onChange={onChange} />}
         filters={block.filters}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
 
     case "topSku":
       return <FilteredInspector
+        block={block}
         design={<TopSkuBlockEditor block={block} onChange={onChange} />}
         filters={block.filters}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
+        onChange={onChange}
       />;
   }
 }
 
 // Wrapper com abas Design / Filtros — dá aos blocos de dados a UX
 // próxima do PowerPoint (painel de formatação à direita).
+// Inclui o seletor de Fonte de Dados PINADO no topo (não-colapsável).
 function FilteredInspector({
-  design, filters, onFiltersChange,
+  block, design, filters, onFiltersChange, onChange,
 }: {
+  block: CustomBlock;
   design: React.ReactNode;
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
+  onChange: (p: Partial<CustomBlock>) => void;
 }) {
+  const ds = (block as { dataSource?: "ke30" | "budget" }).dataSource ?? "ke30";
+  const [pendingSource, setPendingSource] = useState<"ke30" | "budget" | null>(null);
+
+  // Bridge não tem fonte selecionável (sempre KE30 — usa cálculo PVM).
+  const showPicker = block.kind !== "bridge";
+
+  const applySwitch = (next: "ke30" | "budget") => {
+    if (next === ds) return;
+    setPendingSource(next);
+  };
+
+  const confirmSwitch = () => {
+    if (!pendingSource) return;
+    // Reset filtros + medida quando a fonte muda — campos podem não existir.
+    const patch: Partial<CustomBlock> = {
+      dataSource: pendingSource,
+      filters: {},
+    } as never;
+    if (block.kind === "kpi" && pendingSource === "budget") {
+      // mb/mbPct/frete/comissao não existem no Budget
+      const m = (block as KpiBlock).measure;
+      if (m === "mb" || m === "mbPct" || m === "frete" || m === "comissao") {
+        (patch as Partial<KpiBlock>).measure = "rol";
+      }
+    }
+    if (block.kind === "chart" && pendingSource === "budget") {
+      const m = (block as ChartBlock).measure;
+      if (m === "mb" || m === "mbPct" || m === "frete" || m === "comissao") {
+        (patch as Partial<ChartBlock>).measure = "rol";
+      }
+    }
+    if (block.kind === "topSku" && pendingSource === "budget") {
+      const m = (block as TopSkuBlock).measure;
+      if (m === "mb" || m === "mbPct" || m === "frete" || m === "comissao") {
+        (patch as Partial<TopSkuBlock>).measure = "rol";
+      }
+    }
+    onChange(patch);
+    setPendingSource(null);
+  };
+
   return (
-    <Tabs defaultValue="design" className="w-full">
-      <TabsList className="grid h-8 w-full grid-cols-2">
-        <TabsTrigger value="design" className="text-[11px]">Design</TabsTrigger>
-        <TabsTrigger value="filters" className="text-[11px]">Filtros</TabsTrigger>
-      </TabsList>
-      <TabsContent value="design" className="mt-2 space-y-2">
-        {design}
-      </TabsContent>
-      <TabsContent value="filters" className="mt-2">
-        <BlockFilters filters={filters} onChange={onFiltersChange} />
-      </TabsContent>
-    </Tabs>
+    <div className="space-y-2">
+      {showPicker && (
+        <div className="rounded-md border border-border/60 bg-secondary/30 p-2">
+          <div className="mb-1.5 flex items-center justify-between">
+            <Label className="text-[10px] font-semibold uppercase tracking-wider text-foreground">
+              Fonte de Dados
+            </Label>
+            <Badge
+              variant="secondary"
+              className={cn(
+                "text-[9px]",
+                ds === "ke30"
+                  ? "bg-blue-500/15 text-blue-600 dark:text-blue-300"
+                  : "bg-purple-500/15 text-purple-600 dark:text-purple-300",
+              )}
+            >
+              {ds === "ke30" ? "KE30" : "Budget"}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              onClick={() => applySwitch("ke30")}
+              className={cn(
+                "rounded px-2 py-1 text-[11px] font-medium transition-colors",
+                ds === "ke30"
+                  ? "bg-blue-500/20 text-blue-700 dark:text-blue-200"
+                  : "bg-card hover:bg-secondary text-muted-foreground",
+              )}
+            >KE30</button>
+            <button
+              type="button"
+              onClick={() => applySwitch("budget")}
+              className={cn(
+                "rounded px-2 py-1 text-[11px] font-medium transition-colors",
+                ds === "budget"
+                  ? "bg-purple-500/20 text-purple-700 dark:text-purple-200"
+                  : "bg-card hover:bg-secondary text-muted-foreground",
+              )}
+            >Budget</button>
+          </div>
+          <p className="mt-1 text-[9px] leading-snug text-muted-foreground">
+            {ds === "ke30"
+              ? "Detalhada (KE30): receita, custos, margens, frete, comissão."
+              : "Agregada (Budget): receita, volume, CM, CPV. Sem MB/Frete/Comissão."}
+          </p>
+        </div>
+      )}
+
+      <Tabs defaultValue="design" className="w-full">
+        <TabsList className="grid h-8 w-full grid-cols-2">
+          <TabsTrigger value="design" className="text-[11px]">Design</TabsTrigger>
+          <TabsTrigger value="filters" className="text-[11px]">Filtros</TabsTrigger>
+        </TabsList>
+        <TabsContent value="design" className="mt-2 space-y-2">
+          {design}
+        </TabsContent>
+        <TabsContent value="filters" className="mt-2">
+          <BlockFilters filters={filters} onChange={onFiltersChange} dataSource={ds} />
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={!!pendingSource} onOpenChange={(v) => !v && setPendingSource(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Trocar fonte de dados?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Trocar a fonte de dados irá redefinir os filtros deste bloco
+            (e a medida, se ela não existir na nova base). Deseja continuar?
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPendingSource(null)}>Cancelar</Button>
+            <Button onClick={confirmSwitch}>Trocar para {pendingSource === "budget" ? "Budget" : "KE30"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
@@ -1150,5 +1271,37 @@ function PaletteButton({
       <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
       <span className="truncate">{label}</span>
     </button>
+  );
+}
+
+// Badge "KE30" / "Budget" mostrado no canto superior-esquerdo de cada bloco
+// de dados durante a edição. Marcado data-edit-only para o exporter remover.
+function DataSourceBadge({ block }: { block: CustomBlock }) {
+  const kinds: CustomBlockKind[] = ["chart", "kpi", "table", "topSku"];
+  if (!kinds.includes(block.kind)) return null;
+  const ds = (block as { dataSource?: "ke30" | "budget" }).dataSource ?? "ke30";
+  const isKe30 = ds === "ke30";
+  return (
+    <div
+      data-edit-only="true"
+      style={{
+        position: "absolute",
+        top: 4,
+        left: 4,
+        zIndex: 50,
+        padding: "1px 6px",
+        borderRadius: 4,
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: 0.5,
+        textTransform: "uppercase",
+        color: "#fff",
+        background: isKe30 ? "rgba(37,99,235,0.92)" : "rgba(147,51,234,0.92)",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
+        pointerEvents: "none",
+      }}
+    >
+      {isKe30 ? "KE30" : "Budget"}
+    </div>
   );
 }

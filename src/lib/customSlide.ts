@@ -54,6 +54,19 @@ export type KpiMeasureId =
 export type KpiPeriodMode = "fy" | "month" | "all";
 export type KpiFormat = "auto" | "currency" | "percent" | "tons" | "number";
 
+/**
+ * Fonte de dados do bloco.
+ * - "ke30":   base detalhada (CSV KE30 — usePricing)
+ * - "budget": base agregada / orçamentária (Excel Budget — useBudget)
+ * Padrão histórico: "ke30".
+ */
+export type BlockDataSource = "ke30" | "budget";
+
+/** Medidas suportadas pela base Budget (subset do KpiMeasureId). */
+export const BUDGET_SUPPORTED_MEASURES: ReadonlyArray<KpiMeasureId> = [
+  "rol", "volume", "cm", "cv", "cmPct", "precoMedio",
+];
+
 export interface KpiBlock extends BaseBlock {
   kind: "kpi";
   label: string;
@@ -74,6 +87,8 @@ export interface KpiBlock extends BaseBlock {
   filters?: Filters;
   /** Formato; "auto" infere a partir da medida */
   format?: KpiFormat;
+  /** Fonte de dados — default "ke30" para retro-compatibilidade. */
+  dataSource?: BlockDataSource;
 }
 
 export interface ImageBlock extends BaseBlock {
@@ -100,6 +115,8 @@ export interface BridgeBlock extends BaseBlock {
 export interface TableBlock extends BaseBlock {
   kind: "table";
   source: "ke30";
+  /** Fonte de dados — default "ke30". */
+  dataSource?: BlockDataSource;
   measures: string[];
   rowDims: string[];
   colDim: string | null;
@@ -153,6 +170,8 @@ export interface ChartBlock extends BaseBlock {
   exportNote?: boolean;
   /** Estilo PowerPoint-grade — opcional p/ retro-compatibilidade. */
   style?: Partial<ChartStyle>;
+  /** Fonte de dados — default "ke30". */
+  dataSource?: BlockDataSource;
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +194,8 @@ export interface TopSkuBlock extends BaseBlock {
   showOthers?: boolean;
   /** Imprime nota "Mostrando X de Y" no PPT. Default: false */
   exportNote?: boolean;
+  /** Fonte de dados — default "ke30". */
+  dataSource?: BlockDataSource;
 }
 
 export type CustomBlock =
@@ -231,6 +252,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         filters: {},
         format: "auto",
         manualValue: "",
+        dataSource: "ke30",
       };
     case "image":
       return { id, kind, z, x: 80, y: 220, w: 360, h: 220, src: "", fit: "contain" };
@@ -242,7 +264,8 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         base: null, comp: null, mode: "month", filters: {} };
     case "table":
       return { id, kind, z, x: 60, y: 200, w: 1200, h: 360,
-        source: "ke30", measures: ["rol_real", "cm_real"],
+        source: "ke30", dataSource: "ke30",
+        measures: ["rol_real", "cm_real"],
         rowDims: ["marca"], colDim: "periodo", filters: {},
         autoFit: true, showOthers: false, exportNote: false };
     case "chart":
@@ -252,6 +275,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         showGrid: true, showLegend: true, showLabels: false,
         filters: {}, title: "Evolução",
         autoFit: true, showOthers: false, exportNote: false,
+        dataSource: "ke30",
       };
     case "topSku":
       return {
@@ -260,6 +284,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         periodMode: "all", periodValue: null,
         filters: {}, showShare: true, title: "Top SKUs",
         autoFit: true, showOthers: false, exportNote: false,
+        dataSource: "ke30",
       };
   }
 }
