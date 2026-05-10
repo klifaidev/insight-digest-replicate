@@ -26,6 +26,7 @@ import {
   ScatterChart as ScatterIcon, Circle, Filter as FunnelIcon,
   Combine, Network, Radar as RadarIcon, Box as BoxIcon,
   BarChart2, Hash,
+  Undo2, Redo2, Lock, Unlock, ChevronUp, ChevronsUp, ChevronsDown,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
