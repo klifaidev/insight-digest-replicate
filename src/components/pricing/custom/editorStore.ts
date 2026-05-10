@@ -18,6 +18,7 @@ import { useShallow } from "zustand/react/shallow";
 import { temporal } from "zundo";
 import { useEffect } from "react";
 import type {
+  BlockGroup,
   CustomBlock,
   CustomBlockKind,
   CustomChartType,
@@ -28,19 +29,29 @@ import { newBlock, newChartBlock } from "@/lib/customSlide";
 export type EditorActionLabel =
   | "Adicionar bloco"
   | "Excluir bloco"
+  | "Excluir blocos"
   | "Mover bloco"
+  | "Mover blocos"
   | "Redimensionar bloco"
   | "Alterar estilo"
   | "Alterar dados"
   | "Duplicar bloco"
+  | "Duplicar blocos"
   | "Alterar ordem"
   | "Bloquear / Desbloquear"
-  | "Alterar slide";
+  | "Alterar slide"
+  | "Alinhar blocos"
+  | "Agrupar blocos"
+  | "Desagrupar blocos";
 
 interface EditorState {
   config: CustomSlideConfig | null;
   slideId: string | undefined;
   lastActionLabel: EditorActionLabel | null;
+  /** Multi-selection (B8.2). Empty means nothing selected. */
+  selectedIds: string[];
+  /** Group-edit mode: clicking a member dives into editing that single block. */
+  groupEditMemberId: string | null;
 }
 
 // Mutations live outside the partialized state so zundo doesn't snapshot them.
@@ -49,12 +60,17 @@ let suppressEmit = false;
 
 const baseStore = create<EditorState>()(
   temporal(
-    () => ({ config: null, slideId: undefined, lastActionLabel: null }),
+    () => ({
+      config: null,
+      slideId: undefined,
+      lastActionLabel: null,
+      selectedIds: [],
+      groupEditMemberId: null,
+    }),
     {
       limit: 50,
-      // Only track the slide config + label. slideId itself isn't undoable.
+      // Only track the slide config + label. selection / slideId not undoable.
       partialize: (s) => ({ config: s.config, lastActionLabel: s.lastActionLabel }),
-      // Skip the very first set (initial load) so undo can't go past mount state.
       equality: (a, b) => a.config === b.config,
     },
   ),
