@@ -195,9 +195,13 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     if (incoming.length === 0) return rawDsRows;
     return rawDsRows.filter((r) => {
       for (const f of incoming) {
-        const k = f.dimension === "period" ? "periodo" : f.dimension;
-        const v = String((r as unknown as Record<string, unknown>)[k] ?? "");
-        if (!f.values.includes(v)) return false;
+        if (f.dimension === "period") {
+          const lbl = monthLabel((r as any).mes, (r as any).ano);
+          if (!f.values.includes(lbl) && !f.values.includes(String((r as any).periodo))) return false;
+        } else {
+          const v = String((r as unknown as Record<string, unknown>)[f.dimension] ?? "");
+          if (!f.values.includes(v)) return false;
+        }
       }
       return true;
     });
