@@ -214,7 +214,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     if (!rankingTypes.includes(block.chartType)) return [];
     const base = computeTopRanking(
       dsRows, block.filters,
-      block.breakdown ?? "marca",
+      seriesDim ?? "marca",
       block.measure, 50, "all", null,
     );
     // FIX 2 — apply sortConfig to ranking (pie/donut/funnel/treemap/bubble/scatter)
