@@ -635,7 +635,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 );
               })}
 
-              {/* Group outlines for visual feedback. */}
+              {/* Group outlines + resize handles. */}
               {(config.groups ?? []).map((g) => {
                 const members = g.memberIds
                   .map((id) => config.blocks.find((b) => b.id === id))
@@ -643,18 +643,17 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 const bb = groupBounds(members);
                 if (!bb) return null;
                 const active = members.some((b) => selectedIds.includes(b.id));
+                const isGroupEditing = !!groupEditMemberId
+                  && members.some((m) => m.id === groupEditMemberId);
+                const showHandles = active && !isGroupEditing;
                 return (
-                  <div key={`grp-${g.id}`}
-                    data-export-hide="true"
-                    style={{
-                      position: "absolute",
-                      left: bb.x - 4, top: bb.y - 4,
-                      width: bb.w + 8, height: bb.h + 8,
-                      border: `1px dashed ${active ? "#3B82F6" : "rgba(59,130,246,0.35)"}`,
-                      borderRadius: 4,
-                      pointerEvents: "none",
-                      zIndex: 0,
-                    }}
+                  <GroupOverlay
+                    key={`grp-${g.id}`}
+                    bounds={bb}
+                    active={active}
+                    showHandles={showHandles}
+                    memberIds={members.map((m) => m.id)}
+                    scaleRef={scaleRef}
                   />
                 );
               })}
