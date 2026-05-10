@@ -54,6 +54,19 @@ export type KpiMeasureId =
 export type KpiPeriodMode = "fy" | "month" | "all";
 export type KpiFormat = "auto" | "currency" | "percent" | "tons" | "number";
 
+/**
+ * Fonte de dados do bloco.
+ * - "ke30":   base detalhada (CSV KE30 — usePricing)
+ * - "budget": base agregada / orçamentária (Excel Budget — useBudget)
+ * Padrão histórico: "ke30".
+ */
+export type BlockDataSource = "ke30" | "budget";
+
+/** Medidas suportadas pela base Budget (subset do KpiMeasureId). */
+export const BUDGET_SUPPORTED_MEASURES: ReadonlyArray<KpiMeasureId> = [
+  "rol", "volume", "cm", "cv", "cmPct", "precoMedio",
+];
+
 export interface KpiBlock extends BaseBlock {
   kind: "kpi";
   label: string;
