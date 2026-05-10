@@ -7,9 +7,12 @@ import { Package, Briefcase, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 import { usePricing } from "@/store/pricing";
+import { useBudget } from "@/store/budget";
 import { uniqueValues, applyFilters } from "@/lib/analytics";
+import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { getDeParaBySku } from "@/lib/depara";
 import type { Filters, FilterKey, PricingRow } from "@/lib/types";
+import type { BlockDataSource } from "@/lib/customSlide";
 
 const SKU_FIELDS: { key: FilterKey; label: string }[] = [
   { key: "categoria", label: "Categoria" },
