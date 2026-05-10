@@ -1753,3 +1753,95 @@ function clientToCanvas(
   const r = canvasEl.getBoundingClientRect();
   return { x: (clientX - r.left) / scale, y: (clientY - r.top) / scale };
 }
+
+// ---------------------------------------------------------------------------
+// Multi-selection inspector (B8.2)
+// ---------------------------------------------------------------------------
+function MultiSelectInspector({ selectedIds, blocks, hasGroup }: {
+  selectedIds: string[];
+  blocks: CustomBlock[];
+  hasGroup: boolean;
+}) {
+  const align = (k: AlignKind) => alignBlocksAction(selectedIds, k);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Badge variant="secondary" className="text-[10px]">
+          Multi-seleção ({blocks.length} blocos)
+        </Badge>
+        <div className="flex gap-1">
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={() => duplicateBlocksAction(selectedIds)}
+            title="Duplicar todos (⌘D)">
+            <CopyIcon className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive"
+            onClick={() => deleteBlocksAction(selectedIds)}
+            title="Excluir todos (Del)">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div>
+        <Label className="text-[10px] uppercase text-muted-foreground">Alinhamento</Label>
+        <div className="mt-1 grid grid-cols-3 gap-1">
+          <Button size="icon" variant="outline" className="h-8" title="Esquerda" onClick={() => align("left")}>
+            <AlignStartVertical className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="outline" className="h-8" title="Centro horizontal" onClick={() => align("centerH")}>
+            <AlignHorizontalJustifyCenter className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="outline" className="h-8" title="Direita" onClick={() => align("right")}>
+            <AlignEndVertical className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="outline" className="h-8" title="Topo" onClick={() => align("top")}>
+            <AlignStartHorizontal className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="outline" className="h-8" title="Centro vertical" onClick={() => align("centerV")}>
+            <AlignVerticalJustifyCenter className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="outline" className="h-8" title="Base" onClick={() => align("bottom")}>
+            <AlignEndHorizontal className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-[10px] uppercase text-muted-foreground">Distribuir</Label>
+        <div className="mt-1 grid grid-cols-2 gap-1">
+          <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px]"
+            disabled={blocks.length < 3}
+            onClick={() => align("distH")}>
+            <AlignHorizontalDistributeCenter className="h-3.5 w-3.5" /> Horizontal
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px]"
+            disabled={blocks.length < 3}
+            onClick={() => align("distV")}>
+            <AlignVerticalDistributeCenter className="h-3.5 w-3.5" /> Vertical
+          </Button>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="grid grid-cols-2 gap-1">
+        <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px]"
+          onClick={() => { groupBlocksAction(selectedIds); toast.success("Blocos agrupados"); }}>
+          <GroupIcon className="h-3.5 w-3.5" /> Agrupar
+        </Button>
+        <Button size="sm" variant="outline" className="h-8 gap-1 text-[11px]"
+          disabled={!hasGroup}
+          onClick={() => { ungroupBlocksAction(selectedIds); toast.success("Grupo desfeito"); }}>
+          <UngroupIcon className="h-3.5 w-3.5" /> Desagrupar
+        </Button>
+      </div>
+
+      <p className="text-[10px] leading-snug text-muted-foreground">
+        Atalhos: <kbd>⌘A</kbd> selecionar tudo · <kbd>⌘G</kbd> agrupar · <kbd>⌘⇧G</kbd> desagrupar · <kbd>setas</kbd> mover (Shift = 40px)
+      </p>
+    </div>
+  );
+}
