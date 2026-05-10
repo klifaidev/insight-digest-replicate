@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import {
   CANVAS_W, CANVAS_H, FOOTER_H,
   newBlock, newChartBlock, BLOCK_LABELS, KPI_MEASURES,
+  BUDGET_UNAVAILABLE_MEASURES, BUDGET_UNAVAILABLE_HINT,
   type CustomBlock, type CustomBlockKind, type CustomChartType, type CustomSlideConfig,
   type KpiBlock, type ChartBlock, type TopSkuBlock,
 } from "@/lib/customSlide";
