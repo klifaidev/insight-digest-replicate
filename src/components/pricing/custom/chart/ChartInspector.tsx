@@ -186,6 +186,39 @@ export function ChartInspector({
               ]} />
           </Row>
         )}
+        {(ct === "bubble" || ct === "scatter") && (
+          <>
+            <Row label="Medida Eixo X">
+              <SelectField value={(style.measureX ?? "__none__") as string}
+                onChange={(v) => updStyle({ measureX: v === "__none__" ? undefined : v as KpiMeasureId })}
+                options={[
+                  { value: "__none__", label: "— Índice —" },
+                  ...KPI_MEASURES.map((m) => ({
+                    value: m.id, label: m.label,
+                    disabled: block.dataSource === "budget"
+                      && BUDGET_UNAVAILABLE_MEASURES.includes(m.id),
+                  })),
+                ]} />
+            </Row>
+            <Row label="Medida Eixo Y">
+              <SelectField value={(style.measureY ?? "__none__") as string}
+                onChange={(v) => updStyle({ measureY: v === "__none__" ? undefined : v as KpiMeasureId })}
+                options={[
+                  { value: "__none__", label: "— Medida principal —" },
+                  ...KPI_MEASURES.map((m) => ({
+                    value: m.id, label: m.label,
+                    disabled: block.dataSource === "budget"
+                      && BUDGET_UNAVAILABLE_MEASURES.includes(m.id),
+                  })),
+                ]} />
+            </Row>
+            {ct === "bubble" && (
+              <p className="text-[10px] leading-snug text-muted-foreground">
+                A medida principal acima define o <b>tamanho</b> das bolhas.
+              </p>
+            )}
+          </>
+        )}
         {block.dataSource === "budget" && (
           <p className="text-[10px] leading-snug text-muted-foreground">
             {BUDGET_UNAVAILABLE_HINT}
@@ -562,6 +595,16 @@ export function ChartInspector({
                 { value: "name", label: "Nome" },
                 { value: "value", label: "Valor" },
                 { value: "percent", label: "Percentual" },
+              ]} />
+          </Row>
+          <Row label="Pos. rótulo">
+            <SelectField value={style.funnel.labelPos ?? "right"}
+              onChange={(v) => updPath("funnel", { labelPos: v as never })}
+              options={[
+                { value: "left", label: "Esquerda" },
+                { value: "right", label: "Direita" },
+                { value: "center", label: "Centro" },
+                { value: "inside", label: "Dentro" },
               ]} />
           </Row>
           {detectedRanking.length > 0 && (
