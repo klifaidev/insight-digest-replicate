@@ -5,8 +5,10 @@ import type { KpiMeasureId } from "@/lib/customSlide";
 
 export type ChartType =
   | "line" | "bar" | "column" | "hbar"
+  | "stackedColumn" | "stackedBar" | "stackedArea"
   | "pie" | "donut" | "bubble" | "area"
-  | "scatter" | "combo" | "waterfall";
+  | "scatter" | "combo" | "waterfall"
+  | "funnel" | "treemap" | "radar" | "histogram" | "boxplot";
 
 export type LineStyle = "solid" | "dashed" | "dotted";
 export type GridStyle = "solid" | "dashed";
@@ -138,6 +140,7 @@ export interface FunnelStyleCfg {
   direction: "ttb" | "btt";
   gapPct: number;
   labelMode: "value" | "percent" | "name" | "name-percent";
+  labelPos: "left" | "right" | "center" | "inside";
   slices: Record<string, { color?: string }>;
 }
 
@@ -199,8 +202,10 @@ export interface ChartStyle {
   radar: RadarStyleCfg;
   histogram: HistogramStyleCfg;
   boxplot: BoxplotStyleCfg;
-  /** Bubble/scatter only — second measure for Y when X is the first */
+  /** Bubble/scatter only — measure on Y axis */
   measureY?: KpiMeasureId;
+  /** Bubble/scatter only — measure on X axis */
+  measureX?: KpiMeasureId;
   /** Combo only — measure used by line series */
   measureLine?: KpiMeasureId;
 }
@@ -258,7 +263,7 @@ export function defaultChartStyle(): ChartStyle {
       connectors: true, connectorColor: "#94A3B8", connectorStyle: "dashed",
       showRunningTotal: false, labelPos: "above", gapPct: 30, classify: {},
     },
-    funnel: { direction: "ttb", gapPct: 4, labelMode: "name-percent", slices: {} },
+    funnel: { direction: "ttb", gapPct: 4, labelMode: "name-percent", labelPos: "right", slices: {} },
     treemap: {
       colorScheme: "categorical",
       gradientFrom: "#C8102E", gradientTo: "#1C2430",

@@ -4,13 +4,18 @@
 import { useMemo } from "react";
 import {
   ResponsiveContainer, ComposedChart, LineChart, BarChart, AreaChart,
-  PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis,
+  PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, Sector,
   Line, Bar, Area, XAxis, YAxis, CartesianGrid, Legend, Tooltip, LabelList,
   FunnelChart, Funnel, Treemap,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ReferenceLine,
 } from "recharts";
 import type { ChartBlock } from "@/lib/customSlide";
+import { KPI_MEASURES } from "@/lib/customSlide";
+
+const KPI_MEASURES_LABEL: Record<string, string> = Object.fromEntries(
+  KPI_MEASURES.map((m) => [m.id, m.label]),
+);
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
@@ -23,17 +28,79 @@ import {
 // -- helpers ---------------------------------------------------------------
 function fmtVal(v: number, style: ChartStyle, fallback: ReturnType<typeof inferFormat>) {
   const f = style.dataLabels.format === "auto" ? fallback : style.dataLabels.format;
-  return formatValue(v, f, "rol");
+  return formatValue(v, f, "rol", style.dataLabels.decimals);
 }
 function axisFmt(ax: { format: string; decimals: number }, fallback: ReturnType<typeof inferFormat>) {
   return (v: number) => {
     if (!isFinite(v)) return "";
     const f = ax.format === "auto" ? fallback : ax.format;
-    return formatValue(v, f as never, "rol");
+    return formatValue(v, f as never, "rol", ax.decimals);
   };
 }
 function dashArr(s?: "solid" | "dashed" | "dotted") {
   return s === "dashed" ? "5 5" : s === "dotted" ? "2 4" : "0";
+}
+
+// Auto-contrast text color from background hex
+function luminance(hex: string): number {
+  const h = hex.replace("#", "");
+  if (h.length < 6) return 1;
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+// Custom data-label content factory — supports bg, border, autoContrast, showSeries/Category
+function makeLabelContent(opts: {
+  style: ChartStyle;
+  measureFmt: ReturnType<typeof inferFormat>;
+  seriesName?: string;
+  categories?: string[];
+  customFmt?: (v: number) => string;
+  anchor?: "middle" | "start" | "end";
+}) {
+  const { style: cs, measureFmt, seriesName, categories, customFmt, anchor = "middle" } = opts;
+  const dl = cs.dataLabels;
+  return (props: { x?: number; y?: number; value?: number | string; index?: number }) => {
+    if (props.x == null || props.y == null || props.value == null) return null;
+    const num = typeof props.value === "number" ? props.value : Number(props.value);
+    if (!isFinite(num)) return null;
+    let text = customFmt ? customFmt(num) : fmtVal(num, cs, measureFmt);
+    const prefix: string[] = [];
+    if (dl.showSeries && seriesName) prefix.push(seriesName);
+    if (dl.showCategory && categories && props.index != null) {
+      const c = categories[props.index];
+      if (c) prefix.push(c);
+    }
+    if (prefix.length) text = `${prefix.join(" · ")}: ${text}`;
+    let color = dl.color;
+    if (dl.autoContrast && dl.bgOpacity > 0) {
+      color = luminance(dl.bgColor) > 0.55 ? "#000000" : "#FFFFFF";
+    }
+    const fs = dl.size;
+    const padX = 3, padY = 2;
+    const approxW = text.length * fs * 0.55 + padX * 2;
+    const approxH = fs + padY * 2;
+    const rx = anchor === "middle" ? props.x - approxW / 2
+      : anchor === "end" ? props.x - approxW : props.x;
+    const ry = props.y - approxH + padY;
+    const showBg = dl.bgOpacity > 0 || dl.borderWidth > 0;
+    return (
+      <g>
+        {showBg && (
+          <rect x={rx} y={ry} width={approxW} height={approxH} rx={2}
+            fill={dl.bgColor} fillOpacity={dl.bgOpacity}
+            stroke={dl.borderColor} strokeWidth={dl.borderWidth} />
+        )}
+        <text x={props.x} y={props.y - padY}
+          fontSize={fs} fill={color}
+          textAnchor={anchor}
+          fontWeight={dl.bold ? 700 : 400}
+          fontStyle={dl.italic ? "italic" : "normal"}>{text}</text>
+      </g>
+    );
+  };
 }
 
 // Map our generic dataLabels.position → recharts position per chart family
@@ -241,6 +308,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // ---- renderers per chart type ----
   let chart: React.ReactNode = null;
   const forceStack = ct === "stackedColumn" || ct === "stackedBar" || ct === "stackedArea";
+  const cats = data.periodos.map((p) => p.label);
+  const stack100Fmt = (v: number) => `${(v as number).toFixed(0)}%`;
 
   if (ct === "line" || ct === "area" || ct === "stackedArea" || ct === "combo") {
     const Comp = (ct === "area" || ct === "stackedArea") ? AreaChart
@@ -267,8 +336,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 yAxisId="left">
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("area", dlPos) as never}
-                    style={labelStyle}
-                    formatter={(v: number) => fmtVal(v, style, measureFmt)} />
+                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
                 )}
               </Area>
             );
@@ -281,8 +349,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 yAxisId={cfg?.secondaryAxis ? "right" : "left"}>
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
-                    style={labelStyle}
-                    formatter={(v: number) => fmtVal(v, style, measureFmt)} />
+                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
                 )}
               </Bar>
             );
@@ -300,8 +367,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               } : false}>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("line", dlPos) as never}
-                  style={labelStyle}
-                  formatter={(v: number) => fmtVal(v, style, measureFmt)} />
+                  content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
               )}
             </Line>
           );
@@ -336,8 +402,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
-                  style={labelStyle}
-                  formatter={(v: number) => isStack100 ? `${(v as number).toFixed(0)}%` : fmtVal(v, style, measureFmt)} />
+                  content={makeLabelContent({
+                    style, measureFmt, seriesName: s.name, categories: cats,
+                    customFmt: isStack100 ? stack100Fmt : undefined,
+                  }) as never} />
               )}
             </Bar>
           );
@@ -351,10 +419,16 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}
         <XAxis type="number" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }}
+          stroke={xAx.lineColor} strokeWidth={xAx.lineWidth}
           domain={xDomain}
-          tickFormatter={isStack100 ? (v: number) => `${v.toFixed(0)}%` : axisFmt(xAx, measureFmt)} />
+          tickFormatter={isStack100 ? stack100Fmt : axisFmt(xAx, measureFmt)}
+          label={xAx.titleText ? { value: xAx.titleText, position: "insideBottom", offset: -5,
+            style: { fontSize: xAx.titleSize, fill: xAx.titleColor } } : undefined} />
         <YAxis type="category" dataKey="__period"
-          tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
+          tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }}
+          stroke={yAx.lineColor} strokeWidth={yAx.lineWidth}
+          label={yAx.titleText ? { value: yAx.titleText, angle: -90, position: "insideLeft",
+            style: { fontSize: yAx.titleSize, fill: yAx.titleColor } } : undefined} />
         <Tooltip />
         {renderLegend}
         {data.series.map((s, i) => {
@@ -366,8 +440,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("bar-horizontal", dlPos) as never}
-                  style={labelStyle}
-                  formatter={(v: number) => isStack100 ? `${(v as number).toFixed(0)}%` : fmtVal(v, style, measureFmt)} />
+                  content={makeLabelContent({
+                    style, measureFmt, seriesName: s.name, categories: cats,
+                    customFmt: isStack100 ? stack100Fmt : undefined, anchor: "start",
+                  }) as never} />
               )}
             </Bar>
           );
@@ -378,7 +454,28 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const inner = ct === "donut"
       ? `${Math.max(0, Math.min(80, style.pie.donutHolePct))}%` : 0;
     const labelKey = style.pie.labelMode;
-    const labelInside = mapPos("pie", dlPos) === "inside";
+    const labelMode = mapPos("pie", dlPos); // "inside" | "outside"
+    const isCallout = dlPos === "callout";
+    // A.9 — per-slice explosion via custom shape
+    const renderPieShape = (props: {
+      cx: number; cy: number; midAngle: number;
+      innerRadius: number; outerRadius: number;
+      startAngle: number; endAngle: number; fill: string;
+      payload: { name: string };
+    }) => {
+      const sliceCfg = style.pie.slices[props.payload.name];
+      const explodePct = (sliceCfg?.explode ?? style.pie.explodePct ?? 0) / 100;
+      const RAD = Math.PI / 180;
+      const off = props.outerRadius * explodePct * 0.4;
+      const dx = Math.cos(-props.midAngle * RAD) * off;
+      const dy = Math.sin(-props.midAngle * RAD) * off;
+      return (
+        <Sector cx={props.cx + dx} cy={props.cy + dy}
+          innerRadius={props.innerRadius} outerRadius={props.outerRadius}
+          startAngle={props.startAngle} endAngle={props.endAngle}
+          fill={props.fill} />
+      );
+    };
     chart = (
       <PieChart>
         <Tooltip />
@@ -387,14 +484,17 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           startAngle={style.pie.startAngle}
           endAngle={style.pie.startAngle + 360}
           innerRadius={inner} outerRadius="80%"
-          labelLine={!labelInside}
+          labelLine={labelMode === "outside" || isCallout}
+          activeIndex={ranking.map((_, i) => i)}
+          activeShape={renderPieShape as never}
           label={(d: { name: string; value: number; percent: number }) => {
-            const pct = (d.percent * 100).toFixed(1) + "%";
+            const pct = (d.percent * 100).toFixed(style.dataLabels.decimals ?? 1) + "%";
+            const valStr = formatValue(d.value, measureFmt, "rol", style.dataLabels.decimals);
             switch (labelKey) {
-              case "value": return formatValue(d.value, measureFmt, "rol");
+              case "value": return valStr;
               case "percent": return pct;
               case "name": return d.name;
-              case "name-value": return `${d.name}: ${formatValue(d.value, measureFmt, "rol")}`;
+              case "name-value": return `${d.name}: ${valStr}`;
               default: return `${d.name}: ${pct}`;
             }
           }}
@@ -408,17 +508,48 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       </PieChart>
     );
   } else if (ct === "bubble" || ct === "scatter") {
-    const points = ranking.map((r, i) => ({ x: i + 1, y: r.value, z: r.value, name: r.name }));
+    // A.4 — bubble/scatter use measureX/measureY/measure(size) when set
+    const dim = block.breakdown ?? "marca";
+    const sizeRanking = ranking; // ranks by primary measure (drives size)
+    const xRanking = style.measureX
+      ? computeTopRanking(dsRows, block.filters, dim, style.measureX, 50, "all", null)
+      : null;
+    const yRanking = style.measureY
+      ? computeTopRanking(dsRows, block.filters, dim, style.measureY, 50, "all", null)
+      : null;
+    const xByName = new Map(xRanking?.map((r) => [r.name, r.value]) ?? []);
+    const yByName = new Map(yRanking?.map((r) => [r.name, r.value]) ?? []);
+    const points = sizeRanking.map((r, i) => ({
+      x: xRanking ? (xByName.get(r.name) ?? 0) : (i + 1),
+      y: yRanking ? (yByName.get(r.name) ?? 0) : r.value,
+      z: r.value,
+      name: r.name,
+    }));
+    const xLabel = style.measureX
+      ? KPI_MEASURES_LABEL[style.measureX] : "Índice";
+    const yLabel = style.measureY
+      ? KPI_MEASURES_LABEL[style.measureY] : KPI_MEASURES_LABEL[block.measure];
+    const xFmt = style.measureX ? inferFormat(style.measureX) : measureFmt;
+    const yFmt = style.measureY ? inferFormat(style.measureY) : measureFmt;
     chart = (
       <ScatterChart>
         {renderGrid}
-        <XAxis type="number" dataKey="x" name="idx"
+        <XAxis type="number" dataKey="x" name={xLabel}
           domain={xDomain}
-          tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }} />
-        <YAxis type="number" dataKey="y" name="valor"
+          tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }}
+          tickFormatter={style.measureX ? axisFmt({ ...xAx, format: xAx.format }, xFmt) : undefined}
+          label={(xAx.titleText || style.measureX) ? {
+            value: xAx.titleText || xLabel, position: "insideBottom", offset: -5,
+            style: { fontSize: xAx.titleSize, fill: xAx.titleColor },
+          } : undefined} />
+        <YAxis type="number" dataKey="y" name={yLabel}
           domain={[yAx.min ?? "auto", yAx.max ?? "auto"]}
           tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }}
-          tickFormatter={axisFmt(yAx, measureFmt)} />
+          tickFormatter={axisFmt({ ...yAx, format: yAx.format }, yFmt)}
+          label={(yAx.titleText || style.measureY) ? {
+            value: yAx.titleText || yLabel, angle: -90, position: "insideLeft",
+            style: { fontSize: yAx.titleSize, fill: yAx.titleColor },
+          } : undefined} />
         {ct === "bubble" && (
           <ZAxis type="number" dataKey="z" range={[style.bubble.minSize, style.bubble.maxSize]} />
         )}
@@ -432,11 +563,12 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           ))}
           {style.dataLabels.show && (
             <LabelList dataKey="name" position={mapPos("scatter", dlPos) as never}
-              style={labelStyle} />
+              content={makeLabelContent({ style, measureFmt,
+                customFmt: (_v) => "" }) as never} />
           )}
           {ct === "bubble" && style.bubble.showSizeLabel && (
-            <LabelList dataKey="z" position="top" style={labelStyle}
-              formatter={(v: number) => fmtVal(v, style, measureFmt)} />
+            <LabelList dataKey="z" position="top"
+              content={makeLabelContent({ style, measureFmt }) as never} />
           )}
         </Scatter>
       </ScatterChart>
@@ -445,24 +577,37 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} />;
   } else if (ct === "funnel") {
     const ordered = style.funnel.direction === "btt" ? [...ranking].reverse() : ranking;
-    const fdata = ordered.map((r, i) => ({
-      name: r.name, value: r.value,
-      fill: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
-    }));
-    const total = fdata.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
+    const baseTotal = ordered.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
+    // A.6 — simulate gap by inserting transparent spacers between stages
+    const spacerVal = (baseTotal * (style.funnel.gapPct ?? 0)) / 100;
+    const fdata: { name: string; value: number; fill: string; __spacer?: boolean }[] = [];
+    ordered.forEach((r, i) => {
+      fdata.push({
+        name: r.name, value: r.value,
+        fill: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
+      });
+      if (spacerVal > 0 && i < ordered.length - 1) {
+        fdata.push({ name: "", value: spacerVal, fill: "transparent", __spacer: true });
+      }
+    });
+    const total = ordered.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
     chart = (
       <FunnelChart>
         <Tooltip />
         <Funnel dataKey="value" data={fdata} isAnimationActive={false}>
-          <LabelList position="right" fill={style.dataLabels.color}
+          <LabelList position={style.funnel.labelPos as never}
+            fill={style.dataLabels.color}
             stroke="none"
-            style={{ fontSize: style.dataLabels.size }}
-            formatter={(_v: unknown, entry: { name?: string; value?: number } = {}) => {
+            style={{ fontSize: style.dataLabels.size,
+              fontWeight: style.dataLabels.bold ? 700 : 400,
+              fontStyle: style.dataLabels.italic ? "italic" : "normal" }}
+            formatter={(_v: unknown, entry: { name?: string; value?: number; __spacer?: boolean } = {}) => {
+              if (entry.__spacer) return "";
               const name = entry.name ?? "";
               const value = entry.value ?? 0;
-              const pct = ((Math.abs(value) / total) * 100).toFixed(1) + "%";
+              const pct = ((Math.abs(value) / total) * 100).toFixed(style.dataLabels.decimals ?? 1) + "%";
               switch (style.funnel.labelMode) {
-                case "value": return formatValue(value, measureFmt, "rol");
+                case "value": return formatValue(value, measureFmt, "rol", style.dataLabels.decimals);
                 case "percent": return pct;
                 case "name": return name;
                 default: return `${name}: ${pct}`;
@@ -488,7 +633,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <Treemap data={tdata} isAnimationActive={false} dataKey="size" nameKey="name"
         stroke={style.treemap.borderColor}
         aspectRatio={4 / 3}
-        content={<TreemapTile cfg={style.treemap} fmt={measureFmt} />} />
+        content={<TreemapTile cfg={style.treemap} dl={style.dataLabels} fmt={measureFmt} />} />
     );
   } else if (ct === "radar") {
     const polarGrid = (
@@ -510,6 +655,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           return (
             <Radar key={s.name} isAnimationActive={false} dataKey={s.name}
               stroke={color} strokeWidth={cfg?.thickness ?? 2}
+              strokeDasharray={dashArr(cfg?.lineStyle)}
               fill={color}
               fillOpacity={style.radar.fillArea ? style.radar.fillOpacity : 0} />
           );
@@ -517,27 +663,34 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       </RadarChart>
     );
   } else if (ct === "histogram") {
-    // gather all numeric values across visible series
-    const all: number[] = [];
-    data.series.forEach((s) => s.values.forEach((v) => { if (isFinite(v)) all.push(v); }));
-    const min = all.length ? Math.min(...all) : 0;
-    const max = all.length ? Math.max(...all) : 1;
+    // A.10 — when breakdown set, one histogram series per breakdown
+    const seriesList = data.series.length > 0 ? data.series : [{ name: "Total", values: [] as number[] }];
+    const allFlat: number[] = [];
+    seriesList.forEach((s) => s.values.forEach((v) => { if (isFinite(v)) allFlat.push(v); }));
+    const min = allFlat.length ? Math.min(...allFlat) : 0;
+    const max = allFlat.length ? Math.max(...allFlat) : 1;
     const bins = Math.max(2, Math.min(100, style.histogram.bins || 10));
     const w = style.histogram.binWidth && style.histogram.binWidth > 0
       ? style.histogram.binWidth
       : ((max - min) / bins) || 1;
     const nBuckets = style.histogram.binWidth ? Math.max(1, Math.ceil((max - min) / w)) : bins;
-    const buckets = Array.from({ length: nBuckets }, (_, i) => ({
+    const buckets: Record<string, number | string>[] = Array.from({ length: nBuckets }, (_, i) => ({
       bin: `${(min + i * w).toFixed(1)}`,
-      count: 0,
-      cum: 0,
     }));
-    all.forEach((v) => {
-      const idx = Math.min(nBuckets - 1, Math.max(0, Math.floor((v - min) / w)));
-      buckets[idx].count++;
+    seriesList.forEach((s) => {
+      buckets.forEach((b) => { b[s.name] = 0; });
+      s.values.forEach((v) => {
+        if (!isFinite(v)) return;
+        const idx = Math.min(nBuckets - 1, Math.max(0, Math.floor((v - min) / w)));
+        buckets[idx][s.name] = (Number(buckets[idx][s.name]) || 0) + 1;
+      });
     });
-    let acc = 0;
-    buckets.forEach((b) => { acc += b.count; b.cum = acc; });
+    if (style.histogram.cumulative) {
+      seriesList.forEach((s) => {
+        let acc = 0;
+        buckets.forEach((b) => { acc += Number(b[s.name]) || 0; b[`__cum_${s.name}`] = acc; });
+      });
+    }
     chart = (
       <ComposedChart data={buckets} barCategoryGap="2%">
         {renderGrid}
@@ -549,12 +702,24 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         )}
         <Tooltip />
         {renderLegend}
-        <Bar yAxisId="left" isAnimationActive={false} dataKey="count" fill={style.histogram.barColor}
-          stroke={style.histogram.borderColor} strokeWidth={style.histogram.borderWidth} />
-        {style.histogram.cumulative && (
-          <Line yAxisId="right" isAnimationActive={false} dataKey="cum" type="monotone"
-            stroke={DEFAULT_PALETTE[1]} strokeWidth={2} dot={false} />
-        )}
+        {seriesList.map((s, i) => {
+          const color = colorForSeries(style, s.name, i) ?? style.histogram.barColor;
+          return (
+            <Bar key={s.name} yAxisId="left" isAnimationActive={false}
+              dataKey={s.name} name={s.name}
+              fill={seriesList.length === 1 ? style.histogram.barColor : color}
+              fillOpacity={seriesList.length > 1 ? 0.55 : 1}
+              stroke={style.histogram.borderColor}
+              strokeWidth={style.histogram.borderWidth} />
+          );
+        })}
+        {style.histogram.cumulative && seriesList.map((s, i) => (
+          <Line key={`cum_${s.name}`} yAxisId="right" isAnimationActive={false}
+            dataKey={`__cum_${s.name}`} name={`${s.name} (acum.)`}
+            type="monotone"
+            stroke={DEFAULT_PALETTE[(i + 1) % DEFAULT_PALETTE.length]}
+            strokeWidth={2} dot={false} />
+        ))}
       </ComposedChart>
     );
   } else if (ct === "boxplot") {
@@ -595,24 +760,34 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
   );
 }
 
-// -- Treemap tile renderer ------------------------------------------------
-function TreemapTile({ cfg, fmt, ...props }: any) {
+// -- Treemap tile renderer (A.7 — honors dataLabels) ---------------------
+function TreemapTile({ cfg, dl, fmt, ...props }: any) {
   const { x, y, width, height, name, value, fill } = props;
   if (width < 2 || height < 2) return null;
   const showCat = cfg.showCategoryLabel && width > 40 && height > 20;
   const showVal = cfg.showValueLabel && width > 60 && height > 32;
+  const valStr = formatValue(
+    value ?? 0,
+    dl?.format && dl.format !== "auto" ? dl.format : fmt,
+    "rol",
+    dl?.decimals,
+  );
+  const fontWeight = dl?.bold ? 700 : 400;
+  const fontStyle = dl?.italic ? "italic" : "normal";
   return (
     <g>
       <rect x={x} y={y} width={width} height={height}
         style={{ fill, stroke: cfg.borderColor, strokeWidth: cfg.borderWidth }} />
       {showCat && (
         <text x={x + 4} y={y + cfg.labelSize + 2}
-          fontSize={cfg.labelSize} fill={cfg.labelColor}>{name}</text>
+          fontSize={cfg.labelSize} fill={cfg.labelColor}
+          fontWeight={fontWeight} fontStyle={fontStyle}>{name}</text>
       )}
       {showVal && (
         <text x={x + 4} y={y + cfg.labelSize * 2 + 6}
-          fontSize={cfg.labelSize - 1} fill={cfg.labelColor}>
-          {formatValue(value ?? 0, fmt, "rol")}
+          fontSize={cfg.labelSize - 1} fill={cfg.labelColor}
+          fontWeight={fontWeight} fontStyle={fontStyle}>
+          {valStr}
         </text>
       )}
     </g>
@@ -701,9 +876,15 @@ function WaterfallChart({
           <LabelList dataKey="end" position={labelPos as never}
             style={{ fontSize: style.dataLabels.size, fill: style.dataLabels.color,
               fontWeight: style.dataLabels.bold ? 700 : 400 }}
-            formatter={(v: number) => formatValue(v, measureFmt, "rol")} />
+            formatter={(v: number) => formatValue(v, measureFmt, "rol", style.dataLabels.decimals)} />
         )}
       </Bar>
+      {/* A.5 — running total line */}
+      {style.waterfall.showRunningTotal && (
+        <Line type="linear" dataKey="end" isAnimationActive={false}
+          stroke={style.waterfall.totalColor} strokeWidth={2}
+          dot={{ r: 3, fill: style.waterfall.totalColor }} />
+      )}
     </BarChart>
   );
 }
@@ -738,8 +919,9 @@ function BoxPlot({
   });
 
   const all = stats.flatMap((s) => [s.min, s.max, ...s.outliers]);
-  const yMin = all.length ? Math.min(...all) : 0;
-  const yMax = all.length ? Math.max(...all) : 1;
+  // A.12 — honor user yAxis.min/max when set
+  const yMin = style.yAxis.min ?? (all.length ? Math.min(...all) : 0);
+  const yMax = style.yAxis.max ?? (all.length ? Math.max(...all) : 1);
 
   return (
     <ComposedChart data={stats}>
