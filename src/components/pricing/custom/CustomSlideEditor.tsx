@@ -266,6 +266,12 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
           return;
         }
       }
+      // F5 / Cmd+Shift+P → presentation mode (works even with no selection).
+      if (!inField && (e.key === "F5" || ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p"))) {
+        e.preventDefault();
+        setPresentOpen(true);
+        return;
+      }
       if (inField) return;
       if (e.key === "Escape") {
         if (groupEditMemberId) exitGroupEdit();
