@@ -161,9 +161,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     () => (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
     [block.dataSource, pricing, budget],
   );
+  const xDim = block.fieldWells?.xDim ?? null;
   const raw = useMemo(
-    () => computeChartSeries(dsRows, block.filters, block.measure, block.breakdown),
-    [dsRows, block.filters, block.measure, block.breakdown],
+    () => computeChartSeries(dsRows, block.filters, block.measure, block.breakdown, xDim),
+    [dsRows, block.filters, block.measure, block.breakdown, xDim],
   );
   const data = useMemo(() => {
     const ranked = [...raw.series].sort((a, z) =>
