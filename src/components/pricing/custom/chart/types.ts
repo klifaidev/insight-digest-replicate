@@ -122,6 +122,20 @@ export interface AreaStyleCfg {
   lineOnTop: boolean;
 }
 
+export type WaterfallColumnType = "start" | "positive" | "negative" | "total" | "subtotal";
+
+export interface WaterfallColumn {
+  id: string;
+  label: string;
+  type: WaterfallColumnType;
+  /** Optional measure id (KpiMeasureId). When omitted, manualValue is used. */
+  measure?: KpiMeasureId;
+  manualValue?: number;
+  /** Optional dimension filter applied just to this column (e.g. brand=Melken) */
+  filterDim?: string | null;
+  filterValue?: string | null;
+}
+
 export interface WaterfallStyleCfg {
   positiveColor: string;
   negativeColor: string;
@@ -134,6 +148,8 @@ export interface WaterfallStyleCfg {
   gapPct: number;
   /** per category override: positive | negative | total */
   classify: Record<string, "positive" | "negative" | "total">;
+  /** Smart bridge: explicit column list overrides automatic series */
+  columns?: WaterfallColumn[];
 }
 
 export interface FunnelStyleCfg {
