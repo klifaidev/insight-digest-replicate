@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useUploadGuard } from "@/store/uploadGuard";
 import {
   Upload as UploadIcon,
   FileSpreadsheet,
@@ -211,6 +212,20 @@ export function UploadQueue() {
       setApplying(false);
     }
   };
+
+  // Expose pending state + apply handler globally for navigation guard
+  const setGuardPending = useUploadGuard((s) => s.setPending);
+  const setGuardApply = useUploadGuard((s) => s.setApply);
+  useEffect(() => {
+    setGuardPending(readyItems.length);
+    setGuardApply(readyItems.length > 0 ? applyAll : null);
+  });
+  useEffect(() => {
+    return () => {
+      setGuardPending(0);
+      setGuardApply(null);
+    };
+  }, [setGuardPending, setGuardApply]);
 
   return (
     <div className="space-y-4">
