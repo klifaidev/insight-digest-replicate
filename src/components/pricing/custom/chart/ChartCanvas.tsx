@@ -577,24 +577,37 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} />;
   } else if (ct === "funnel") {
     const ordered = style.funnel.direction === "btt" ? [...ranking].reverse() : ranking;
-    const fdata = ordered.map((r, i) => ({
-      name: r.name, value: r.value,
-      fill: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
-    }));
-    const total = fdata.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
+    const baseTotal = ordered.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
+    // A.6 — simulate gap by inserting transparent spacers between stages
+    const spacerVal = (baseTotal * (style.funnel.gapPct ?? 0)) / 100;
+    const fdata: { name: string; value: number; fill: string; __spacer?: boolean }[] = [];
+    ordered.forEach((r, i) => {
+      fdata.push({
+        name: r.name, value: r.value,
+        fill: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
+      });
+      if (spacerVal > 0 && i < ordered.length - 1) {
+        fdata.push({ name: "", value: spacerVal, fill: "transparent", __spacer: true });
+      }
+    });
+    const total = ordered.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
     chart = (
       <FunnelChart>
         <Tooltip />
         <Funnel dataKey="value" data={fdata} isAnimationActive={false}>
-          <LabelList position="right" fill={style.dataLabels.color}
+          <LabelList position={style.funnel.labelPos as never}
+            fill={style.dataLabels.color}
             stroke="none"
-            style={{ fontSize: style.dataLabels.size }}
-            formatter={(_v: unknown, entry: { name?: string; value?: number } = {}) => {
+            style={{ fontSize: style.dataLabels.size,
+              fontWeight: style.dataLabels.bold ? 700 : 400,
+              fontStyle: style.dataLabels.italic ? "italic" : "normal" }}
+            formatter={(_v: unknown, entry: { name?: string; value?: number; __spacer?: boolean } = {}) => {
+              if (entry.__spacer) return "";
               const name = entry.name ?? "";
               const value = entry.value ?? 0;
-              const pct = ((Math.abs(value) / total) * 100).toFixed(1) + "%";
+              const pct = ((Math.abs(value) / total) * 100).toFixed(style.dataLabels.decimals ?? 1) + "%";
               switch (style.funnel.labelMode) {
-                case "value": return formatValue(value, measureFmt, "rol");
+                case "value": return formatValue(value, measureFmt, "rol", style.dataLabels.decimals);
                 case "percent": return pct;
                 case "name": return name;
                 default: return `${name}: ${pct}`;
@@ -620,7 +633,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <Treemap data={tdata} isAnimationActive={false} dataKey="size" nameKey="name"
         stroke={style.treemap.borderColor}
         aspectRatio={4 / 3}
-        content={<TreemapTile cfg={style.treemap} fmt={measureFmt} />} />
+        content={<TreemapTile cfg={style.treemap} dl={style.dataLabels} fmt={measureFmt} />} />
     );
   } else if (ct === "radar") {
     const polarGrid = (
@@ -642,6 +655,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           return (
             <Radar key={s.name} isAnimationActive={false} dataKey={s.name}
               stroke={color} strokeWidth={cfg?.thickness ?? 2}
+              strokeDasharray={dashArr(cfg?.lineStyle)}
               fill={color}
               fillOpacity={style.radar.fillArea ? style.radar.fillOpacity : 0} />
           );
@@ -649,27 +663,34 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       </RadarChart>
     );
   } else if (ct === "histogram") {
-    // gather all numeric values across visible series
-    const all: number[] = [];
-    data.series.forEach((s) => s.values.forEach((v) => { if (isFinite(v)) all.push(v); }));
-    const min = all.length ? Math.min(...all) : 0;
-    const max = all.length ? Math.max(...all) : 1;
+    // A.10 — when breakdown set, one histogram series per breakdown
+    const seriesList = data.series.length > 0 ? data.series : [{ name: "Total", values: [] as number[] }];
+    const allFlat: number[] = [];
+    seriesList.forEach((s) => s.values.forEach((v) => { if (isFinite(v)) allFlat.push(v); }));
+    const min = allFlat.length ? Math.min(...allFlat) : 0;
+    const max = allFlat.length ? Math.max(...allFlat) : 1;
     const bins = Math.max(2, Math.min(100, style.histogram.bins || 10));
     const w = style.histogram.binWidth && style.histogram.binWidth > 0
       ? style.histogram.binWidth
       : ((max - min) / bins) || 1;
     const nBuckets = style.histogram.binWidth ? Math.max(1, Math.ceil((max - min) / w)) : bins;
-    const buckets = Array.from({ length: nBuckets }, (_, i) => ({
+    const buckets: Record<string, number | string>[] = Array.from({ length: nBuckets }, (_, i) => ({
       bin: `${(min + i * w).toFixed(1)}`,
-      count: 0,
-      cum: 0,
     }));
-    all.forEach((v) => {
-      const idx = Math.min(nBuckets - 1, Math.max(0, Math.floor((v - min) / w)));
-      buckets[idx].count++;
+    seriesList.forEach((s) => {
+      buckets.forEach((b) => { b[s.name] = 0; });
+      s.values.forEach((v) => {
+        if (!isFinite(v)) return;
+        const idx = Math.min(nBuckets - 1, Math.max(0, Math.floor((v - min) / w)));
+        buckets[idx][s.name] = (Number(buckets[idx][s.name]) || 0) + 1;
+      });
     });
-    let acc = 0;
-    buckets.forEach((b) => { acc += b.count; b.cum = acc; });
+    if (style.histogram.cumulative) {
+      seriesList.forEach((s) => {
+        let acc = 0;
+        buckets.forEach((b) => { acc += Number(b[s.name]) || 0; b[`__cum_${s.name}`] = acc; });
+      });
+    }
     chart = (
       <ComposedChart data={buckets} barCategoryGap="2%">
         {renderGrid}
@@ -681,12 +702,24 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         )}
         <Tooltip />
         {renderLegend}
-        <Bar yAxisId="left" isAnimationActive={false} dataKey="count" fill={style.histogram.barColor}
-          stroke={style.histogram.borderColor} strokeWidth={style.histogram.borderWidth} />
-        {style.histogram.cumulative && (
-          <Line yAxisId="right" isAnimationActive={false} dataKey="cum" type="monotone"
-            stroke={DEFAULT_PALETTE[1]} strokeWidth={2} dot={false} />
-        )}
+        {seriesList.map((s, i) => {
+          const color = colorForSeries(style, s.name, i) ?? style.histogram.barColor;
+          return (
+            <Bar key={s.name} yAxisId="left" isAnimationActive={false}
+              dataKey={s.name} name={s.name}
+              fill={seriesList.length === 1 ? style.histogram.barColor : color}
+              fillOpacity={seriesList.length > 1 ? 0.55 : 1}
+              stroke={style.histogram.borderColor}
+              strokeWidth={style.histogram.borderWidth} />
+          );
+        })}
+        {style.histogram.cumulative && seriesList.map((s, i) => (
+          <Line key={`cum_${s.name}`} yAxisId="right" isAnimationActive={false}
+            dataKey={`__cum_${s.name}`} name={`${s.name} (acum.)`}
+            type="monotone"
+            stroke={DEFAULT_PALETTE[(i + 1) % DEFAULT_PALETTE.length]}
+            strokeWidth={2} dot={false} />
+        ))}
       </ComposedChart>
     );
   } else if (ct === "boxplot") {
