@@ -16,7 +16,7 @@
 import { create, useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { temporal } from "zundo";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type {
   BlockGroup,
   CustomBlock,
