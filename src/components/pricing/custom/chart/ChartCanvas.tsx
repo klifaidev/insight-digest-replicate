@@ -738,11 +738,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           activeIndex={ranking.map((_, i) => i)}
           activeShape={renderPieShape as never}
           label={pieLabel as never}
+          onClick={(_d: any, idx: number, e: any) =>
+            handleEmit(ranking[idx]?.name, { shift: !!e?.shiftKey })}
         >
           {ranking.map((r, i) => {
             const sl = style.pie.slices[r.name];
             const color = sl?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
-            return <Cell key={r.name} fill={color} />;
+            const op = isDimmed(r.name) ? 0.4 : 1;
+            return <Cell key={r.name} fill={color} fillOpacity={op} />;
           })}
         </Pie>
       </PieChart>
