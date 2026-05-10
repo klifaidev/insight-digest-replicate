@@ -105,7 +105,7 @@ export function bindEditorStore(
   const prevSlide = baseStore.getState().slideId;
   // Suppress the emit caused by the initial load.
   suppressEmit = true;
-  baseStore.setState({ config, slideId, lastActionLabel: null });
+  baseStore.setState({ config, slideId, lastActionLabel: null, selectedIds: [], groupEditMemberId: null });
   // Reset undo history when binding to a new slide (or first mount).
   if (prevSlide !== slideId) {
     baseStore.temporal.getState().clear();
