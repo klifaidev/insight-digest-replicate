@@ -138,10 +138,12 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   // ---- renderers per chart type ----
   let chart: React.ReactNode = null;
+  const ct = block.chartType;
+  const forceStack = ct === "stackedColumn" || ct === "stackedBar" || ct === "stackedArea";
 
-  if (block.chartType === "line" || block.chartType === "area" || block.chartType === "combo") {
-    const Comp = block.chartType === "area" ? AreaChart
-      : block.chartType === "combo" ? ComposedChart : LineChart;
+  if (ct === "line" || ct === "area" || ct === "stackedArea" || ct === "combo") {
+    const Comp = (ct === "area" || ct === "stackedArea") ? AreaChart
+      : ct === "combo" ? ComposedChart : LineChart;
     chart = (
       <Comp data={rows}>
         {renderGrid}{xAxis}{yAxis}
