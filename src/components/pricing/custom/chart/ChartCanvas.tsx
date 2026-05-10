@@ -345,30 +345,49 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const stack100Fmt = (v: number) => `${(v as number).toFixed(0)}%`;
 
   if (ct === "line" || ct === "area" || ct === "stackedArea" || ct === "combo") {
-    const Comp = (ct === "area" || ct === "stackedArea") ? AreaChart
-      : ct === "combo" ? ComposedChart : LineChart;
-
     // C2 — trendline + forecast overlay
     const trendCfg = style.analytics?.trendline;
     const fcCfg = style.analytics?.forecast;
     const trendOn = !!trendCfg?.enabled;
+    const bandOn = trendOn && !!fcCfg?.enabled && !!fcCfg?.band;
+    // FIX 3 — band needs Area children; switch line→ComposedChart when band on
+    const Comp = (ct === "area" || ct === "stackedArea") ? AreaChart
+      : ct === "combo" ? ComposedChart
+      : (bandOn ? ComposedChart : LineChart);
+
     const trendOut = trendOn ? computeTrendlineSeries(
       data.series, cats,
       { enabled: true, type: trendCfg!.type, maWindow: trendCfg!.maWindow },
       { enabled: !!fcCfg?.enabled, periods: fcCfg?.periods ?? 0 },
     ) : null;
-    let chartRows = rows as Record<string, number | string | null>[];
+    let chartRows = rows as Record<string, number | string | null | [number, number]>[];
     if (trendOut && trendOut.rows.length > 0) {
-      // merge by index; extend with future-only rows
-      const merged: Record<string, number | string | null>[] = rows.map((r) => ({ ...r }));
+      const merged: Record<string, number | string | null | [number, number]>[] = rows.map((r) => ({ ...r }));
       const fwd = (fcCfg?.enabled ? Math.max(0, Math.min(6, fcCfg.periods ?? 0)) : 0);
       for (let i = 0; i < fwd; i++) merged.push({ __period: `+${i + 1}` });
       trendOut.rows.forEach((tr, i) => {
         Object.keys(tr).forEach((k) => {
           if (k === "__period") return;
-          if (merged[i]) merged[i][k] = tr[k];
+          if (merged[i]) merged[i][k] = tr[k] as never;
         });
       });
+      // FIX 3 — confidence band: per-series [lo, up] for each forecast index
+      if (bandOn) {
+        const startIdx = trendOut.forecastStartIdx;
+        data.series.forEach((s) => {
+          const tk = trendOut.trendKey(s.name);
+          merged.forEach((r, i) => {
+            if (i >= startIdx) {
+              const tv = Number(r[tk]) || 0;
+              const dist = i - startIdx + 1;
+              const u = 0.03 * dist;
+              r[`__band_${s.name}`] = [tv * (1 - u), tv * (1 + u)];
+            } else {
+              r[`__band_${s.name}`] = null;
+            }
+          });
+        });
+      }
       chartRows = merged;
     }
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
