@@ -121,8 +121,10 @@ export interface TableBlock extends BaseBlock {
 // ---------------------------------------------------------------------------
 export type CustomChartType =
   | "line" | "bar" | "column" | "hbar"
+  | "stackedColumn" | "stackedBar" | "stackedArea"
   | "pie" | "donut" | "bubble" | "area"
-  | "scatter" | "combo" | "waterfall";
+  | "scatter" | "combo" | "waterfall"
+  | "funnel" | "treemap" | "radar" | "boxplot" | "histogram";
 
 // Importação tardia para evitar ciclo
 import type { ChartStyle } from "@/components/pricing/custom/chart/types";
