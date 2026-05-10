@@ -393,11 +393,14 @@ export function ChartInspector({
           onChange={(v) => updPath("dataLabels", { bold: v })} />
         <ToggleField label="Itálico" value={style.dataLabels.italic}
           onChange={(v) => updPath("dataLabels", { italic: v })} />
-        <Row label="Posição">
-          <SelectField value={style.dataLabels.position}
-            onChange={(v) => updPath("dataLabels", { position: v as never })}
-            options={positionOptions(ct) as never} />
-        </Row>
+        {/* Cleanup: histogram has fixed "above" position; pie/donut handled below */}
+        {ct !== "histogram" && (
+          <Row label="Posição">
+            <SelectField value={style.dataLabels.position}
+              onChange={(v) => updPath("dataLabels", { position: v as never })}
+              options={positionOptions(ct) as never} />
+          </Row>
+        )}
         <Row label="Formato">
           <SelectField value={style.dataLabels.format}
             onChange={(v) => updPath("dataLabels", { format: v as never })}
