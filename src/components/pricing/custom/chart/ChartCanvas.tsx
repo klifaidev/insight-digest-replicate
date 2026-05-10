@@ -723,7 +723,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               fill={seriesList.length === 1 ? style.histogram.barColor : color}
               fillOpacity={seriesList.length > 1 ? 0.55 : 1}
               stroke={style.histogram.borderColor}
-              strokeWidth={style.histogram.borderWidth} />
+              strokeWidth={style.histogram.borderWidth}>
+              {/* FIX 6 — histogram data labels (always above) */}
+              {style.dataLabels.show && (
+                <LabelList dataKey={s.name} position="top"
+                  content={makeLabelContent({ style, measureFmt,
+                    customFmt: (v) => Number.isInteger(v) ? String(v) : v.toFixed(0) }) as never} />
+              )}
+            </Bar>
           );
         })}
         {style.histogram.cumulative && seriesList.map((s, i) => (
