@@ -1184,11 +1184,12 @@ function ConditionalSection({ rules, defaultColor, onRules, onDefault }: {
   );
 }
 
-function BridgeColumnBuilder({ block, value, setValue }: {
+function BridgeColumnBuilder({ block, value, setValue, dsRows }: {
   block: ChartBlock;
   onChange: (p: Patch) => void;
   value: WaterfallColumn[];
   setValue: (cols: WaterfallColumn[]) => void;
+  dsRows: ReturnType<typeof budgetRowsAsPricing> | ReturnType<typeof usePricing.getState>["rows"];
 }) {
   const upd = (i: number, p: Partial<WaterfallColumn>) => {
     const next = [...value]; next[i] = { ...next[i], ...p };
@@ -1201,8 +1202,39 @@ function BridgeColumnBuilder({ block, value, setValue }: {
     const next = [...value]; [next[i], next[j]] = [next[j], next[i]];
     setValue(next);
   };
+
+  // FIX 1 — preset builders that snapshot the current data into manualValue.
+  const buildByPeriod = (): WaterfallColumn[] => {
+    try {
+      const r = computeChartSeries(dsRows, block.filters, block.measure, null);
+      const totals = r.periodos.map((p, i) =>
+        ({ label: p.label, v: r.series.reduce((s, ser) => s + (ser.values[i] ?? 0), 0) }));
+      const cols: WaterfallColumn[] = totals.map((t) => ({
+        id: rid(), label: t.label,
+        type: t.v >= 0 ? "positive" : "negative",
+        manualValue: t.v,
+      }));
+      const total = totals.reduce((s, t) => s + t.v, 0);
+      cols.push({ id: rid(), label: "Total", type: "total", manualValue: total });
+      return cols;
+    } catch { return []; }
+  };
+  const buildByDim = (dim: string): WaterfallColumn[] => {
+    try {
+      const r = computeTopRanking(dsRows, block.filters, dim, block.measure, 50, "all", null);
+      const cols: WaterfallColumn[] = r.map((e) => ({
+        id: rid(), label: e.name,
+        type: e.value >= 0 ? "positive" : "negative",
+        manualValue: e.value,
+      }));
+      const total = r.reduce((s, e) => s + e.value, 0);
+      cols.push({ id: rid(), label: "Total", type: "total", manualValue: total });
+      return cols;
+    } catch { return []; }
+  };
+
   const presets: { label: string; build: () => WaterfallColumn[] }[] = [
-    { label: "Por mês", build: () => [] },
+    { label: "Por mês", build: buildByPeriod },
     { label: "Por efeito", build: () => [
       { id: rid(), label: "Início", type: "start", measure: block.measure },
       { id: rid(), label: "Volume", type: "positive", measure: "volume" },
@@ -1210,9 +1242,9 @@ function BridgeColumnBuilder({ block, value, setValue }: {
       { id: rid(), label: "Mix", type: "negative", measure: block.measure },
       { id: rid(), label: "Final", type: "total", measure: block.measure },
     ]},
-    { label: "Por categoria", build: () => [] },
-    { label: "Por marca", build: () => [] },
-    { label: "Por canal", build: () => [] },
+    { label: "Por categoria", build: () => buildByDim("categoria") },
+    { label: "Por marca", build: () => buildByDim("marca") },
+    { label: "Por canal", build: () => buildByDim("canalAjustado") },
     { label: "Em branco", build: () => [] },
   ];
   const addBlank = () => setValue([...value, {
