@@ -792,6 +792,12 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             </Select>
           )}
           <Badge variant="secondary" className="ml-2 text-[9px] uppercase">16:9</Badge>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <Button size="sm" variant="default" className="h-7 gap-1 px-2 text-[11px]"
+            onClick={() => setPresentOpen(true)}
+            title="Apresentar (F5)">
+            <Play className="h-3 w-3" /> Apresentar
+          </Button>
         </div>
       </div>
 
