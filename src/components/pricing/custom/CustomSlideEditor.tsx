@@ -3,7 +3,7 @@
 // dinâmicas. Atalhos de teclado, registro do canvas para o exporter, menu
 // de templates built-in / do usuário.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Rnd } from "react-rnd";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,11 @@ import {
   Combine, Network, Radar as RadarIcon, Box as BoxIcon,
   BarChart2, Hash,
   Undo2, Redo2, Lock, Unlock, ChevronUp, ChevronsUp, ChevronsDown,
+  AlignHorizontalJustifyCenter, AlignVerticalJustifyCenter,
+  AlignStartHorizontal, AlignEndHorizontal,
+  AlignStartVertical, AlignEndVertical,
+  AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter,
+  Group as GroupIcon, Ungroup as UngroupIcon, Grid3x3,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -73,7 +78,15 @@ import {
   patchBlockAction, bringForwardAction, sendBackAction, bringToFrontAction,
   sendToBackAction, toggleLockAction, undo as undoAction, redo as redoAction,
   setShowHaraldFooter as setShowHaraldFooterAction,
+  useSelection, selectBlock, setSelection, clearSelection,
+  selectAllOnSlide, enterGroupEdit, exitGroupEdit,
+  deleteBlocksAction, duplicateBlocksAction,
+  patchBlocksAction, nudgeBlocksAction,
+  alignBlocksAction, groupBlocksAction, ungroupBlocksAction,
+  type AlignKind,
 } from "./editorStore";
+import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
+import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
 
 type Icon = React.ComponentType<{ className?: string }>;
 
