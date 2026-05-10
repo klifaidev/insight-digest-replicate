@@ -112,3 +112,53 @@ export function SelectField<T extends string>({
     </select>
   );
 }
+
+export function Segmented<T extends string>({
+  value, onChange, options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+}) {
+  return (
+    <div className="flex h-7 rounded-md border border-input overflow-hidden">
+      {options.map((o) => (
+        <button key={o.value} type="button"
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "flex-1 px-1.5 text-[10px] transition-colors",
+            value === o.value ? "bg-primary text-primary-foreground" : "bg-background hover:bg-secondary",
+          )}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function Slider({
+  value, onChange, min = 0, max = 100, step = 1, suffix = "%",
+}: {
+  value: number; onChange: (v: number) => void;
+  min?: number; max?: number; step?: number; suffix?: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="flex-1 accent-primary" />
+      <span className="w-10 text-right text-[10px] text-muted-foreground tabular-nums">
+        {value}{suffix}
+      </span>
+    </div>
+  );
+}
+
+export function ResetButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="mt-1 text-[10px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+      Restaurar padrão
+    </button>
+  );
+}

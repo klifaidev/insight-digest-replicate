@@ -134,6 +134,53 @@ export interface WaterfallStyleCfg {
   classify: Record<string, "positive" | "negative" | "total">;
 }
 
+export interface FunnelStyleCfg {
+  direction: "ttb" | "btt";
+  gapPct: number;
+  labelMode: "value" | "percent" | "name" | "name-percent";
+  slices: Record<string, { color?: string }>;
+}
+
+export interface TreemapStyleCfg {
+  colorScheme: "categorical" | "gradient";
+  gradientFrom: string;
+  gradientTo: string;
+  showCategoryLabel: boolean;
+  showValueLabel: boolean;
+  labelSize: number;
+  labelColor: string;
+  borderColor: string;
+  borderWidth: number;
+}
+
+export interface RadarStyleCfg {
+  fillArea: boolean;
+  fillOpacity: number; // 0..1
+  gridShape: "polygon" | "circle";
+  gridColor: string;
+  axisLabelSize: number;
+  axisLabelColor: string;
+}
+
+export interface HistogramStyleCfg {
+  bins: number;
+  binWidth: number | null;
+  barColor: string;
+  borderColor: string;
+  borderWidth: number;
+  cumulative: boolean;
+}
+
+export interface BoxplotStyleCfg {
+  boxFillColor: string;
+  whiskerColor: string;
+  whiskerWidth: number;
+  medianColor: string;
+  medianWidth: number;
+  showMean: boolean;
+  showOutliers: boolean;
+}
+
 export interface ChartStyle {
   general: GeneralStyle;
   xAxis: AxisStyle;
@@ -147,6 +194,11 @@ export interface ChartStyle {
   bubble: BubbleStyleCfg;
   area: AreaStyleCfg;
   waterfall: WaterfallStyleCfg;
+  funnel: FunnelStyleCfg;
+  treemap: TreemapStyleCfg;
+  radar: RadarStyleCfg;
+  histogram: HistogramStyleCfg;
+  boxplot: BoxplotStyleCfg;
   /** Bubble/scatter only — second measure for Y when X is the first */
   measureY?: KpiMeasureId;
   /** Combo only — measure used by line series */
@@ -206,6 +258,30 @@ export function defaultChartStyle(): ChartStyle {
       connectors: true, connectorColor: "#94A3B8", connectorStyle: "dashed",
       showRunningTotal: false, labelPos: "above", gapPct: 30, classify: {},
     },
+    funnel: { direction: "ttb", gapPct: 4, labelMode: "name-percent", slices: {} },
+    treemap: {
+      colorScheme: "categorical",
+      gradientFrom: "#C8102E", gradientTo: "#1C2430",
+      showCategoryLabel: true, showValueLabel: false,
+      labelSize: 11, labelColor: "#FFFFFF",
+      borderColor: "#FFFFFF", borderWidth: 1,
+    },
+    radar: {
+      fillArea: true, fillOpacity: 0.35,
+      gridShape: "polygon", gridColor: "#E2E8F0",
+      axisLabelSize: 11, axisLabelColor: "#64748B",
+    },
+    histogram: {
+      bins: 10, binWidth: null,
+      barColor: "#C8102E", borderColor: "#FFFFFF", borderWidth: 0,
+      cumulative: false,
+    },
+    boxplot: {
+      boxFillColor: "#C8102E",
+      whiskerColor: "#1C2430", whiskerWidth: 1.5,
+      medianColor: "#FFFFFF", medianWidth: 2,
+      showMean: false, showOutliers: true,
+    },
   };
 }
 
@@ -226,6 +302,11 @@ export function ensureChartStyle(s?: Partial<ChartStyle>): ChartStyle {
     bubble: { ...d.bubble, ...(s.bubble ?? {}) },
     area: { ...d.area, ...(s.area ?? {}) },
     waterfall: { ...d.waterfall, ...(s.waterfall ?? {}) },
+    funnel: { ...d.funnel, ...(s.funnel ?? {}) },
+    treemap: { ...d.treemap, ...(s.treemap ?? {}) },
+    radar: { ...d.radar, ...(s.radar ?? {}) },
+    histogram: { ...d.histogram, ...(s.histogram ?? {}) },
+    boxplot: { ...d.boxplot, ...(s.boxplot ?? {}) },
     series: s.series ?? [],
   };
 }
