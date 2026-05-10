@@ -158,13 +158,87 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   const pricing = usePricing((s) => s.rows);
   const budget = useBudget((s) => s.rows);
-  const dsRows = useMemo(
+  const rawDsRows = useMemo(
     () => (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
     [block.dataSource, pricing, budget],
   );
   const xDim = block.fieldWells?.xDim ?? null;
   // C1 — colorDim overrides breakdown as series-key generator
   const seriesDim = block.fieldWells?.colorDim ?? block.breakdown;
+
+  // ---- Cross-filter (Part B.6) ----
+  const cf = useSlideFilters();
+  const participates = block.participatesInCrossFilter !== false;
+  const emits = block.emitsCrossFilter !== false;
+  // Block's own emitted filter (drives dimming, not row filtering on self)
+  const ownFilter = useMemo(
+    () => cf.filters.find((f) => f.sourceBlockId === block.id) ?? null,
+    [cf.filters, block.id],
+  );
+  // Incoming filters from other blocks; matched by dim against this block's xDim/colorDim/breakdown.
+  const myDims = useMemo(() => {
+    const set = new Set<string>();
+    if (xDim) set.add(xDim);
+    if (block.fieldWells?.colorDim) set.add(block.fieldWells.colorDim);
+    if (block.breakdown) set.add(block.breakdown);
+    return set;
+  }, [xDim, block.fieldWells?.colorDim, block.breakdown]);
+  const incoming = useMemo(() => {
+    if (!participates) return [];
+    return cf.filters.filter(
+      (f) => f.sourceBlockId !== block.id && (myDims.has(f.dimension) || f.dimension === "period")
+    );
+  }, [cf.filters, participates, block.id, myDims]);
+  // Apply incoming filters to dsRows
+  const dsRows = useMemo(() => {
+    if (incoming.length === 0) return rawDsRows;
+    return rawDsRows.filter((r) => {
+      for (const f of incoming) {
+        const k = f.dimension === "period" ? "periodo" : f.dimension;
+        const v = String((r as unknown as Record<string, unknown>)[k] ?? "");
+        if (!f.values.includes(v)) return false;
+      }
+      return true;
+    });
+  }, [rawDsRows, incoming]);
+
+  // Determine the dimension this block emits
+  const emitDim: string = (xDim && xDim !== "period" ? xDim
+    : block.breakdown ?? "period");
+
+  // Click handler — emits/toggles a filter on this block's emit dimension
+  const handleEmit = (rawValue: unknown, opts?: { shift?: boolean }) => {
+    if (!emits) return;
+    const v = String(rawValue ?? "");
+    if (!v) return;
+    const filter = { sourceBlockId: block.id, dimension: emitDim, values: [v] };
+    if (opts?.shift) cf.toggleFilter(filter);
+    else {
+      // single click: if same single value already selected, clear; else replace
+      if (ownFilter && ownFilter.values.length === 1 && ownFilter.values[0] === v
+          && ownFilter.dimension === emitDim) {
+        cf.clearFilter(block.id);
+      } else {
+        cf.setFilter(filter);
+      }
+    }
+  };
+
+  // Helper for Recharts top-level onClick (point/bar payload)
+  const chartOnClick = (e: any) => {
+    if (!emits) return;
+    const label = e?.activeLabel ?? e?.activePayload?.[0]?.payload?.__period
+      ?? e?.activePayload?.[0]?.payload?.name;
+    if (label != null) handleEmit(label, { shift: !!e?.shiftKey });
+  };
+
+  // Should a value be dimmed (own filter active and value not selected)?
+  const isDimmed = (value: string) => {
+    if (!ownFilter) return false;
+    if (ownFilter.dimension !== emitDim) return false;
+    return !ownFilter.values.includes(value);
+  };
+
   const raw = useMemo(
     () => computeChartSeries(dsRows, block.filters, block.measure, seriesDim, xDim),
     [dsRows, block.filters, block.measure, seriesDim, xDim],
