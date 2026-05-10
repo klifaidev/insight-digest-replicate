@@ -172,6 +172,18 @@ export interface ChartBlock extends BaseBlock {
   style?: Partial<ChartStyle>;
   /** Fonte de dados — default "ke30". */
   dataSource?: BlockDataSource;
+  /** Power BI-style axis field wells (Part B.1). When present, takes precedence over measure/breakdown for the relevant slot. */
+  fieldWells?: {
+    xDim?: string | null;
+    yMeasure?: KpiMeasureId;
+    colorDim?: string | null;
+    tooltipMeasure?: KpiMeasureId | null;
+    labelDim?: string | null;
+  };
+  /** Sort control (Part B.5) */
+  sortConfig?: { field: "period" | "value" | "name"; dir: "asc" | "desc" };
+  /** Cross-filter participation (Part B.6 placeholder) */
+  participatesInCrossFilter?: boolean;
 }
 
 // ---------------------------------------------------------------------------
