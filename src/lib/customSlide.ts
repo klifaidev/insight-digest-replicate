@@ -27,6 +27,14 @@ export interface BaseBlock {
   z: number;
   /** Posição/tamanho bloqueados (move/resize desabilitados). Default false. */
   locked?: boolean;
+  /** Group ID — when set the block belongs to a group and moves/resizes with siblings. */
+  groupId?: string;
+}
+
+/** Group of blocks that move/resize as a unit. Bounding box is derived from members. */
+export interface BlockGroup {
+  id: string;
+  memberIds: string[];
 }
 
 export interface TitleBlock extends BaseBlock {
@@ -222,6 +230,8 @@ export interface CustomSlideConfig {
   blocks: CustomBlock[];
   background: string;
   showHaraldFooter: boolean;
+  /** Block groups (B8.2). Optional for retro-compat. */
+  groups?: BlockGroup[];
 }
 
 // ---------------------------------------------------------------------------

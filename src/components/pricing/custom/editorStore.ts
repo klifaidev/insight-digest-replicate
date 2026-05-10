@@ -18,6 +18,7 @@ import { useShallow } from "zustand/react/shallow";
 import { temporal } from "zundo";
 import { useEffect } from "react";
 import type {
+  BlockGroup,
   CustomBlock,
   CustomBlockKind,
   CustomChartType,
@@ -28,19 +29,29 @@ import { newBlock, newChartBlock } from "@/lib/customSlide";
 export type EditorActionLabel =
   | "Adicionar bloco"
   | "Excluir bloco"
+  | "Excluir blocos"
   | "Mover bloco"
+  | "Mover blocos"
   | "Redimensionar bloco"
   | "Alterar estilo"
   | "Alterar dados"
   | "Duplicar bloco"
+  | "Duplicar blocos"
   | "Alterar ordem"
   | "Bloquear / Desbloquear"
-  | "Alterar slide";
+  | "Alterar slide"
+  | "Alinhar blocos"
+  | "Agrupar blocos"
+  | "Desagrupar blocos";
 
 interface EditorState {
   config: CustomSlideConfig | null;
   slideId: string | undefined;
   lastActionLabel: EditorActionLabel | null;
+  /** Multi-selection (B8.2). Empty means nothing selected. */
+  selectedIds: string[];
+  /** Group-edit mode: clicking a member dives into editing that single block. */
+  groupEditMemberId: string | null;
 }
 
 // Mutations live outside the partialized state so zundo doesn't snapshot them.
@@ -49,12 +60,17 @@ let suppressEmit = false;
 
 const baseStore = create<EditorState>()(
   temporal(
-    () => ({ config: null, slideId: undefined, lastActionLabel: null }),
+    () => ({
+      config: null,
+      slideId: undefined,
+      lastActionLabel: null,
+      selectedIds: [],
+      groupEditMemberId: null,
+    }),
     {
       limit: 50,
-      // Only track the slide config + label. slideId itself isn't undoable.
+      // Only track the slide config + label. selection / slideId not undoable.
       partialize: (s) => ({ config: s.config, lastActionLabel: s.lastActionLabel }),
-      // Skip the very first set (initial load) so undo can't go past mount state.
       equality: (a, b) => a.config === b.config,
     },
   ),
@@ -89,7 +105,7 @@ export function bindEditorStore(
   const prevSlide = baseStore.getState().slideId;
   // Suppress the emit caused by the initial load.
   suppressEmit = true;
-  baseStore.setState({ config, slideId, lastActionLabel: null });
+  baseStore.setState({ config, slideId, lastActionLabel: null, selectedIds: [], groupEditMemberId: null });
   // Reset undo history when binding to a new slide (or first mount).
   if (prevSlide !== slideId) {
     baseStore.temporal.getState().clear();
@@ -270,4 +286,272 @@ export function useEditorBinding(
   useEffect(() => {
     syncFromParent(config);
   }, [config]);
+}
+
+// ----- Selection (B8.2) ---------------------------------------------------
+
+function rid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * If `id` belongs to a group, expand to all members of that group.
+ * Used so that any selection action treats grouped blocks atomically
+ * (unless the user is in group-edit mode for that specific id).
+ */
+function expandGroup(cfg: CustomSlideConfig, id: string): string[] {
+  const blk = cfg.blocks.find((b) => b.id === id);
+  if (!blk?.groupId) return [id];
+  const grp = (cfg.groups ?? []).find((g) => g.id === blk.groupId);
+  if (!grp) return [id];
+  return grp.memberIds;
+}
+
+export function setSelection(ids: string[]) {
+  baseStore.setState({ selectedIds: Array.from(new Set(ids)), groupEditMemberId: null });
+}
+
+export function clearSelection() {
+  baseStore.setState({ selectedIds: [], groupEditMemberId: null });
+}
+
+export function selectBlock(id: string, opts?: { additive?: boolean }) {
+  const cfg = baseStore.getState().config;
+  if (!cfg) return;
+  const groupEdit = baseStore.getState().groupEditMemberId;
+  // If we're in group-edit mode for this id, just keep it.
+  if (groupEdit === id) return;
+  const expanded = expandGroup(cfg, id);
+  const cur = baseStore.getState().selectedIds;
+  if (opts?.additive) {
+    // Shift+click toggles membership.
+    const set = new Set(cur);
+    const allIn = expanded.every((x) => set.has(x));
+    if (allIn) expanded.forEach((x) => set.delete(x));
+    else expanded.forEach((x) => set.add(x));
+    baseStore.setState({ selectedIds: Array.from(set), groupEditMemberId: null });
+  } else {
+    baseStore.setState({ selectedIds: expanded, groupEditMemberId: null });
+  }
+}
+
+/** Double-click member: enter group-edit mode for that single block. */
+export function enterGroupEdit(id: string) {
+  baseStore.setState({ selectedIds: [id], groupEditMemberId: id });
+}
+
+export function exitGroupEdit() {
+  baseStore.setState({ groupEditMemberId: null });
+}
+
+export function selectAllOnSlide() {
+  const cfg = baseStore.getState().config;
+  if (!cfg) return;
+  baseStore.setState({ selectedIds: cfg.blocks.map((b) => b.id), groupEditMemberId: null });
+}
+
+export function useSelection() {
+  return useStore(
+    baseStore,
+    useShallow((s) => ({
+      selectedIds: s.selectedIds,
+      groupEditMemberId: s.groupEditMemberId,
+    })),
+  );
+}
+
+// ----- Multi-block actions ------------------------------------------------
+
+export function deleteBlocksAction(ids: string[]) {
+  if (ids.length === 0) return;
+  if (ids.length === 1) { deleteBlockAction(ids[0]); clearSelection(); return; }
+  const set = new Set(ids);
+  mutate("Excluir blocos", (c) => ({
+    ...c,
+    blocks: c.blocks.filter((b) => !set.has(b.id)),
+    groups: (c.groups ?? [])
+      .map((g) => ({ ...g, memberIds: g.memberIds.filter((m) => !set.has(m)) }))
+      .filter((g) => g.memberIds.length > 1),
+  }));
+  clearSelection();
+}
+
+export function duplicateBlocksAction(ids: string[]): string[] {
+  const cur = baseStore.getState().config;
+  if (!cur || ids.length === 0) return [];
+  if (ids.length === 1) {
+    const newId = duplicateBlockAction(ids[0]);
+    return newId ? [newId] : [];
+  }
+  let zTop = cur.blocks.reduce((m, b) => Math.max(m, b.z), 0);
+  const newIds: string[] = [];
+  // For groups: regenerate groupId so duplicated set forms its own group.
+  const groupIdMap = new Map<string, string>();
+  const idMap = new Map<string, string>();
+  const newBlocks: CustomBlock[] = [];
+  for (const id of ids) {
+    const orig = cur.blocks.find((b) => b.id === id);
+    if (!orig) continue;
+    zTop += 1;
+    const newId = rid();
+    idMap.set(id, newId);
+    let newGroupId: string | undefined = undefined;
+    if (orig.groupId) {
+      if (!groupIdMap.has(orig.groupId)) groupIdMap.set(orig.groupId, rid());
+      newGroupId = groupIdMap.get(orig.groupId);
+    }
+    const clone = {
+      ...JSON.parse(JSON.stringify(orig)),
+      id: newId,
+      x: orig.x + 16,
+      y: orig.y + 16,
+      z: zTop,
+      locked: false,
+      groupId: newGroupId,
+    } as CustomBlock;
+    newBlocks.push(clone);
+    newIds.push(newId);
+  }
+  const newGroups: BlockGroup[] = Array.from(groupIdMap.values()).map((gid) => ({
+    id: gid,
+    memberIds: newBlocks.filter((b) => b.groupId === gid).map((b) => b.id),
+  }));
+  mutate("Duplicar blocos", (c) => ({
+    ...c,
+    blocks: [...c.blocks, ...newBlocks],
+    groups: [...(c.groups ?? []), ...newGroups],
+  }));
+  baseStore.setState({ selectedIds: newIds, groupEditMemberId: null });
+  return newIds;
+}
+
+/**
+ * Apply per-id position deltas / patches in a single undo step.
+ * Used by multi-drag, alignment, distribute, and arrow-key nudge.
+ */
+export function patchBlocksAction(
+  patches: { id: string; patch: Partial<CustomBlock> }[],
+  label: EditorActionLabel,
+) {
+  if (patches.length === 0) return;
+  const map = new Map(patches.map((p) => [p.id, p.patch]));
+  mutate(label, (c) => ({
+    ...c,
+    blocks: c.blocks.map((b) => {
+      const p = map.get(b.id);
+      return p ? ({ ...b, ...p } as CustomBlock) : b;
+    }),
+  }));
+}
+
+/** Move a set of blocks by (dx, dy). Locked blocks are skipped. */
+export function nudgeBlocksAction(ids: string[], dx: number, dy: number, label: EditorActionLabel) {
+  const cur = baseStore.getState().config;
+  if (!cur || ids.length === 0) return;
+  const patches = ids
+    .map((id) => cur.blocks.find((b) => b.id === id))
+    .filter((b): b is CustomBlock => !!b && !b.locked)
+    .map((b) => ({ id: b.id, patch: { x: b.x + dx, y: b.y + dy } as Partial<CustomBlock> }));
+  if (patches.length) patchBlocksAction(patches, label);
+}
+
+// ----- Alignment ---------------------------------------------------------
+
+export type AlignKind =
+  | "left" | "centerH" | "right"
+  | "top"  | "centerV" | "bottom"
+  | "distH" | "distV";
+
+export function alignBlocksAction(ids: string[], kind: AlignKind) {
+  const cur = baseStore.getState().config;
+  if (!cur || ids.length < 2) return;
+  const blocks = ids
+    .map((id) => cur.blocks.find((b) => b.id === id))
+    .filter((b): b is CustomBlock => !!b);
+  if (blocks.length < 2) return;
+  const patches: { id: string; patch: Partial<CustomBlock> }[] = [];
+
+  if (kind === "left") {
+    const m = Math.min(...blocks.map((b) => b.x));
+    blocks.forEach((b) => patches.push({ id: b.id, patch: { x: m } }));
+  } else if (kind === "right") {
+    const m = Math.max(...blocks.map((b) => b.x + b.w));
+    blocks.forEach((b) => patches.push({ id: b.id, patch: { x: m - b.w } }));
+  } else if (kind === "centerH") {
+    const mean = blocks.reduce((s, b) => s + (b.x + b.w / 2), 0) / blocks.length;
+    blocks.forEach((b) => patches.push({ id: b.id, patch: { x: Math.round(mean - b.w / 2) } }));
+  } else if (kind === "top") {
+    const m = Math.min(...blocks.map((b) => b.y));
+    blocks.forEach((b) => patches.push({ id: b.id, patch: { y: m } }));
+  } else if (kind === "bottom") {
+    const m = Math.max(...blocks.map((b) => b.y + b.h));
+    blocks.forEach((b) => patches.push({ id: b.id, patch: { y: m - b.h } }));
+  } else if (kind === "centerV") {
+    const mean = blocks.reduce((s, b) => s + (b.y + b.h / 2), 0) / blocks.length;
+    blocks.forEach((b) => patches.push({ id: b.id, patch: { y: Math.round(mean - b.h / 2) } }));
+  } else if (kind === "distH") {
+    if (blocks.length < 3) return;
+    const sorted = [...blocks].sort((a, b) => a.x - b.x);
+    const first = sorted[0].x;
+    const last = sorted[sorted.length - 1].x;
+    const step = (last - first) / (sorted.length - 1);
+    sorted.forEach((b, i) => patches.push({ id: b.id, patch: { x: Math.round(first + step * i) } }));
+  } else if (kind === "distV") {
+    if (blocks.length < 3) return;
+    const sorted = [...blocks].sort((a, b) => a.y - b.y);
+    const first = sorted[0].y;
+    const last = sorted[sorted.length - 1].y;
+    const step = (last - first) / (sorted.length - 1);
+    sorted.forEach((b, i) => patches.push({ id: b.id, patch: { y: Math.round(first + step * i) } }));
+  }
+  patchBlocksAction(patches, "Alinhar blocos");
+}
+
+// ----- Group / Ungroup ---------------------------------------------------
+
+export function groupBlocksAction(ids: string[]): string | null {
+  const cur = baseStore.getState().config;
+  if (!cur || ids.length < 2) return null;
+  // Flatten any existing groups into the new one.
+  const memberSet = new Set<string>();
+  ids.forEach((id) => {
+    const blk = cur.blocks.find((b) => b.id === id);
+    if (!blk) return;
+    if (blk.groupId) {
+      const grp = (cur.groups ?? []).find((g) => g.id === blk.groupId);
+      grp?.memberIds.forEach((m) => memberSet.add(m));
+    } else {
+      memberSet.add(id);
+    }
+  });
+  if (memberSet.size < 2) return null;
+  const newGroupId = rid();
+  const memberIds = Array.from(memberSet);
+  mutate("Agrupar blocos", (c) => ({
+    ...c,
+    blocks: c.blocks.map((b) => memberSet.has(b.id) ? ({ ...b, groupId: newGroupId } as CustomBlock) : b),
+    groups: [
+      ...((c.groups ?? []).filter((g) => !g.memberIds.some((m) => memberSet.has(m)))),
+      { id: newGroupId, memberIds },
+    ],
+  }));
+  baseStore.setState({ selectedIds: memberIds, groupEditMemberId: null });
+  return newGroupId;
+}
+
+export function ungroupBlocksAction(ids: string[]) {
+  const cur = baseStore.getState().config;
+  if (!cur || ids.length === 0) return;
+  const groupIds = new Set<string>();
+  ids.forEach((id) => {
+    const blk = cur.blocks.find((b) => b.id === id);
+    if (blk?.groupId) groupIds.add(blk.groupId);
+  });
+  if (groupIds.size === 0) return;
+  mutate("Desagrupar blocos", (c) => ({
+    ...c,
+    blocks: c.blocks.map((b) => (b.groupId && groupIds.has(b.groupId)) ? ({ ...b, groupId: undefined } as CustomBlock) : b),
+    groups: (c.groups ?? []).filter((g) => !groupIds.has(g.id)),
+  }));
 }
