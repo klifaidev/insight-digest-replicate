@@ -604,7 +604,7 @@ export function resizeGroupAction(
 
 // ----- Chart style copy / paste (B8.6) ------------------------------------
 
-import type { ChartBlock, ChartStyle } from "@/components/pricing/custom/chart/types";
+import type { ChartStyle, SeriesStyle } from "@/components/pricing/custom/chart/types";
 
 interface CopiedStyle {
   sourceType: import("@/lib/customSlide").CustomChartType;
