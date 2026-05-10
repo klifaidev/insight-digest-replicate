@@ -665,12 +665,32 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
           const color = cfg?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+          // FIX 7b — radar custom data labels via dot prop
+          const dl = style.dataLabels;
+          const dotRenderer = dl.show ? (props: any) => {
+            const { cx, cy, value } = props;
+            if (cx == null || cy == null) return <g />;
+            const off = dl.position === "below" ? 12 : -8;
+            const fmt = dl.format === "auto" ? measureFmt : dl.format;
+            return (
+              <g>
+                <circle cx={cx} cy={cy} r={2.5} fill={color} />
+                <text x={cx} y={cy + off} fontSize={dl.size} fill={dl.color}
+                  fontWeight={dl.bold ? 700 : 400}
+                  fontStyle={dl.italic ? "italic" : "normal"}
+                  textAnchor="middle">
+                  {formatValue(Number(value) || 0, fmt, "rol", dl.decimals)}
+                </text>
+              </g>
+            );
+          } : { r: 2.5, fill: color };
           return (
             <Radar key={s.name} isAnimationActive={false} dataKey={s.name}
               stroke={color} strokeWidth={cfg?.thickness ?? 2}
               strokeDasharray={dashArr(cfg?.lineStyle)}
               fill={color}
-              fillOpacity={style.radar.fillArea ? style.radar.fillOpacity : 0} />
+              fillOpacity={style.radar.fillArea ? style.radar.fillOpacity : 0}
+              dot={dotRenderer as never} />
           );
         })}
       </RadarChart>
