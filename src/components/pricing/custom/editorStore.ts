@@ -669,18 +669,19 @@ export function pasteChartStyleAction(blockId: string): boolean {
     }
     // Series colors only — preserve marker/line/etc.
     if (src.series && Array.isArray(src.series)) {
-      const tgtSeries = (cur.series ?? []) as Array<Record<string, unknown>>;
-      const merged = tgtSeries.map((s, i) => {
-        const ss = src.series?.[i] as { color?: string } | undefined;
+      const tgtSeries = (cur.series ?? []) as SeriesStyle[];
+      const merged: SeriesStyle[] = tgtSeries.map((s, i) => {
+        const ss = src.series?.[i];
         return ss?.color ? { ...s, color: ss.color } : s;
       });
       // Keep extra source colors so the renderer uses them when target has fewer entries.
       if (src.series.length > tgtSeries.length) {
         for (let i = tgtSeries.length; i < src.series.length; i++) {
-          merged.push({ color: (src.series[i] as { color?: string }).color });
+          const ss = src.series[i];
+          merged.push({ key: ss.key ?? `s${i}`, color: ss.color });
         }
       }
-      out.series = merged as ChartStyle["series"];
+      out.series = merged;
     }
     nextStyle = out;
   }
