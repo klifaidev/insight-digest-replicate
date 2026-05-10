@@ -418,8 +418,10 @@ export function ChartInspector({
         </Row>
         <ToggleField label="Auto-contraste" value={style.dataLabels.autoContrast}
           onChange={(v) => updPath("dataLabels", { autoContrast: v })} />
-        <ToggleField label="Mostrar nome série" value={style.dataLabels.showSeries}
-          onChange={(v) => updPath("dataLabels", { showSeries: v })} />
+        {ct !== "pie" && ct !== "donut" && (
+          <ToggleField label="Mostrar nome série" value={style.dataLabels.showSeries}
+            onChange={(v) => updPath("dataLabels", { showSeries: v })} />
+        )}
         <ToggleField label="Mostrar categoria" value={style.dataLabels.showCategory}
           onChange={(v) => updPath("dataLabels", { showCategory: v })} />
         <Row label="Fundo rótulo">
