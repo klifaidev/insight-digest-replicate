@@ -1847,3 +1847,114 @@ function MultiSelectInspector({ selectedIds, blocks, hasGroup }: {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// GroupOverlay — dashed bbox + 8 resize handles for the active group (B8 fix).
+// Drag preview is local; on mouseup a single labeled action commits the
+// proportional scale to every member ("Redimensionar grupo" — undoable).
+// ---------------------------------------------------------------------------
+function GroupOverlay({
+  bounds, active, showHandles, memberIds, scaleRef,
+}: {
+  bounds: { x: number; y: number; w: number; h: number };
+  active: boolean;
+  showHandles: boolean;
+  memberIds: string[];
+  scaleRef: React.MutableRefObject<number>;
+}) {
+  const [preview, setPreview] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const bb = preview ?? bounds;
+
+  type HandleDir = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+
+  const startResize = (dir: HandleDir, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const origin = { ...bounds };
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const sc = scaleRef.current || 1;
+    const move = (ev: MouseEvent) => {
+      const rawDx = (ev.clientX - startX) / sc;
+      const rawDy = (ev.clientY - startY) / sc;
+      let { x, y, w, h } = origin;
+      if (dir.includes("e")) w = Math.max(40, origin.w + rawDx);
+      if (dir.includes("s")) h = Math.max(40, origin.h + rawDy);
+      if (dir.includes("w")) {
+        const nw = Math.max(40, origin.w - rawDx);
+        x = origin.x + (origin.w - nw);
+        w = nw;
+      }
+      if (dir.includes("n")) {
+        const nh = Math.max(40, origin.h - rawDy);
+        y = origin.y + (origin.h - nh);
+        h = nh;
+      }
+      setPreview({ x, y, w, h });
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setPreview((p) => {
+        if (p) resizeGroupAction(memberIds, origin, p);
+        return null;
+      });
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+
+  const handleStyle = (top: number | "auto", left: number | "auto", right: number | "auto", bottom: number | "auto", cursor: string): React.CSSProperties => ({
+    position: "absolute",
+    top: top === "auto" ? "auto" : top,
+    left: left === "auto" ? "auto" : left,
+    right: right === "auto" ? "auto" : right,
+    bottom: bottom === "auto" ? "auto" : bottom,
+    width: 10, height: 10,
+    background: "#3B82F6",
+    border: "1.5px solid white",
+    borderRadius: 2,
+    cursor,
+    pointerEvents: "auto",
+    zIndex: 999997,
+  });
+
+  return (
+    <>
+      {/* dashed bbox */}
+      <div
+        data-export-hide="true"
+        style={{
+          position: "absolute",
+          left: bb.x - 4, top: bb.y - 4,
+          width: bb.w + 8, height: bb.h + 8,
+          border: `1px dashed ${active ? "#3B82F6" : "rgba(59,130,246,0.35)"}`,
+          borderRadius: 4,
+          pointerEvents: "none",
+          zIndex: showHandles ? 999996 : 0,
+        }}
+      />
+      {showHandles && (
+        <div
+          data-export-hide="true"
+          style={{
+            position: "absolute",
+            left: bb.x - 5, top: bb.y - 5,
+            width: bb.w + 10, height: bb.h + 10,
+            pointerEvents: "none",
+            zIndex: 999997,
+          }}
+        >
+          <div onMouseDown={(e) => startResize("nw", e)} style={handleStyle(-5, -5, "auto", "auto", "nwse-resize")} />
+          <div onMouseDown={(e) => startResize("n",  e)} style={{ ...handleStyle(-5, "50%", "auto", "auto", "ns-resize"), marginLeft: -5 }} />
+          <div onMouseDown={(e) => startResize("ne", e)} style={handleStyle(-5, "auto", -5, "auto", "nesw-resize")} />
+          <div onMouseDown={(e) => startResize("e",  e)} style={{ ...handleStyle("50%", "auto", -5, "auto", "ew-resize"), marginTop: -5 }} />
+          <div onMouseDown={(e) => startResize("se", e)} style={handleStyle("auto", "auto", -5, -5, "nwse-resize")} />
+          <div onMouseDown={(e) => startResize("s",  e)} style={{ ...handleStyle("auto", "50%", "auto", -5, "ns-resize"), marginLeft: -5 }} />
+          <div onMouseDown={(e) => startResize("sw", e)} style={handleStyle("auto", -5, "auto", -5, "nesw-resize")} />
+          <div onMouseDown={(e) => startResize("w",  e)} style={{ ...handleStyle("50%", -5, "auto", "auto", "ew-resize"), marginTop: -5 }} />
+        </div>
+      )}
+    </>
+  );
+}
