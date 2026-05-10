@@ -1,92 +1,75 @@
-## Goal
+## Diagnóstico — por que a Bridge fica em branco
 
-Transform the current chart block in the slide editor into a PowerPoint-grade chart system: more chart types, a dedicated **Design** panel per chart type with rich, dynamic, real-time controls, and exports that respect every setting.
+O botão **"Bridge"** na paleta de gráficos do slide personalizado insere um `ChartBlock` com `chartType: "waterfall"`. O renderer (`WaterfallChart` em `ChartCanvas.tsx`) tem dois caminhos:
 
-Given the size of the request, I'll deliver this in **4 phases** so you can validate as we go. We can ship each phase independently.
+1. **Smart columns** — só ativa se `style.waterfall.columns` estiver preenchido (não vem por default).
+2. **Fallback genérico** — pega `series[0].values` (uma série única `Total` por período) e gera barras `P1, P2, …` cumulativas.
 
----
+Problemas que produzem o "branco":
 
-## Phase 1 — Foundation (data model + new editor architecture)
+- O default cai sempre no fallback. Se o usuário tem **um único período** filtrado (ou os filtros do bloco zeram todos os meses), `series[0].values` tem 1 valor → 1 barra minúscula sem rótulo coerente, parecendo vazio.
+- O fallback rotula como `P1, P2…` e classifica tudo como `positive/negative` em cumulativo, o que **não é uma bridge real** — não separa Volume × Preço × Custo etc.
+- Não há base/comparação como no `BridgeBlock` legado, então o usuário não tem o que configurar e a Bridge fica visualmente quebrada antes de qualquer ação.
+- Detalhe extra: dentro de `WaterfallChart`, o `dsRows` é refeito a partir de `usePricing` direto e **ignora os cross-filters de entrada** já aplicados pelo `ChartCanvas` pai.
 
-**Files touched:** `src/lib/customSlide.ts`, `src/components/pricing/custom/CustomSlideEditor.tsx`, new `src/components/pricing/custom/chart/*`
-
-1. Extend `ChartBlock` to a discriminated union by `chartType`:
-   `line | bar | column | hbar | pie | donut | bubble | area | scatter | combo | waterfall`.
-2. Add a shared `ChartStyle` object on every chart block:
-   - `general`: title (text, size, color, bold, italic, show), background, border (color, width), padding, legend (show, position).
-   - `axes`: x/y `{ show, labelSize, labelColor, titleText, titleSize, titleColor, ticks, lineColor, lineWidth, min, max, format }`, plus `secondaryY` for combo.
-   - `gridlines`: `{ show, color, style: solid|dashed }`.
-   - `dataLabels`: `{ show, position, size, color, autoContrast, bold, italic, format, showSeries, showCategory, bgColor, bgOpacity, borderColor, borderWidth }`.
-   - `series[]`: per-series overrides (color, lineStyle, thickness, marker, fillOpacity, smooth, areaFill, etc.).
-3. New right-panel architecture:
-   - Replace the current flat **Design** tab with a **chart inspector**: collapsible sections (`General`, `Axes`, `Series`, `Data Labels`, `Type-specific`).
-   - Sections render dynamically based on selected `chartType`.
-   - Reusable `ColorPicker` (HEX + opacity slider + brand palette from `index.css` tokens), `NumberStepper` (typing + ± buttons), `Toggle`, `Select`.
-4. State persisted per block (already the case); migration ensures old blocks get sensible defaults.
-
-**Deliverable:** new chart inspector UI working for the existing `line`/`bar` types, no regressions.
+A Bridge da aba `/bridge-pvm` (`calcPVM` em `src/lib/analytics.ts`) é a referência: decompõe ΔContribuição Marginal entre dois períodos em **Base → Volume → Preço → Custo → Frete → Comissão → Outros → Atual**.
 
 ---
 
-## Phase 2 — New chart types in the canvas (renderer)
+## Plano
 
-**Files touched:** `src/components/pricing/custom/BlockRenderer.tsx`, new `src/components/pricing/custom/chart/Renderers.tsx`
+### 1. Tornar a Bridge "PVM-aware" por padrão
 
-Implement each renderer with **Recharts** (already in repo) + a custom Waterfall:
+`src/components/pricing/custom/chart/types.ts`
+- Adicionar campos opcionais ao `WaterfallStyleCfg`:
+  - `mode?: "pvm" | "manual"` (default `"pvm"`)
+  - `pvm?: { base: string | null; comp: string | null; periodMode: "fy" | "month"; metric?: Metric }` (default `{ base:null, comp:null, periodMode:"month" }`)
+  - Manter `columns?` para o modo manual já existente.
+- Atualizar `defaultChartStyle()` e `ensureChartStyle()` para preservar esses campos.
 
-- Pie / Donut (`PieChart`, donut via `innerRadius`).
-- Horizontal bar (`BarChart layout="vertical"`).
-- Bubble (`ScatterChart` with `ZAxis`).
-- Area (`AreaChart`, stacked/overlapping).
-- Scatter (`ScatterChart`).
-- Combo (line + bar via `ComposedChart`, secondary Y).
-- Waterfall (custom: stacked invisible base + colored deltas + connector segments).
+`src/lib/customSlide.ts`
+- Em `newChartBlock("waterfall", …)`: aplicar `style.waterfall.mode = "pvm"` no objeto criado, título "Bridge PVM", `breakdown: null`, `participatesInCrossFilter: true`.
 
-All renderers consume the unified `ChartStyle` so design settings apply live.
+### 2. Renderizar a PVM dentro do `WaterfallChart`
 
----
+`src/components/pricing/custom/chart/ChartCanvas.tsx`
+- Em `WaterfallChart`, antes do fallback genérico, checar `style.waterfall.mode === "pvm"`:
+  - Reutilizar `dsRows` já cross-filtrado vindo do pai (passar como prop em vez de re-`usePricing`). Aplicar `applyFilters` com `block.filters`.
+  - Se `pvm.base` e `pvm.comp` estiverem definidos e diferentes:
+    - Chamar `calcPVM(filtered, metric, base, comp, periodMode, labels)` com `metric = pvm.metric ?? usePricing.metric`.
+    - Montar `items` na ordem: `Base CM`, `Volume`, `Preço`, `Custo`, `Frete`, `Comissão`, `Outros`, `Atual CM`. Tipos: `start | positive/negative (auto pelo sinal de cada efeito) | total`.
+    - Labels usam `result.baseLabel` / `result.currentLabel` (que já vêm com `monthLabel`).
+  - Se faltar base/comp, retornar **empty state estilizado** ("Configure base e comparação da Bridge") em vez de barras vazias.
+- No `ChartCanvas` pai, **não bloquear** a Bridge no `seriesEmpty` quando `mode === "pvm"`; o pivot por período não é necessário.
+- Bypassar o `usePricing(s.rows)` dentro de `WaterfallChart` e passar `dsRows` (já com cross-filter) por prop — corrige a inconsistência atual.
 
-## Phase 3 — Type-specific design controls
+### 3. Inspector — pickers de Base/Comparação
 
-For each chart type, expose the controls listed in your spec:
+`src/components/pricing/custom/chart/ChartInspector.tsx`
+- Na seção "Waterfall", quando `mode === "pvm"`:
+  - Toggle `Modo: PVM | Manual` (default PVM).
+  - Selects de **Modo período** (FY/Mês), **Base**, **Comparação** — reutilizando `useMonthsInfo` / `useFyList` já usados em `BridgeBlockEditor`.
+  - Esconder a tabela de "Smart columns" (só aparece em modo Manual).
+- Manter as cores positiva/negativa/total e demais opções existentes válidas para ambos os modos.
 
-- **Line:** style/thickness/color per series, marker (shape/size/colors), smooth, area fill, hover highlight.
-- **Bar / Column:** mode (grouped / stacked / 100%), gap width, overlap, per-category color override, border, corner radius.
-- **Pie / Donut:** slice explosion, donut hole size, start angle, per-slice color, label composition (value / % / name).
-- **Bubble:** min/max bubble size, fill+opacity, border, show size as label, axis mapping.
-- **Area:** fill opacity per series, stacked toggle, line-on-top.
-- **Waterfall:** classify each bar (positive/negative/total), color per category, connector lines, running total, label position, gap width.
-- **Combo:** per-series choice between bar/line, secondary Y assignment.
+### 4. Exportação e cross-filter
 
----
+- `exportCustomSlide.tsx` continua capturando o bloco como PNG via `BlockRenderer` — sem alteração.
+- A Bridge PVM **não emite** cross-filter (os "passos" não são uma dimensão real); setar `emitsCrossFilter: false` no `newChartBlock("waterfall")` e ignorar cliques no renderer.
+- Ela **continua participando** como receiver: filtros que chegam (categoria, marca, etc.) entram via `dsRows` antes do `calcPVM`.
 
-## Phase 4 — Export parity (PPTX)
+### 5. QA
 
-**File touched:** `src/lib/exportCustomSlide.tsx`
+- Inserir Bridge num slide novo → mostra empty state pedindo Base/Comparação.
+- Definir Base e Comparação → render igual à aba Bridge (mesmas barras, mesmos sinais, mesmos rótulos `monthLabel`).
+- Aplicar filtro de Marca em outro bloco → Bridge se recalcula com o subset.
+- Exportar slide para PPTX → PNG da Bridge fica idêntico ao preview.
+- Modo "Manual" continua funcionando para quem quer columns customizadas.
 
-- Today the export captures the live canvas DOM (good for fidelity).
-- Update offscreen renderer to read the same `ChartStyle`, ensuring exports match the canvas exactly for every new chart type.
-- For waterfall, keep using the DOM/PNG capture path (PPTX has no native waterfall).
-- Where possible, also emit native PPTX charts (`pptxgen` `addChart`) using the style — gives editable charts in PowerPoint. This is a stretch goal; if a setting can't be expressed natively, fall back to PNG.
+### Arquivos afetados
 
----
-
-## UX details (apply across phases)
-
-- Collapsible sections via existing `Collapsible` component.
-- Real-time updates: every control writes to the block via the existing `update(id, patch)` flow.
-- Color picker: HEX text input + opacity slider + 8 brand swatches from `--primary`, `--accent`, etc.
-- Number inputs: `<input type="number">` + ± buttons + unit suffix.
-- Tab structure stays **Design | Filtros**; chart inspector lives inside Design.
-
----
-
-## Scope check before I start
-
-This is large (~2-3k new LOC across renderers and controls). I propose to:
-
-1. Ship **Phase 1 + 2** in this turn (foundation + all new renderers wired with sensible defaults).
-2. Ship **Phase 3** (rich per-type controls) in the next turn so you can review the inspector UX before we expand it for every type.
-3. Ship **Phase 4** (export parity) once the canvas is approved.
-
-If you'd rather I do everything in one go, say so and I'll proceed straight through.
+- `src/components/pricing/custom/chart/types.ts` — tipo + defaults
+- `src/lib/customSlide.ts` — `newChartBlock("waterfall")`
+- `src/components/pricing/custom/chart/ChartCanvas.tsx` — `WaterfallChart` PVM + bypass do empty-check
+- `src/components/pricing/custom/chart/ChartInspector.tsx` — pickers Base/Comp + toggle de modo
+- (Sem mudanças em `BridgeBlock` legado — segue convivendo.)
