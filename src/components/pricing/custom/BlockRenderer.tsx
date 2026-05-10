@@ -11,12 +11,12 @@ import { computePivot, type PivotConfig, type PivotMeasure } from "@/lib/pivot";
 import { buildUnifiedRows, ALL_DIMENSIONS } from "@/lib/pivotData";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
-import { monthLabel, formatBRL, formatNum } from "@/lib/format";
+import { monthLabel, formatBRL } from "@/lib/format";
 import {
-  computeKpiBlock, computeChartSeries, computeTopRanking, formatValue, inferFormat,
+  computeKpiBlock, computeTopRanking, formatValue, inferFormat,
 } from "@/lib/customKpi";
 import { KPI_MEASURES } from "@/lib/customSlide";
-import { resolveTableFit, resolveChartFit, resolveTopSkuFit } from "@/lib/customCapacity";
+import { resolveTableFit, resolveTopSkuFit } from "@/lib/customCapacity";
 
 export const CUSTOM_TABLE_MEASURES: PivotMeasure[] = [
   { id: "rol_real",  label: "ROL",            field: "rol_real",         agg: "sum", format: "currency", tone: "real" },
