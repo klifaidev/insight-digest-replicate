@@ -6,14 +6,99 @@ import type { ChartBlock, KpiMeasureId } from "@/lib/customSlide";
 import {
   KPI_MEASURES, BUDGET_UNAVAILABLE_MEASURES, BUDGET_UNAVAILABLE_HINT,
 } from "@/lib/customSlide";
-import { ensureChartStyle, type ChartStyle } from "./types";
+import {
+  ensureChartStyle, defaultChartStyle, DEFAULT_PALETTE,
+  type ChartStyle, type SeriesStyle,
+} from "./types";
 import {
   Section, Row, ToggleField, NumberStepper, ColorField, SelectField,
+  Segmented, Slider, ResetButton,
 } from "./Inspector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePricing } from "@/store/pricing";
+import { useBudget } from "@/store/budget";
+import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
+import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
+import { useMemo } from "react";
 
 type Patch = Partial<ChartBlock>;
+
+// Position options per chart family
+function positionOptions(ct: ChartBlock["chartType"]) {
+  if (ct === "pie" || ct === "donut") {
+    return [
+      { value: "inside", label: "Dentro" },
+      { value: "outside", label: "Fora" },
+      { value: "callout", label: "Callout" },
+    ];
+  }
+  if (ct === "line" || ct === "area" || ct === "stackedArea" || ct === "scatter") {
+    return [
+      { value: "above", label: "Acima" },
+      { value: "below", label: "Abaixo" },
+      { value: "left", label: "Esquerda" },
+      { value: "right", label: "Direita" },
+    ];
+  }
+  if (ct === "waterfall") {
+    return [
+      { value: "above", label: "Acima da barra" },
+      { value: "inside", label: "Dentro da barra" },
+      { value: "below", label: "Abaixo da barra" },
+    ];
+  }
+  // bar/column/combo
+  return [
+    { value: "above", label: "Acima" },
+    { value: "below", label: "Abaixo" },
+    { value: "inside-end", label: "Dentro topo" },
+    { value: "inside-base", label: "Dentro base" },
+    { value: "center", label: "Centro" },
+  ];
+}
+
+const ALL_TYPES: { value: ChartBlock["chartType"]; label: string }[] = [
+  { value: "line", label: "Linha" },
+  { value: "area", label: "Área" },
+  { value: "stackedArea", label: "Área empilhada" },
+  { value: "bar", label: "Coluna (vertical)" },
+  { value: "column", label: "Coluna agrupada" },
+  { value: "stackedColumn", label: "Coluna empilhada" },
+  { value: "hbar", label: "Barra horizontal" },
+  { value: "stackedBar", label: "Barra empilhada" },
+  { value: "combo", label: "Combo (linha + barra)" },
+  { value: "pie", label: "Pizza" },
+  { value: "donut", label: "Rosca" },
+  { value: "bubble", label: "Bolha" },
+  { value: "scatter", label: "Dispersão" },
+  { value: "waterfall", label: "Waterfall" },
+  { value: "funnel", label: "Funil" },
+  { value: "treemap", label: "Mapa de árvore" },
+  { value: "radar", label: "Radar" },
+  { value: "histogram", label: "Histograma" },
+  { value: "boxplot", label: "Caixa (Box)" },
+];
+
+// Determines what sections should appear
+function sectionsFor(ct: ChartBlock["chartType"]) {
+  const isPie = ct === "pie" || ct === "donut";
+  const isRadar = ct === "radar";
+  const isBarFamily = ["bar", "column", "hbar", "stackedColumn", "stackedBar"].includes(ct);
+  const isAreaFamily = ct === "area" || ct === "stackedArea";
+  const isComboLineFamily = ct === "line" || ct === "combo";
+  const showAxes = !isPie && !isRadar && !["funnel", "treemap"].includes(ct);
+  const showGrid = showAxes && ct !== "histogram"
+    && !["funnel", "treemap", "boxplot"].includes(ct) ? true : false;
+  const showSeries = !["pie", "donut", "bubble", "scatter", "waterfall", "funnel", "treemap", "histogram"].includes(ct);
+  return {
+    showAxes, showGrid: showAxes,
+    showSeries,
+    showBar: isBarFamily, showArea: isAreaFamily,
+    showLineSeriesProps: isComboLineFamily || isAreaFamily,
+    isPie, isRadar, isCombo: ct === "combo",
+  };
+}
 
 export function ChartInspector({
   block, onChange,
@@ -23,10 +108,47 @@ export function ChartInspector({
     onChange({ style: { ...block.style, ...patch } } as Patch);
   const updPath = <K extends keyof ChartStyle>(key: K, patch: Partial<ChartStyle[K]>) =>
     updStyle({ [key]: { ...(style[key] as object), ...patch } } as Partial<ChartStyle>);
+  const resetPath = <K extends keyof ChartStyle>(key: K) => {
+    const d = defaultChartStyle();
+    updStyle({ [key]: d[key] } as Partial<ChartStyle>);
+  };
 
   const ct = block.chartType;
-  const showAxes = !["pie", "donut"].includes(ct);
-  const showSeries = !["pie", "donut", "bubble", "scatter", "waterfall"].includes(ct);
+  const S = sectionsFor(ct);
+
+  // Detect actual series/categories present on canvas to drive per-item editors
+  const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const dsRows = block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing;
+  const detectedSeries = useMemo(() => {
+    try {
+      const r = computeChartSeries(dsRows, block.filters, block.measure, block.breakdown);
+      return r.series.map((s) => s.name);
+    } catch { return []; }
+  }, [dsRows, block.filters, block.measure, block.breakdown]);
+  const detectedCategories = useMemo(() => {
+    try {
+      const r = computeChartSeries(dsRows, block.filters, block.measure, block.breakdown);
+      return r.periodos.map((p) => p.label);
+    } catch { return []; }
+  }, [dsRows, block.filters, block.measure, block.breakdown]);
+  const detectedRanking = useMemo(() => {
+    if (!["pie", "donut", "funnel", "treemap"].includes(ct)) return [];
+    try {
+      return computeTopRanking(dsRows, block.filters, block.breakdown ?? "marca",
+        block.measure, 50, "all", null).map((r) => r.name);
+    } catch { return []; }
+  }, [dsRows, block.filters, block.breakdown, block.measure, ct]);
+
+  const updSeries = (key: string, patch: Partial<SeriesStyle>) => {
+    const next = [...style.series];
+    const idx = next.findIndex((x) => x.key === key);
+    if (idx >= 0) next[idx] = { ...next[idx], ...patch };
+    else next.push({ key, ...patch });
+    updStyle({ series: next });
+  };
+  const getSeriesCfg = (key: string): SeriesStyle =>
+    style.series.find((x) => x.key === key) ?? { key };
 
   return (
     <div className="space-y-2">
@@ -35,19 +157,7 @@ export function ChartInspector({
         <Row label="Tipo">
           <SelectField value={ct as string}
             onChange={(v) => onChange({ chartType: v as ChartBlock["chartType"] })}
-            options={[
-              { value: "line", label: "Linha" },
-              { value: "area", label: "Área" },
-              { value: "bar", label: "Coluna (vertical)" },
-              { value: "column", label: "Coluna agrupada" },
-              { value: "hbar", label: "Barra horizontal" },
-              { value: "combo", label: "Combo (linha + barra)" },
-              { value: "pie", label: "Pizza" },
-              { value: "donut", label: "Rosca" },
-              { value: "bubble", label: "Bolha" },
-              { value: "scatter", label: "Dispersão" },
-              { value: "waterfall", label: "Waterfall" },
-            ]} />
+            options={ALL_TYPES} />
         </Row>
         <Row label="Medida">
           <SelectField value={block.measure}
@@ -62,6 +172,20 @@ export function ChartInspector({
                 ? BUDGET_UNAVAILABLE_HINT : undefined,
             }))} />
         </Row>
+        {S.isCombo && (
+          <Row label="Medida da linha">
+            <SelectField value={(style.measureLine ?? "__none__") as string}
+              onChange={(v) => updStyle({ measureLine: v === "__none__" ? undefined : v as KpiMeasureId })}
+              options={[
+                { value: "__none__", label: "— Nenhuma —" },
+                ...KPI_MEASURES.map((m) => ({
+                  value: m.id, label: m.label,
+                  disabled: block.dataSource === "budget"
+                    && BUDGET_UNAVAILABLE_MEASURES.includes(m.id),
+                })),
+              ]} />
+          </Row>
+        )}
         {block.dataSource === "budget" && (
           <p className="text-[10px] leading-snug text-muted-foreground">
             {BUDGET_UNAVAILABLE_HINT}
@@ -130,10 +254,11 @@ export function ChartInspector({
               { value: "right", label: "Direita" },
             ]} />
         </Row>
+        <ResetButton onClick={() => resetPath("general")} />
       </Section>
 
       {/* ===== Grid ===== */}
-      {showAxes && (
+      {S.showGrid && (
         <Section title="Grade">
           <ToggleField label="Mostrar grade" value={style.grid.show}
             onChange={(v) => updPath("grid", { show: v })} />
@@ -144,16 +269,24 @@ export function ChartInspector({
               onChange={(v) => updPath("grid", { style: v as never })}
               options={[{ value: "solid", label: "Sólido" }, { value: "dashed", label: "Tracejado" }]} />
           </Row>
+          <ResetButton onClick={() => resetPath("grid")} />
         </Section>
       )}
 
       {/* ===== Axes ===== */}
-      {showAxes && (
+      {S.showAxes && (
         <>
           <AxisSection title="Eixo X" axis={style.xAxis}
-            onChange={(p) => updPath("xAxis", p)} />
+            onChange={(p) => updPath("xAxis", p)}
+            onReset={() => resetPath("xAxis")} />
           <AxisSection title="Eixo Y" axis={style.yAxis}
-            onChange={(p) => updPath("yAxis", p)} />
+            onChange={(p) => updPath("yAxis", p)}
+            onReset={() => resetPath("yAxis")} />
+          {S.isCombo && (
+            <AxisSection title="Eixo Y secundário" axis={style.yAxis2!}
+              onChange={(p) => updPath("yAxis2", p)}
+              onReset={() => resetPath("yAxis2")} />
+          )}
         </>
       )}
 
@@ -174,13 +307,7 @@ export function ChartInspector({
         <Row label="Posição">
           <SelectField value={style.dataLabels.position}
             onChange={(v) => updPath("dataLabels", { position: v as never })}
-            options={[
-              { value: "above", label: "Acima" },
-              { value: "below", label: "Abaixo" },
-              { value: "inside-end", label: "Dentro topo" },
-              { value: "inside-base", label: "Dentro base" },
-              { value: "center", label: "Centro" },
-            ]} />
+            options={positionOptions(ct) as never} />
         </Row>
         <Row label="Formato">
           <SelectField value={style.dataLabels.format}
@@ -193,10 +320,37 @@ export function ChartInspector({
               { value: "tons", label: "Toneladas" },
             ]} />
         </Row>
+        <Row label="Decimais">
+          <NumberStepper value={style.dataLabels.decimals} min={0} max={4}
+            onChange={(v) => updPath("dataLabels", { decimals: v })} />
+        </Row>
+        <ToggleField label="Auto-contraste" value={style.dataLabels.autoContrast}
+          onChange={(v) => updPath("dataLabels", { autoContrast: v })} />
+        <ToggleField label="Mostrar nome série" value={style.dataLabels.showSeries}
+          onChange={(v) => updPath("dataLabels", { showSeries: v })} />
+        <ToggleField label="Mostrar categoria" value={style.dataLabels.showCategory}
+          onChange={(v) => updPath("dataLabels", { showCategory: v })} />
+        <Row label="Fundo rótulo">
+          <ColorField value={style.dataLabels.bgColor}
+            onChange={(c) => updPath("dataLabels", { bgColor: c })} />
+        </Row>
+        <Row label="Opac. fundo">
+          <Slider value={Math.round(style.dataLabels.bgOpacity * 100)}
+            onChange={(v) => updPath("dataLabels", { bgOpacity: v / 100 })} />
+        </Row>
+        <Row label="Cor borda">
+          <ColorField value={style.dataLabels.borderColor}
+            onChange={(c) => updPath("dataLabels", { borderColor: c })} />
+        </Row>
+        <Row label="Esp. borda">
+          <NumberStepper value={style.dataLabels.borderWidth} min={0} max={5}
+            onChange={(v) => updPath("dataLabels", { borderWidth: v })} suffix="px" />
+        </Row>
+        <ResetButton onClick={() => resetPath("dataLabels")} />
       </Section>
 
-      {/* ===== Type-specific ===== */}
-      {(ct === "bar" || ct === "column" || ct === "hbar") && (
+      {/* ===== Type-specific: Bar ===== */}
+      {S.showBar && (
         <Section title="Barras">
           <Row label="Modo">
             <SelectField value={style.bar.mode}
@@ -221,10 +375,12 @@ export function ChartInspector({
             <NumberStepper value={style.bar.borderWidth} min={0} max={5}
               onChange={(v) => updPath("bar", { borderWidth: v })} suffix="px" />
           </Row>
+          <ResetButton onClick={() => resetPath("bar")} />
         </Section>
       )}
 
-      {(ct === "pie" || ct === "donut") && (
+      {/* ===== Type-specific: Pie/Donut ===== */}
+      {S.isPie && (
         <Section title="Pizza/Rosca">
           {ct === "donut" && (
             <Row label="Furo">
@@ -247,9 +403,40 @@ export function ChartInspector({
                 { value: "value", label: "Valor" },
               ]} />
           </Row>
+          <Row label="Explosão geral">
+            <Slider value={style.pie.explodePct} max={30}
+              onChange={(v) => updPath("pie", { explodePct: v })} />
+          </Row>
+          {detectedRanking.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground">Fatias</div>
+              {detectedRanking.map((name, i) => {
+                const sl = style.pie.slices[name] ?? {};
+                return (
+                  <div key={name} className="space-y-1 rounded border border-border/30 p-1.5">
+                    <div className="text-[10px] font-medium truncate">{name}</div>
+                    <Row label="Cor">
+                      <ColorField value={sl.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
+                        onChange={(c) => updPath("pie", {
+                          slices: { ...style.pie.slices, [name]: { ...sl, color: c } },
+                        })} />
+                    </Row>
+                    <Row label="Explosão">
+                      <Slider value={sl.explode ?? 0} max={30}
+                        onChange={(v) => updPath("pie", {
+                          slices: { ...style.pie.slices, [name]: { ...sl, explode: v } },
+                        })} />
+                    </Row>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <ResetButton onClick={() => resetPath("pie")} />
         </Section>
       )}
 
+      {/* ===== Type-specific: Bubble ===== */}
       {ct === "bubble" && (
         <Section title="Bolhas">
           <Row label="Tam. mín">
@@ -261,9 +448,8 @@ export function ChartInspector({
               onChange={(v) => updPath("bubble", { maxSize: v })} suffix="px" />
           </Row>
           <Row label="Opacidade">
-            <NumberStepper value={Math.round(style.bubble.fillOpacity * 100)}
-              min={0} max={100}
-              onChange={(v) => updPath("bubble", { fillOpacity: v / 100 })} suffix="%" />
+            <Slider value={Math.round(style.bubble.fillOpacity * 100)}
+              onChange={(v) => updPath("bubble", { fillOpacity: v / 100 })} />
           </Row>
           <Row label="Borda"><ColorField value={style.bubble.borderColor}
             onChange={(c) => updPath("bubble", { borderColor: c })} /></Row>
@@ -271,18 +457,25 @@ export function ChartInspector({
             <NumberStepper value={style.bubble.borderWidth} min={0} max={5}
               onChange={(v) => updPath("bubble", { borderWidth: v })} suffix="px" />
           </Row>
+          <ToggleField label="Mostrar tamanho como rótulo"
+            value={style.bubble.showSizeLabel}
+            onChange={(v) => updPath("bubble", { showSizeLabel: v })} />
+          <ResetButton onClick={() => resetPath("bubble")} />
         </Section>
       )}
 
-      {ct === "area" && (
+      {/* ===== Type-specific: Area ===== */}
+      {S.showArea && (
         <Section title="Área">
           <ToggleField label="Empilhado" value={style.area.stacked}
             onChange={(v) => updPath("area", { stacked: v })} />
           <ToggleField label="Linha por cima" value={style.area.lineOnTop}
             onChange={(v) => updPath("area", { lineOnTop: v })} />
+          <ResetButton onClick={() => resetPath("area")} />
         </Section>
       )}
 
+      {/* ===== Type-specific: Waterfall ===== */}
       {ct === "waterfall" && (
         <Section title="Waterfall">
           <Row label="Cor positiva"><ColorField value={style.waterfall.positiveColor}
@@ -293,47 +486,347 @@ export function ChartInspector({
             onChange={(c) => updPath("waterfall", { totalColor: c })} /></Row>
           <ToggleField label="Conectores" value={style.waterfall.connectors}
             onChange={(v) => updPath("waterfall", { connectors: v })} />
+          <Row label="Cor conector">
+            <ColorField value={style.waterfall.connectorColor}
+              onChange={(c) => updPath("waterfall", { connectorColor: c })} />
+          </Row>
+          <Row label="Estilo conector">
+            <Segmented value={style.waterfall.connectorStyle}
+              onChange={(v) => updPath("waterfall", { connectorStyle: v as never })}
+              options={[
+                { value: "solid", label: "Sólido" },
+                { value: "dashed", label: "Tracejado" },
+              ]} />
+          </Row>
           <ToggleField label="Total acumulado" value={style.waterfall.showRunningTotal}
             onChange={(v) => updPath("waterfall", { showRunningTotal: v })} />
+          <Row label="Pos. rótulo">
+            <SelectField value={style.waterfall.labelPos}
+              onChange={(v) => updPath("waterfall", { labelPos: v as never })}
+              options={[
+                { value: "above", label: "Acima da barra" },
+                { value: "inside", label: "Dentro da barra" },
+                { value: "below", label: "Abaixo da barra" },
+              ]} />
+          </Row>
           <Row label="Espaçamento">
             <NumberStepper value={style.waterfall.gapPct} min={0} max={80}
               onChange={(v) => updPath("waterfall", { gapPct: v })} suffix="%" />
           </Row>
+          {detectedCategories.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground">Classificação</div>
+              {detectedCategories.map((label, i) => {
+                const lbl = `P${i + 1}`;
+                const current = style.waterfall.classify[lbl] ?? "positive";
+                return (
+                  <Row key={lbl} label={label}>
+                    <SelectField value={current}
+                      onChange={(v) => updPath("waterfall", {
+                        classify: { ...style.waterfall.classify, [lbl]: v as never },
+                      })}
+                      options={[
+                        { value: "positive", label: "Positivo" },
+                        { value: "negative", label: "Negativo" },
+                        { value: "total", label: "Total" },
+                      ]} />
+                  </Row>
+                );
+              })}
+            </div>
+          )}
+          <ResetButton onClick={() => resetPath("waterfall")} />
         </Section>
       )}
 
-      {/* ===== Series (color overrides) ===== */}
-      {showSeries && (
+      {/* ===== Type-specific: Funnel ===== */}
+      {ct === "funnel" && (
+        <Section title="Funil">
+          <Row label="Direção">
+            <Segmented value={style.funnel.direction}
+              onChange={(v) => updPath("funnel", { direction: v as never })}
+              options={[
+                { value: "ttb", label: "Topo → Base" },
+                { value: "btt", label: "Base → Topo" },
+              ]} />
+          </Row>
+          <Row label="Espaçamento">
+            <Slider value={style.funnel.gapPct} max={20}
+              onChange={(v) => updPath("funnel", { gapPct: v })} />
+          </Row>
+          <Row label="Rótulos">
+            <SelectField value={style.funnel.labelMode}
+              onChange={(v) => updPath("funnel", { labelMode: v as never })}
+              options={[
+                { value: "name-percent", label: "Nome + %" },
+                { value: "name", label: "Nome" },
+                { value: "value", label: "Valor" },
+                { value: "percent", label: "Percentual" },
+              ]} />
+          </Row>
+          {detectedRanking.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground">Estágios</div>
+              {detectedRanking.map((name, i) => {
+                const sl = style.funnel.slices[name] ?? {};
+                return (
+                  <Row key={name} label={name}>
+                    <ColorField value={sl.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
+                      onChange={(c) => updPath("funnel", {
+                        slices: { ...style.funnel.slices, [name]: { color: c } },
+                      })} />
+                  </Row>
+                );
+              })}
+            </div>
+          )}
+          <ResetButton onClick={() => resetPath("funnel")} />
+        </Section>
+      )}
+
+      {/* ===== Type-specific: Treemap ===== */}
+      {ct === "treemap" && (
+        <Section title="Mapa de árvore">
+          <Row label="Esquema de cor">
+            <Segmented value={style.treemap.colorScheme}
+              onChange={(v) => updPath("treemap", { colorScheme: v as never })}
+              options={[
+                { value: "categorical", label: "Por categoria" },
+                { value: "gradient", label: "Gradiente" },
+              ]} />
+          </Row>
+          {style.treemap.colorScheme === "gradient" && (
+            <>
+              <Row label="Cor inicial">
+                <ColorField value={style.treemap.gradientFrom}
+                  onChange={(c) => updPath("treemap", { gradientFrom: c })} />
+              </Row>
+              <Row label="Cor final">
+                <ColorField value={style.treemap.gradientTo}
+                  onChange={(c) => updPath("treemap", { gradientTo: c })} />
+              </Row>
+            </>
+          )}
+          <ToggleField label="Mostrar nome" value={style.treemap.showCategoryLabel}
+            onChange={(v) => updPath("treemap", { showCategoryLabel: v })} />
+          <ToggleField label="Mostrar valor" value={style.treemap.showValueLabel}
+            onChange={(v) => updPath("treemap", { showValueLabel: v })} />
+          <Row label="Tam. fonte">
+            <NumberStepper value={style.treemap.labelSize} min={6} max={24}
+              onChange={(v) => updPath("treemap", { labelSize: v })} suffix="pt" />
+          </Row>
+          <Row label="Cor fonte">
+            <ColorField value={style.treemap.labelColor}
+              onChange={(c) => updPath("treemap", { labelColor: c })} />
+          </Row>
+          <Row label="Cor borda">
+            <ColorField value={style.treemap.borderColor}
+              onChange={(c) => updPath("treemap", { borderColor: c })} />
+          </Row>
+          <Row label="Esp. borda">
+            <NumberStepper value={style.treemap.borderWidth} min={0} max={5}
+              onChange={(v) => updPath("treemap", { borderWidth: v })} suffix="px" />
+          </Row>
+          <ResetButton onClick={() => resetPath("treemap")} />
+        </Section>
+      )}
+
+      {/* ===== Type-specific: Radar ===== */}
+      {S.isRadar && (
+        <Section title="Radar">
+          <ToggleField label="Preencher área" value={style.radar.fillArea}
+            onChange={(v) => updPath("radar", { fillArea: v })} />
+          <Row label="Opac. preenchimento">
+            <Slider value={Math.round(style.radar.fillOpacity * 100)}
+              onChange={(v) => updPath("radar", { fillOpacity: v / 100 })} />
+          </Row>
+          <Row label="Forma da grade">
+            <Segmented value={style.radar.gridShape}
+              onChange={(v) => updPath("radar", { gridShape: v as never })}
+              options={[
+                { value: "polygon", label: "Polígono" },
+                { value: "circle", label: "Círculo" },
+              ]} />
+          </Row>
+          <Row label="Cor grade">
+            <ColorField value={style.radar.gridColor}
+              onChange={(c) => updPath("radar", { gridColor: c })} />
+          </Row>
+          <Row label="Tam. rótulo eixo">
+            <NumberStepper value={style.radar.axisLabelSize} min={6} max={24}
+              onChange={(v) => updPath("radar", { axisLabelSize: v })} suffix="pt" />
+          </Row>
+          <Row label="Cor rótulo eixo">
+            <ColorField value={style.radar.axisLabelColor}
+              onChange={(c) => updPath("radar", { axisLabelColor: c })} />
+          </Row>
+          <ResetButton onClick={() => resetPath("radar")} />
+        </Section>
+      )}
+
+      {/* ===== Type-specific: Histogram ===== */}
+      {ct === "histogram" && (
+        <Section title="Histograma">
+          <Row label="Nº de bins">
+            <NumberStepper value={style.histogram.bins} min={2} max={100}
+              onChange={(v) => updPath("histogram", { bins: v })} />
+          </Row>
+          <Row label="Largura bin">
+            <Input type="number" className="h-7 text-[11px]"
+              value={style.histogram.binWidth ?? ""} placeholder="auto"
+              onChange={(e) => updPath("histogram", {
+                binWidth: e.target.value === "" ? null : parseFloat(e.target.value),
+              })} />
+          </Row>
+          <Row label="Cor barra">
+            <ColorField value={style.histogram.barColor}
+              onChange={(c) => updPath("histogram", { barColor: c })} />
+          </Row>
+          <Row label="Cor borda">
+            <ColorField value={style.histogram.borderColor}
+              onChange={(c) => updPath("histogram", { borderColor: c })} />
+          </Row>
+          <Row label="Esp. borda">
+            <NumberStepper value={style.histogram.borderWidth} min={0} max={5}
+              onChange={(v) => updPath("histogram", { borderWidth: v })} suffix="px" />
+          </Row>
+          <ToggleField label="Linha cumulativa" value={style.histogram.cumulative}
+            onChange={(v) => updPath("histogram", { cumulative: v })} />
+          <ResetButton onClick={() => resetPath("histogram")} />
+        </Section>
+      )}
+
+      {/* ===== Type-specific: Boxplot ===== */}
+      {ct === "boxplot" && (
+        <Section title="Caixa (Box & Whisker)">
+          <Row label="Cor caixa">
+            <ColorField value={style.boxplot.boxFillColor}
+              onChange={(c) => updPath("boxplot", { boxFillColor: c })} />
+          </Row>
+          <Row label="Cor bigode">
+            <ColorField value={style.boxplot.whiskerColor}
+              onChange={(c) => updPath("boxplot", { whiskerColor: c })} />
+          </Row>
+          <Row label="Esp. bigode">
+            <NumberStepper value={style.boxplot.whiskerWidth} min={0.5} max={6} step={0.5}
+              onChange={(v) => updPath("boxplot", { whiskerWidth: v })} suffix="px" />
+          </Row>
+          <Row label="Cor mediana">
+            <ColorField value={style.boxplot.medianColor}
+              onChange={(c) => updPath("boxplot", { medianColor: c })} />
+          </Row>
+          <Row label="Esp. mediana">
+            <NumberStepper value={style.boxplot.medianWidth} min={0.5} max={6} step={0.5}
+              onChange={(v) => updPath("boxplot", { medianWidth: v })} suffix="px" />
+          </Row>
+          <ToggleField label="Mostrar média" value={style.boxplot.showMean}
+            onChange={(v) => updPath("boxplot", { showMean: v })} />
+          <ToggleField label="Mostrar outliers" value={style.boxplot.showOutliers}
+            onChange={(v) => updPath("boxplot", { showOutliers: v })} />
+          <ResetButton onClick={() => resetPath("boxplot")} />
+        </Section>
+      )}
+
+      {/* ===== Series (color overrides + per-series style) ===== */}
+      {S.showSeries && (
         <Section title="Séries">
           <p className="text-[10px] text-muted-foreground">
-            Cores e estilos adicionais aplicados na ordem das séries detectadas.
+            Cores e estilos por série. {detectedSeries.length === 0 && "(Nenhuma série detectada — usando padrão.)"}
           </p>
-          {(style.series.length === 0 ? [{ key: "Total", color: undefined } as never] : style.series)
-            .map((s, i) => (
-              <div key={i} className="space-y-1 rounded border border-border/30 p-1.5">
-                <div className="text-[10px] font-medium">{s.key}</div>
+          {(detectedSeries.length === 0 ? ["Total"] : detectedSeries).map((name, i) => {
+            const cfg = getSeriesCfg(name);
+            return (
+              <div key={name} className="space-y-1 rounded border border-border/30 p-1.5">
+                <div className="text-[10px] font-medium truncate">{name}</div>
                 <Row label="Cor">
-                  <ColorField value={s.color ?? "#C8102E"}
-                    onChange={(c) => {
-                      const next = [...style.series];
-                      const existing = next.find((x) => x.key === s.key);
-                      if (existing) existing.color = c;
-                      else next.push({ key: s.key, color: c });
-                      updStyle({ series: next });
-                    }} />
+                  <ColorField value={cfg.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
+                    onChange={(c) => updSeries(name, { color: c })} />
                 </Row>
+                {S.showLineSeriesProps && (
+                  <>
+                    <Row label="Estilo linha">
+                      <Segmented value={cfg.lineStyle ?? "solid"}
+                        onChange={(v) => updSeries(name, { lineStyle: v as never })}
+                        options={[
+                          { value: "solid", label: "Sólida" },
+                          { value: "dashed", label: "Tracej." },
+                          { value: "dotted", label: "Pont." },
+                        ]} />
+                    </Row>
+                    <Row label="Espessura">
+                      <NumberStepper value={cfg.thickness ?? 2.5} min={0.5} max={8} step={0.5}
+                        onChange={(v) => updSeries(name, { thickness: v })} suffix="px" />
+                    </Row>
+                    <ToggleField label="Suave" value={cfg.smooth ?? false}
+                      onChange={(v) => updSeries(name, { smooth: v })} />
+                  </>
+                )}
+                {S.showArea && (
+                  <Row label="Opac. área">
+                    <Slider value={Math.round((cfg.areaOpacity ?? 0.35) * 100)}
+                      onChange={(v) => updSeries(name, { areaOpacity: v / 100 })} />
+                  </Row>
+                )}
+                {(ct === "line" || ct === "scatter" || ct === "combo") && (
+                  <>
+                    <Row label="Marcador">
+                      <SelectField value={cfg.marker?.shape ?? "circle"}
+                        onChange={(v) => updSeries(name, {
+                          marker: { ...(cfg.marker ?? { show: true, shape: "circle", size: 3 }),
+                            shape: v as never },
+                        })}
+                        options={[
+                          { value: "circle", label: "Círculo" },
+                          { value: "square", label: "Quadrado" },
+                          { value: "diamond", label: "Diamante" },
+                          { value: "triangle", label: "Triângulo" },
+                        ]} />
+                    </Row>
+                    <Row label="Tam. marcador">
+                      <NumberStepper value={cfg.marker?.size ?? 3} min={0} max={12}
+                        onChange={(v) => updSeries(name, {
+                          marker: { ...(cfg.marker ?? { show: true, shape: "circle", size: 3 }),
+                            size: v, show: v > 0 },
+                        })} suffix="px" />
+                    </Row>
+                    <Row label="Cor marcador">
+                      <ColorField value={cfg.marker?.fill ?? cfg.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
+                        onChange={(c) => updSeries(name, {
+                          marker: { ...(cfg.marker ?? { show: true, shape: "circle", size: 3 }),
+                            fill: c },
+                        })} />
+                    </Row>
+                  </>
+                )}
+                {S.isCombo && (
+                  <>
+                    <Row label="Renderizar como">
+                      <Segmented value={cfg.asLine ? "line" : "bar"}
+                        onChange={(v) => updSeries(name, { asLine: v === "line" })}
+                        options={[
+                          { value: "bar", label: "Barra" },
+                          { value: "line", label: "Linha" },
+                        ]} />
+                    </Row>
+                    <ToggleField label="Eixo Y secundário" value={cfg.secondaryAxis ?? false}
+                      onChange={(v) => updSeries(name, { secondaryAxis: v })} />
+                  </>
+                )}
               </div>
-            ))}
+            );
+          })}
+          <ResetButton onClick={() => updStyle({ series: [] })} />
         </Section>
       )}
     </div>
   );
 }
 
-function AxisSection({ title, axis, onChange }: {
+function AxisSection({ title, axis, onChange, onReset }: {
   title: string;
   axis: ChartStyle["xAxis"];
   onChange: (p: Partial<ChartStyle["xAxis"]>) => void;
+  onReset: () => void;
 }) {
   return (
     <Section title={title}>
@@ -344,6 +837,14 @@ function AxisSection({ title, axis, onChange }: {
         <Input className="h-7 text-xs" value={axis.titleText}
           onChange={(e) => onChange({ titleText: e.target.value })} />
       </div>
+      <Row label="Tam. título">
+        <NumberStepper value={axis.titleSize} min={6} max={24}
+          onChange={(v) => onChange({ titleSize: v })} suffix="pt" />
+      </Row>
+      <Row label="Cor título">
+        <ColorField value={axis.titleColor}
+          onChange={(c) => onChange({ titleColor: c })} />
+      </Row>
       <Row label="Tam. rótulo">
         <NumberStepper value={axis.labelSize} min={6} max={24}
           onChange={(v) => onChange({ labelSize: v })} suffix="pt" />
@@ -352,6 +853,10 @@ function AxisSection({ title, axis, onChange }: {
         onChange={(c) => onChange({ labelColor: c })} /></Row>
       <Row label="Cor linha"><ColorField value={axis.lineColor}
         onChange={(c) => onChange({ lineColor: c })} /></Row>
+      <Row label="Esp. linha">
+        <NumberStepper value={axis.lineWidth} min={0} max={5}
+          onChange={(v) => onChange({ lineWidth: v })} suffix="px" />
+      </Row>
       <ToggleField label="Marcações" value={axis.ticks}
         onChange={(v) => onChange({ ticks: v })} />
       <Row label="Mín">
@@ -375,6 +880,11 @@ function AxisSection({ title, axis, onChange }: {
             { value: "tons", label: "Toneladas" },
           ]} />
       </Row>
+      <Row label="Decimais">
+        <NumberStepper value={axis.decimals} min={0} max={4}
+          onChange={(v) => onChange({ decimals: v })} />
+      </Row>
+      <ResetButton onClick={onReset} />
     </Section>
   );
 }
