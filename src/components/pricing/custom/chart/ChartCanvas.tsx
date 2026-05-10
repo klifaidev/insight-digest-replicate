@@ -39,9 +39,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   // ---- common series fetch (line/bar/column/hbar/area/combo) ----
   const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const rows = useMemo(
+    () => (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
+    [block.dataSource, pricing, budget],
+  );
   const raw = useMemo(
-    () => computeChartSeries(pricing, block.filters, block.measure, block.breakdown),
-    [pricing, block.filters, block.measure, block.breakdown],
+    () => computeChartSeries(rows, block.filters, block.measure, block.breakdown),
+    [rows, block.filters, block.measure, block.breakdown],
   );
   const data = useMemo(() => {
     const ranked = [...raw.series].sort((a, z) =>
