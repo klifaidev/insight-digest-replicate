@@ -132,7 +132,7 @@ export function defaultItem(kind: SlideKind): SlideItem {
   switch (kind) {
     case "bridge_pvm":
       return {
-        id, kind, label: "Bridge PVM",
+        id, kind, label: "Bridge",
         config: { mode: "month", base: null, comp: null, filters: {} },
       };
     case "budget_evo":
