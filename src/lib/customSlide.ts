@@ -252,6 +252,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         filters: {},
         format: "auto",
         manualValue: "",
+        dataSource: "ke30",
       };
     case "image":
       return { id, kind, z, x: 80, y: 220, w: 360, h: 220, src: "", fit: "contain" };
@@ -263,7 +264,8 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         base: null, comp: null, mode: "month", filters: {} };
     case "table":
       return { id, kind, z, x: 60, y: 200, w: 1200, h: 360,
-        source: "ke30", measures: ["rol_real", "cm_real"],
+        source: "ke30", dataSource: "ke30",
+        measures: ["rol_real", "cm_real"],
         rowDims: ["marca"], colDim: "periodo", filters: {},
         autoFit: true, showOthers: false, exportNote: false };
     case "chart":
@@ -273,6 +275,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         showGrid: true, showLegend: true, showLabels: false,
         filters: {}, title: "Evolução",
         autoFit: true, showOthers: false, exportNote: false,
+        dataSource: "ke30",
       };
     case "topSku":
       return {
@@ -281,6 +284,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         periodMode: "all", periodValue: null,
         filters: {}, showShare: true, title: "Top SKUs",
         autoFit: true, showOthers: false, exportNote: false,
+        dataSource: "ke30",
       };
   }
 }
