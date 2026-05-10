@@ -353,6 +353,14 @@ export function defaultChartStyle(): ChartStyle {
       medianColor: "#FFFFFF", medianWidth: 2,
       showMean: false, showOutliers: true,
     },
+    conditionalRules: [],
+    conditionalDefault: "",
+    analytics: {
+      refLines: [],
+      trendline: { enabled: false, type: "linear", maWindow: 3,
+                   color: "#7C3AED", thickness: 2, style: "dashed", showR2: false },
+      forecast: { enabled: false, periods: 3, band: false },
+    },
   };
 }
 
