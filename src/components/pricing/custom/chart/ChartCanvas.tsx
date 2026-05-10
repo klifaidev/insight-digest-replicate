@@ -676,9 +676,12 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stackId={stacked ? "stack" : undefined}
               radius={style.bar.cornerRadius}
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
-              {(style.conditionalRules?.length ?? 0) > 0 && rows.map((r, ri) => (
-                <Cell key={`${s.name}-${ri}`} fill={evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)} />
-              ))}
+              {((style.conditionalRules?.length ?? 0) > 0 || ownFilterOnRowDim) && rows.map((r, ri) => {
+                const baseFill = (style.conditionalRules?.length ?? 0) > 0
+                  ? evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)
+                  : color;
+                return <Cell key={`${s.name}-${ri}`} fill={baseFill} fillOpacity={cellFillOpacity(String(r.__period ?? ""))} />;
+              })}
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("bar-horizontal", dlPos) as never}
                   content={makeLabelContent({
