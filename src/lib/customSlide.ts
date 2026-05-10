@@ -230,6 +230,8 @@ export interface CustomSlideConfig {
   blocks: CustomBlock[];
   background: string;
   showHaraldFooter: boolean;
+  /** Block groups (B8.2). Optional for retro-compat. */
+  groups?: BlockGroup[];
 }
 
 // ---------------------------------------------------------------------------
