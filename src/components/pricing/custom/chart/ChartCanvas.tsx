@@ -23,17 +23,79 @@ import {
 // -- helpers ---------------------------------------------------------------
 function fmtVal(v: number, style: ChartStyle, fallback: ReturnType<typeof inferFormat>) {
   const f = style.dataLabels.format === "auto" ? fallback : style.dataLabels.format;
-  return formatValue(v, f, "rol");
+  return formatValue(v, f, "rol", style.dataLabels.decimals);
 }
 function axisFmt(ax: { format: string; decimals: number }, fallback: ReturnType<typeof inferFormat>) {
   return (v: number) => {
     if (!isFinite(v)) return "";
     const f = ax.format === "auto" ? fallback : ax.format;
-    return formatValue(v, f as never, "rol");
+    return formatValue(v, f as never, "rol", ax.decimals);
   };
 }
 function dashArr(s?: "solid" | "dashed" | "dotted") {
   return s === "dashed" ? "5 5" : s === "dotted" ? "2 4" : "0";
+}
+
+// Auto-contrast text color from background hex
+function luminance(hex: string): number {
+  const h = hex.replace("#", "");
+  if (h.length < 6) return 1;
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+// Custom data-label content factory — supports bg, border, autoContrast, showSeries/Category
+function makeLabelContent(opts: {
+  style: ChartStyle;
+  measureFmt: ReturnType<typeof inferFormat>;
+  seriesName?: string;
+  categories?: string[];
+  customFmt?: (v: number) => string;
+  anchor?: "middle" | "start" | "end";
+}) {
+  const { style: cs, measureFmt, seriesName, categories, customFmt, anchor = "middle" } = opts;
+  const dl = cs.dataLabels;
+  return (props: { x?: number; y?: number; value?: number | string; index?: number }) => {
+    if (props.x == null || props.y == null || props.value == null) return null;
+    const num = typeof props.value === "number" ? props.value : Number(props.value);
+    if (!isFinite(num)) return null;
+    let text = customFmt ? customFmt(num) : fmtVal(num, cs, measureFmt);
+    const prefix: string[] = [];
+    if (dl.showSeries && seriesName) prefix.push(seriesName);
+    if (dl.showCategory && categories && props.index != null) {
+      const c = categories[props.index];
+      if (c) prefix.push(c);
+    }
+    if (prefix.length) text = `${prefix.join(" · ")}: ${text}`;
+    let color = dl.color;
+    if (dl.autoContrast && dl.bgOpacity > 0) {
+      color = luminance(dl.bgColor) > 0.55 ? "#000000" : "#FFFFFF";
+    }
+    const fs = dl.size;
+    const padX = 3, padY = 2;
+    const approxW = text.length * fs * 0.55 + padX * 2;
+    const approxH = fs + padY * 2;
+    const rx = anchor === "middle" ? props.x - approxW / 2
+      : anchor === "end" ? props.x - approxW : props.x;
+    const ry = props.y - approxH + padY;
+    const showBg = dl.bgOpacity > 0 || dl.borderWidth > 0;
+    return (
+      <g>
+        {showBg && (
+          <rect x={rx} y={ry} width={approxW} height={approxH} rx={2}
+            fill={dl.bgColor} fillOpacity={dl.bgOpacity}
+            stroke={dl.borderColor} strokeWidth={dl.borderWidth} />
+        )}
+        <text x={props.x} y={props.y - padY}
+          fontSize={fs} fill={color}
+          textAnchor={anchor}
+          fontWeight={dl.bold ? 700 : 400}
+          fontStyle={dl.italic ? "italic" : "normal"}>{text}</text>
+      </g>
+    );
+  };
 }
 
 // Map our generic dataLabels.position → recharts position per chart family
