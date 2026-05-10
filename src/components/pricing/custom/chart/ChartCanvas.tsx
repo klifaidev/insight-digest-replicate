@@ -596,47 +596,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "waterfall") {
     chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} />;
   } else if (ct === "funnel") {
-    const ordered = style.funnel.direction === "btt" ? [...ranking].reverse() : ranking;
-    const baseTotal = ordered.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
-    // A.6 — simulate gap by inserting transparent spacers between stages
-    const spacerVal = (baseTotal * (style.funnel.gapPct ?? 0)) / 100;
-    const fdata: { name: string; value: number; fill: string; __spacer?: boolean }[] = [];
-    ordered.forEach((r, i) => {
-      fdata.push({
-        name: r.name, value: r.value,
-        fill: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
-      });
-      if (spacerVal > 0 && i < ordered.length - 1) {
-        fdata.push({ name: "", value: spacerVal, fill: "transparent", __spacer: true });
-      }
-    });
-    const total = ordered.reduce((s, x) => s + Math.abs(x.value), 0) || 1;
+    // FIX 3 — replace recharts Funnel (broken triangles) with custom SVG trapezoids
+    const fdata = ranking.map((r, i) => ({
+      name: r.name, value: r.value,
+      color: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
+    }));
     chart = (
-      <FunnelChart>
-        <Tooltip />
-        <Funnel dataKey="value" data={fdata} isAnimationActive={false}>
-          <LabelList position={style.funnel.labelPos as never}
-            fill={style.dataLabels.color}
-            stroke="none"
-            style={{ fontSize: style.dataLabels.size,
-              fontWeight: style.dataLabels.bold ? 700 : 400,
-              fontStyle: style.dataLabels.italic ? "italic" : "normal" }}
-            formatter={(_v: unknown, entry: { name?: string; value?: number; __spacer?: boolean } = {}) => {
-              if (entry.__spacer) return "";
-              const name = entry.name ?? "";
-              const value = entry.value ?? 0;
-              const pct = ((Math.abs(value) / total) * 100).toFixed(style.dataLabels.decimals ?? 1) + "%";
-              switch (style.funnel.labelMode) {
-                case "value": return formatValue(value, measureFmt, "rol", style.dataLabels.decimals);
-                case "percent": return pct;
-                case "name": return name;
-                default: return `${name}: ${pct}`;
-              }
-            }}
-          />
-        </Funnel>
-      </FunnelChart>
-    );
+      <FunnelSVG data={fdata} style={style} measureFmt={measureFmt} />
+    ) as React.ReactElement;
   } else if (ct === "treemap") {
     const total = ranking.reduce((s, r) => s + Math.abs(r.value), 0) || 1;
     const tdata = ranking.map((r, i) => {
