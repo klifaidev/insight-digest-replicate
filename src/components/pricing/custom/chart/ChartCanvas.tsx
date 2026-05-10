@@ -919,8 +919,9 @@ function BoxPlot({
   });
 
   const all = stats.flatMap((s) => [s.min, s.max, ...s.outliers]);
-  const yMin = all.length ? Math.min(...all) : 0;
-  const yMax = all.length ? Math.max(...all) : 1;
+  // A.12 — honor user yAxis.min/max when set
+  const yMin = style.yAxis.min ?? (all.length ? Math.min(...all) : 0);
+  const yMax = style.yAxis.max ?? (all.length ? Math.max(...all) : 1);
 
   return (
     <ComposedChart data={stats}>
