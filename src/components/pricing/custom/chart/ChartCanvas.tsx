@@ -879,7 +879,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       </ScatterChart>
     );
   } else if (ct === "waterfall") {
-    chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} />;
+    chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} dsRows={dsRows} />;
   } else if (ct === "funnel") {
     // FIX 3 — replace recharts Funnel (broken triangles) with custom SVG trapezoids
     const fdata = ranking.map((r, i) => ({
