@@ -60,6 +60,20 @@ import { computePivot, type PivotConfig } from "@/lib/pivot";
 import { buildUnifiedRows } from "@/lib/pivotData";
 import type { Filters } from "@/lib/types";
 import { BlockFilters } from "./BlockFilters";
+import {
+  ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem,
+  ContextMenuSeparator, ContextMenuShortcut,
+} from "@/components/ui/context-menu";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  useEditorBinding, useUndoRedoState,
+  addBlockAction, addChartBlockAction, deleteBlockAction, duplicateBlockAction,
+  patchBlockAction, bringForwardAction, sendBackAction, bringToFrontAction,
+  sendToBackAction, toggleLockAction, undo as undoAction, redo as redoAction,
+  setShowHaraldFooter as setShowHaraldFooterAction,
+} from "./editorStore";
 
 type Icon = React.ComponentType<{ className?: string }>;
 
