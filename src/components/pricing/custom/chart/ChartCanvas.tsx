@@ -1034,7 +1034,7 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
 }
 
 // -- Treemap tile renderer (A.7 — honors dataLabels) ---------------------
-function TreemapTile({ cfg, dl, fmt, ...props }: any) {
+function TreemapTile({ cfg, dl, fmt, dimmedNames, ...props }: any) {
   const { x, y, width, height, name, value, fill } = props;
   if (width < 2 || height < 2) return null;
   const showCat = cfg.showCategoryLabel && width > 40 && height > 20;
@@ -1049,8 +1049,9 @@ function TreemapTile({ cfg, dl, fmt, ...props }: any) {
   const fontStyle = dl?.italic ? "italic" : "normal";
   const fs = dl?.size ?? 11;
   const fc = dl?.color ?? "#FFFFFF";
+  const op = dimmedNames && dimmedNames.has(name) ? 0.4 : 1;
   return (
-    <g>
+    <g opacity={op}>
       <rect x={x} y={y} width={width} height={height}
         style={{ fill, stroke: cfg.borderColor, strokeWidth: cfg.borderWidth }} />
       {showCat && (
