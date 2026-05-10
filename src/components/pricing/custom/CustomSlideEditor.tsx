@@ -735,7 +735,7 @@ function FilteredInspector({
       if (filtered.length !== tb.measures.length) {
         (patch as Partial<typeof tb>).measures = filtered;
         if (tb.sortMeasure && BUDGET_UNAVAILABLE_MEASURES.includes(tb.sortMeasure)) {
-          (patch as Partial<typeof tb>).sortMeasure = filtered[0] ?? null;
+          (patch as Partial<typeof tb>).sortMeasure = filtered[0] ?? undefined;
         }
       }
     }
