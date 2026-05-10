@@ -844,7 +844,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           fillOpacity={style.bubble.fillOpacity}
           stroke={style.bubble.borderColor} strokeWidth={style.bubble.borderWidth}>
           {points.map((p, i) => (
-            <Cell key={p.name} fill={DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]} />
+            <Cell key={p.name} fill={DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
+              fillOpacity={isDimmed(p.name) ? 0.4 : (style.bubble.fillOpacity ?? 1)} />
           ))}
           {style.dataLabels.show && (
             <LabelList dataKey="name" position={mapPos("scatter", dlPos) as never}
