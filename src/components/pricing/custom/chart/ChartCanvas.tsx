@@ -514,13 +514,17 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const cfg = style.series.find((x) => x.key === s.name);
           const color = cfg?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const dash = dashArr(cfg?.lineStyle);
+          const sDim = seriesDimmed(s.name);
+          const sStrokeOp = sDim ? 0.2 : 1;
+          const sFillOp = sDim ? 0.1 : undefined;
           if (ct === "area" || ct === "stackedArea") {
             const stacked = forceStack || style.area.stacked;
             return (
               <Area key={s.name} isAnimationActive={false} dataKey={s.name}
                 type={cfg?.smooth ? "monotone" : "linear"}
                 stroke={color} fill={color}
-                fillOpacity={cfg?.areaOpacity ?? 0.35}
+                strokeOpacity={sStrokeOp}
+                fillOpacity={sDim ? 0.1 : (cfg?.areaOpacity ?? 0.35)}
                 strokeWidth={style.area.lineOnTop ? (cfg?.thickness ?? 2.5) : (cfg?.thickness ?? 1)}
                 strokeDasharray={dash}
                 stackId={stacked ? "stack" : undefined}
@@ -535,12 +539,16 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           if (ct === "combo" && !cfg?.asLine) {
             return (
               <Bar key={s.name} isAnimationActive={false} dataKey={s.name} fill={color}
+                fillOpacity={sFillOp}
                 radius={style.bar.cornerRadius} stroke={style.bar.borderColor}
                 strokeWidth={style.bar.borderWidth}
                 yAxisId={cfg?.secondaryAxis ? "right" : "left"}>
-                {(style.conditionalRules?.length ?? 0) > 0 && chartRows.map((r, ri) => (
-                  <Cell key={`${s.name}-${ri}`} fill={evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)} />
-                ))}
+                {((style.conditionalRules?.length ?? 0) > 0 || ownFilterOnRowDim) && chartRows.map((r, ri) => {
+                  const baseFill = (style.conditionalRules?.length ?? 0) > 0
+                    ? evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)
+                    : color;
+                  return <Cell key={`${s.name}-${ri}`} fill={baseFill} fillOpacity={cellFillOpacity(String(r.__period ?? r.name ?? ""))} />;
+                })}
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
                     content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
@@ -552,12 +560,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             <Line key={s.name} isAnimationActive={false} dataKey={s.name}
               type={cfg?.smooth ? "monotone" : "linear"}
               stroke={color} strokeWidth={cfg?.thickness ?? 2.5}
+              strokeOpacity={sStrokeOp}
               strokeDasharray={dash}
               yAxisId={ct === "combo" && cfg?.secondaryAxis ? "right" : "left"}
               dot={cfg?.marker?.show !== false ? {
                 r: cfg?.marker?.size ?? 3,
                 fill: cfg?.marker?.fill ?? color,
                 stroke: cfg?.marker?.border ?? color,
+                fillOpacity: sStrokeOp,
               } : false}
               connectNulls>
               {style.dataLabels.show && (
