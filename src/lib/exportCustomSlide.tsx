@@ -153,9 +153,29 @@ async function renderBlockOffscreen(block: CustomBlock): Promise<string> {
         style: { width: block.w, height: block.h, background: "#FFFFFF", overflow: "hidden" },
       }, React.createElement(BlockRenderer, { block })));
     });
-    // Aguarda render + dados (Zustand é síncrono; SVGs precisam de 2 frames)
+    // Aguarda render + dados. Recharts usa ResizeObserver (assíncrono) para
+    // dimensionar o ResponsiveContainer; precisamos dar tempo para isso + para
+    // a primeira pintura dos paths SVG. Captura prematura → gráfico em branco.
     await waitFonts();
-    await new Promise((r) => setTimeout(r, 80));
+    // 4 RAFs garantem ResizeObserver → measure → render → paint
+    for (let i = 0; i < 4; i++) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+    }
+    await new Promise((r) => setTimeout(r, 350));
+    // Verifica se o SVG do recharts efetivamente tem geometria pintada;
+    // se ainda estiver vazio, espera mais um pouco antes de capturar.
+    const hasGeom = () => {
+      const svgs = host.querySelectorAll("svg");
+      for (const svg of svgs) {
+        if (svg.querySelector("path, rect, circle, polyline, polygon")) return true;
+      }
+      return svgs.length === 0; // sem svg = bloco não-recharts (ok)
+    };
+    let tries = 0;
+    while (!hasGeom() && tries < 10) {
+      await new Promise((r) => setTimeout(r, 120));
+      tries++;
+    }
     return await captureNode(host);
   } finally {
     setTimeout(() => { try { root.unmount(); } catch {} host.remove(); }, 0);
