@@ -9,6 +9,7 @@ import {
 import {
   ensureChartStyle, defaultChartStyle, DEFAULT_PALETTE,
   type ChartStyle, type SeriesStyle,
+  type ConditionalRule, type ReferenceLineCfg, type WaterfallColumn,
 } from "./types";
 import {
   Section, Row, ToggleField, NumberStepper, ColorField, SelectField,
@@ -21,8 +22,14 @@ import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
+import { Trash2, Plus } from "lucide-react";
 
 type Patch = Partial<ChartBlock>;
+
+function rid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 // Position options per chart family
 function positionOptions(ct: ChartBlock["chartType"]) {
