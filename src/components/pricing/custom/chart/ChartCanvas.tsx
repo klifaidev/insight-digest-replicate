@@ -228,7 +228,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       return sc.dir === "asc" ? [...base].reverse() : base;
     }
     return base;
-  }, [dsRows, block.filters, block.breakdown, block.measure, block.chartType, block.sortConfig]);
+  }, [dsRows, block.filters, seriesDim, block.measure, block.chartType, block.sortConfig]);
 
   // ---- empty states ----
   const seriesEmpty = data.periodos.length === 0 || data.series.length === 0;
