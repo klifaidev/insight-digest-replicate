@@ -335,8 +335,8 @@ export function ChartInspector({
             ]} />
         </Row>
 
-        {/* B.4 — Bridge column builder */}
-        {ct === "waterfall" && (
+        {/* B.4 — Bridge column builder (apenas no modo manual) */}
+        {ct === "waterfall" && (style.waterfall.mode ?? "pvm") === "manual" && (
           <BridgeColumnBuilder block={block} onChange={onChange}
             dsRows={dsRows}
             value={style.waterfall.columns ?? []}
