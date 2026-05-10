@@ -746,6 +746,24 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             onClick={() => setZoomMode("fit")} title="Ajustar à tela">
             <Maximize2 className="h-3 w-3" /> Ajustar
           </Button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <Button size="icon" variant={prefs.gridEnabled ? "default" : "ghost"}
+            className="h-7 w-7"
+            onClick={() => prefs.setGridEnabled(!prefs.gridEnabled)}
+            title={prefs.gridEnabled ? "Grade ligada — clique para desligar" : "Ativar grade"}>
+            <Grid3x3 className="h-3.5 w-3.5" />
+          </Button>
+          {prefs.gridEnabled && (
+            <Select value={String(prefs.gridSize)}
+              onValueChange={(v) => prefs.setGridSize(parseInt(v, 10) as GridSize)}>
+              <SelectTrigger className="h-7 w-[64px] text-[11px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {[4, 8, 16, 32].map((s) => (
+                  <SelectItem key={s} value={String(s)}>{s} px</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Badge variant="secondary" className="ml-2 text-[9px] uppercase">16:9</Badge>
         </div>
       </div>
