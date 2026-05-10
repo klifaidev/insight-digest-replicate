@@ -318,7 +318,20 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
 /** Cria um ChartBlock já com chartType específico (para a paleta de gráficos). */
 export function newChartBlock(chartType: CustomChartType, zTop: number): ChartBlock {
   const base = newBlock("chart", zTop) as ChartBlock;
-  return { ...base, chartType, title: CHART_TYPE_LABELS[chartType] };
+  const out: ChartBlock = { ...base, chartType, title: CHART_TYPE_LABELS[chartType] };
+  if (chartType === "waterfall") {
+    out.title = "Bridge PVM";
+    out.breakdown = null;
+    out.emitsCrossFilter = false;
+    out.style = {
+      ...(out.style ?? {}),
+      waterfall: {
+        mode: "pvm",
+        pvm: { base: null, comp: null, periodMode: "month" },
+      } as never,
+    };
+  }
+  return out;
 }
 
 export const CHART_TYPE_LABELS: Record<CustomChartType, string> = {

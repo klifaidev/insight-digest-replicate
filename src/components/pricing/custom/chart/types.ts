@@ -150,6 +150,14 @@ export interface WaterfallStyleCfg {
   classify: Record<string, "positive" | "negative" | "total">;
   /** Smart bridge: explicit column list overrides automatic series */
   columns?: WaterfallColumn[];
+  /** Bridge mode — "pvm" decompõe Δ entre dois períodos (igual aba Bridge); "manual" usa columns. Default "pvm". */
+  mode?: "pvm" | "manual";
+  /** Configuração da decomposição PVM. */
+  pvm?: {
+    base: string | null;
+    comp: string | null;
+    periodMode: "fy" | "month";
+  };
 }
 
 export interface FunnelStyleCfg {
@@ -328,6 +336,8 @@ export function defaultChartStyle(): ChartStyle {
       positiveColor: "#16A34A", negativeColor: "#C8102E", totalColor: "#1C2430",
       connectors: true, connectorColor: "#94A3B8", connectorStyle: "dashed",
       showRunningTotal: false, labelPos: "above", gapPct: 30, classify: {},
+      mode: "pvm",
+      pvm: { base: null, comp: null, periodMode: "month" },
     },
     funnel: { direction: "ttb", gapPct: 4, labelMode: "name-percent", labelPos: "right", slices: {} },
     treemap: {
