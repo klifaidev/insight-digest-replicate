@@ -285,6 +285,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
 
       {/* ====== Canvas ====== */}
       <div className="flex min-h-0 min-w-0 flex-col gap-2">
+        <ClearFiltersToolbar />
         <div
           ref={wrapperRef}
           className="relative min-h-0 flex-1 overflow-auto rounded-lg border border-border/40 bg-secondary/20"
