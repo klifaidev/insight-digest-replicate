@@ -496,28 +496,53 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           fill={props.fill} />
       );
     };
+    const dl = style.dataLabels;
+    const pieTotal = ranking.reduce((s, r) => s + Math.abs(r.value), 0) || 1;
+    // FIX 5 — fully-styled pie label honoring size/color/bold/italic/format/position/showCategory
+    const pieLabel = dl.show ? (props: any) => {
+      const { cx, cy, midAngle, outerRadius, innerRadius, percent, value, name } = props;
+      const RAD = Math.PI / 180;
+      const inside = labelMode === "inside";
+      const r = inside
+        ? innerRadius + (outerRadius - innerRadius) * 0.55
+        : outerRadius + (isCallout ? 24 : 12);
+      const x = cx + r * Math.cos(-midAngle * RAD);
+      const y = cy + r * Math.sin(-midAngle * RAD);
+      const pct = (percent * 100).toFixed(dl.decimals ?? 1) + "%";
+      const fmt = dl.format === "auto" ? measureFmt : dl.format;
+      const valStr = formatValue(value, fmt, "rol", dl.decimals);
+      let body: string;
+      switch (labelKey) {
+        case "value": body = valStr; break;
+        case "percent": body = pct; break;
+        case "name": body = name; break;
+        case "name-value": body = `${name}: ${valStr}`; break;
+        default: body = `${name}: ${pct}`;
+      }
+      const text = dl.showCategory ? `${name} · ${body}` : body;
+      return (
+        <text x={x} y={y} fill={dl.color}
+          fontSize={dl.size}
+          fontWeight={dl.bold ? 700 : 400}
+          fontStyle={dl.italic ? "italic" : "normal"}
+          textAnchor={x > cx ? "start" : "end"}
+          dominantBaseline="central">{text}</text>
+      );
+    } : false;
     chart = (
       <PieChart>
-        <Tooltip />
+        <Tooltip content={(p: any) => (
+          <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="pie" pieTotal={pieTotal} />
+        )} />
         {renderLegend}
         <Pie data={ranking} isAnimationActive={false} dataKey="value" nameKey="name"
           startAngle={style.pie.startAngle}
           endAngle={style.pie.startAngle + 360}
           innerRadius={inner} outerRadius="80%"
-          labelLine={labelMode === "outside" || isCallout}
+          labelLine={!!pieLabel && (labelMode === "outside" || isCallout)}
           activeIndex={ranking.map((_, i) => i)}
           activeShape={renderPieShape as never}
-          label={(d: { name: string; value: number; percent: number }) => {
-            const pct = (d.percent * 100).toFixed(style.dataLabels.decimals ?? 1) + "%";
-            const valStr = formatValue(d.value, measureFmt, "rol", style.dataLabels.decimals);
-            switch (labelKey) {
-              case "value": return valStr;
-              case "percent": return pct;
-              case "name": return d.name;
-              case "name-value": return `${d.name}: ${valStr}`;
-              default: return `${d.name}: ${pct}`;
-            }
-          }}
+          label={pieLabel as never}
         >
           {ranking.map((r, i) => {
             const sl = style.pie.slices[r.name];
