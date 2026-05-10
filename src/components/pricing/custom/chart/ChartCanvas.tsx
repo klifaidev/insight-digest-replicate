@@ -761,18 +761,20 @@ function TreemapTile({ cfg, dl, fmt, ...props }: any) {
   );
   const fontWeight = dl?.bold ? 700 : 400;
   const fontStyle = dl?.italic ? "italic" : "normal";
+  const fs = dl?.size ?? 11;
+  const fc = dl?.color ?? "#FFFFFF";
   return (
     <g>
       <rect x={x} y={y} width={width} height={height}
         style={{ fill, stroke: cfg.borderColor, strokeWidth: cfg.borderWidth }} />
       {showCat && (
-        <text x={x + 4} y={y + cfg.labelSize + 2}
-          fontSize={cfg.labelSize} fill={cfg.labelColor}
+        <text x={x + 4} y={y + fs + 2}
+          fontSize={fs} fill={fc}
           fontWeight={fontWeight} fontStyle={fontStyle}>{name}</text>
       )}
       {showVal && (
-        <text x={x + 4} y={y + cfg.labelSize * 2 + 6}
-          fontSize={cfg.labelSize - 1} fill={cfg.labelColor}
+        <text x={x + 4} y={y + fs * 2 + 6}
+          fontSize={fs - 1} fill={fc}
           fontWeight={fontWeight} fontStyle={fontStyle}>
           {valStr}
         </text>
