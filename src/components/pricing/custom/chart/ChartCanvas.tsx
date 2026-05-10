@@ -4,7 +4,7 @@
 import { useMemo } from "react";
 import {
   ResponsiveContainer, ComposedChart, LineChart, BarChart, AreaChart,
-  PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis,
+  PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, Sector,
   Line, Bar, Area, XAxis, YAxis, CartesianGrid, Legend, Tooltip, LabelList,
   FunnelChart, Funnel, Treemap,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -449,7 +449,28 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const inner = ct === "donut"
       ? `${Math.max(0, Math.min(80, style.pie.donutHolePct))}%` : 0;
     const labelKey = style.pie.labelMode;
-    const labelInside = mapPos("pie", dlPos) === "inside";
+    const labelMode = mapPos("pie", dlPos); // "inside" | "outside"
+    const isCallout = dlPos === "callout";
+    // A.9 — per-slice explosion via custom shape
+    const renderPieShape = (props: {
+      cx: number; cy: number; midAngle: number;
+      innerRadius: number; outerRadius: number;
+      startAngle: number; endAngle: number; fill: string;
+      payload: { name: string };
+    }) => {
+      const sliceCfg = style.pie.slices[props.payload.name];
+      const explodePct = (sliceCfg?.explode ?? style.pie.explodePct ?? 0) / 100;
+      const RAD = Math.PI / 180;
+      const off = props.outerRadius * explodePct * 0.4;
+      const dx = Math.cos(-props.midAngle * RAD) * off;
+      const dy = Math.sin(-props.midAngle * RAD) * off;
+      return (
+        <Sector cx={props.cx + dx} cy={props.cy + dy}
+          innerRadius={props.innerRadius} outerRadius={props.outerRadius}
+          startAngle={props.startAngle} endAngle={props.endAngle}
+          fill={props.fill} />
+      );
+    };
     chart = (
       <PieChart>
         <Tooltip />
@@ -458,14 +479,17 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           startAngle={style.pie.startAngle}
           endAngle={style.pie.startAngle + 360}
           innerRadius={inner} outerRadius="80%"
-          labelLine={!labelInside}
+          labelLine={labelMode === "outside" || isCallout}
+          activeIndex={ranking.map((_, i) => i)}
+          activeShape={renderPieShape as never}
           label={(d: { name: string; value: number; percent: number }) => {
-            const pct = (d.percent * 100).toFixed(1) + "%";
+            const pct = (d.percent * 100).toFixed(style.dataLabels.decimals ?? 1) + "%";
+            const valStr = formatValue(d.value, measureFmt, "rol", style.dataLabels.decimals);
             switch (labelKey) {
-              case "value": return formatValue(d.value, measureFmt, "rol");
+              case "value": return valStr;
               case "percent": return pct;
               case "name": return d.name;
-              case "name-value": return `${d.name}: ${formatValue(d.value, measureFmt, "rol")}`;
+              case "name-value": return `${d.name}: ${valStr}`;
               default: return `${d.name}: ${pct}`;
             }
           }}
@@ -479,17 +503,48 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       </PieChart>
     );
   } else if (ct === "bubble" || ct === "scatter") {
-    const points = ranking.map((r, i) => ({ x: i + 1, y: r.value, z: r.value, name: r.name }));
+    // A.4 — bubble/scatter use measureX/measureY/measure(size) when set
+    const dim = block.breakdown ?? "marca";
+    const sizeRanking = ranking; // ranks by primary measure (drives size)
+    const xRanking = style.measureX
+      ? computeTopRanking(dsRows, block.filters, dim, style.measureX, 50, "all", null)
+      : null;
+    const yRanking = style.measureY
+      ? computeTopRanking(dsRows, block.filters, dim, style.measureY, 50, "all", null)
+      : null;
+    const xByName = new Map(xRanking?.map((r) => [r.name, r.value]) ?? []);
+    const yByName = new Map(yRanking?.map((r) => [r.name, r.value]) ?? []);
+    const points = sizeRanking.map((r, i) => ({
+      x: xRanking ? (xByName.get(r.name) ?? 0) : (i + 1),
+      y: yRanking ? (yByName.get(r.name) ?? 0) : r.value,
+      z: r.value,
+      name: r.name,
+    }));
+    const xLabel = style.measureX
+      ? KPI_MEASURES_LABEL[style.measureX] : "Índice";
+    const yLabel = style.measureY
+      ? KPI_MEASURES_LABEL[style.measureY] : KPI_MEASURES_LABEL[block.measure];
+    const xFmt = style.measureX ? inferFormat(style.measureX) : measureFmt;
+    const yFmt = style.measureY ? inferFormat(style.measureY) : measureFmt;
     chart = (
       <ScatterChart>
         {renderGrid}
-        <XAxis type="number" dataKey="x" name="idx"
+        <XAxis type="number" dataKey="x" name={xLabel}
           domain={xDomain}
-          tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }} />
-        <YAxis type="number" dataKey="y" name="valor"
+          tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }}
+          tickFormatter={style.measureX ? axisFmt({ ...xAx, format: xAx.format }, xFmt) : undefined}
+          label={(xAx.titleText || style.measureX) ? {
+            value: xAx.titleText || xLabel, position: "insideBottom", offset: -5,
+            style: { fontSize: xAx.titleSize, fill: xAx.titleColor },
+          } : undefined} />
+        <YAxis type="number" dataKey="y" name={yLabel}
           domain={[yAx.min ?? "auto", yAx.max ?? "auto"]}
           tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }}
-          tickFormatter={axisFmt(yAx, measureFmt)} />
+          tickFormatter={axisFmt({ ...yAx, format: yAx.format }, yFmt)}
+          label={(yAx.titleText || style.measureY) ? {
+            value: yAx.titleText || yLabel, angle: -90, position: "insideLeft",
+            style: { fontSize: yAx.titleSize, fill: yAx.titleColor },
+          } : undefined} />
         {ct === "bubble" && (
           <ZAxis type="number" dataKey="z" range={[style.bubble.minSize, style.bubble.maxSize]} />
         )}
@@ -503,11 +558,12 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           ))}
           {style.dataLabels.show && (
             <LabelList dataKey="name" position={mapPos("scatter", dlPos) as never}
-              style={labelStyle} />
+              content={makeLabelContent({ style, measureFmt,
+                customFmt: (_v) => "" }) as never} />
           )}
           {ct === "bubble" && style.bubble.showSizeLabel && (
-            <LabelList dataKey="z" position="top" style={labelStyle}
-              formatter={(v: number) => fmtVal(v, style, measureFmt)} />
+            <LabelList dataKey="z" position="top"
+              content={makeLabelContent({ style, measureFmt }) as never} />
           )}
         </Scatter>
       </ScatterChart>
