@@ -483,8 +483,19 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
           </div>
         </div>
 
-        {/* Barra de zoom */}
+        {/* Barra de zoom + undo/redo */}
         <div className="flex shrink-0 items-center justify-center gap-1 rounded-lg border border-border/40 bg-card/40 px-2 py-1">
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={undoAction} disabled={!undoRedo.canUndo}
+            title={undoRedo.undoLabel ? `Desfazer: ${undoRedo.undoLabel.toLowerCase()}` : "Desfazer (⌘Z)"}>
+            <Undo2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={redoAction} disabled={!undoRedo.canRedo}
+            title={undoRedo.redoLabel ? `Refazer: ${undoRedo.redoLabel.toLowerCase()}` : "Refazer (⌘⇧Z)"}>
+            <Redo2 className="h-3.5 w-3.5" />
+          </Button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
           <Button size="icon" variant="ghost" className="h-7 w-7"
             onClick={() => setZoom(scale - 0.1)} title="Diminuir zoom">
             <ZoomOut className="h-3.5 w-3.5" />
