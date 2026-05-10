@@ -22,6 +22,7 @@ import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking, formatValue, inferFormat } from "@/lib/customKpi";
 import { resolveChartFit } from "@/lib/customCapacity";
 import { useSlideFilters, dimensionLabel } from "../SlideFilterContext";
+import { monthLabel } from "@/lib/format";
 import {
   ensureChartStyle, colorForSeries, DEFAULT_PALETTE, type ChartStyle,
 } from "./types";
