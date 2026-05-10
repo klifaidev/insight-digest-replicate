@@ -652,6 +652,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       } else {
         fill = DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
       }
+      // C1 — conditional formatting overrides palette/gradient
+      if ((style.conditionalRules?.length ?? 0) > 0) {
+        fill = evalCondColor(r.value, style.conditionalRules, style.conditionalDefault || fill);
+      }
       return { name: r.name, size: Math.abs(r.value), value: r.value, pct: (Math.abs(r.value) / total) * 100, fill };
     });
     chart = (
