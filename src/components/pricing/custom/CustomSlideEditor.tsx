@@ -357,44 +357,99 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
               }}
             >
               {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => (
-                <Rnd
-                  key={blk.id}
-                  size={{ width: blk.w, height: blk.h }}
-                  position={{ x: blk.x, y: blk.y }}
-                  bounds="parent"
-                  dragGrid={[5, 5]}
-                  resizeGrid={[5, 5]}
-                  scale={scale}
-                  onDrag={(_, d) => computeGuides(blk.id, d.x, d.y, blk.w, blk.h)}
-                  onResize={(_, __, refEl, ___, pos) =>
-                    computeGuides(blk.id, pos.x, pos.y, parseInt(refEl.style.width, 10), parseInt(refEl.style.height, 10))
-                  }
-                  onDragStop={(_, d) => { setGuides({ v: [], h: [] }); updateBlock(blk.id, { x: d.x, y: d.y }); }}
-                  onResizeStop={(_, __, refEl, ___, pos) => {
-                    setGuides({ v: [], h: [] });
-                    updateBlock(blk.id, {
-                      w: parseInt(refEl.style.width, 10),
-                      h: parseInt(refEl.style.height, 10),
-                      x: pos.x, y: pos.y,
-                    });
-                  }}
-                  onMouseDown={(e) => { e.stopPropagation(); setSelectedId(blk.id); }}
-                  style={{ zIndex: blk.z }}
-                  className={cn(
-                    "group/block",
-                    selectedId === blk.id
-                      ? "outline outline-2 outline-offset-1 outline-primary"
-                      : "outline outline-1 outline-transparent hover:outline-primary/40",
-                  )}
-                >
-                  <div data-block-id={blk.id} data-block-kind={blk.kind} style={{
-                    width: "100%", height: "100%",
-                    pointerEvents: blk.kind === "chart" ? "auto" : "none",
-                  }}>
-                    <BlockRenderer block={blk} />
-                  </div>
-                  <DataSourceBadge block={blk} />
-                </Rnd>
+                <ContextMenu key={blk.id}>
+                  <ContextMenuTrigger asChild>
+                    <Rnd
+                      size={{ width: blk.w, height: blk.h }}
+                      position={{ x: blk.x, y: blk.y }}
+                      bounds="parent"
+                      dragGrid={[5, 5]}
+                      resizeGrid={[5, 5]}
+                      scale={scale}
+                      disableDragging={!!blk.locked}
+                      enableResizing={!blk.locked}
+                      onDrag={(_, d) => computeGuides(blk.id, d.x, d.y, blk.w, blk.h)}
+                      onResize={(_, __, refEl, ___, pos) =>
+                        computeGuides(blk.id, pos.x, pos.y, parseInt(refEl.style.width, 10), parseInt(refEl.style.height, 10))
+                      }
+                      onDragStop={(_, d) => { setGuides({ v: [], h: [] }); updateBlock(blk.id, { x: d.x, y: d.y }); }}
+                      onResizeStop={(_, __, refEl, ___, pos) => {
+                        setGuides({ v: [], h: [] });
+                        updateBlock(blk.id, {
+                          w: parseInt(refEl.style.width, 10),
+                          h: parseInt(refEl.style.height, 10),
+                          x: pos.x, y: pos.y,
+                        });
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(blk.id);
+                        // Toast hint when user tries to drag a locked block.
+                        if (blk.locked && e.button === 0) {
+                          // Only show on actual drag attempts (not pure clicks), so debounce by checking shift/move later.
+                          // Simplification: show on every left-click of a locked block — light, dismissible.
+                          toast("Bloco bloqueado. Clique com botão direito para desbloquear.", { duration: 1800 });
+                        }
+                      }}
+                      style={{ zIndex: blk.z }}
+                      className={cn(
+                        "group/block",
+                        selectedId === blk.id
+                          ? "outline outline-2 outline-offset-1 outline-primary"
+                          : "outline outline-1 outline-transparent hover:outline-primary/40",
+                      )}
+                    >
+                      <div data-block-id={blk.id} data-block-kind={blk.kind} style={{
+                        width: "100%", height: "100%",
+                        pointerEvents: blk.kind === "chart" ? "auto" : "none",
+                      }}>
+                        <BlockRenderer block={blk} />
+                      </div>
+                      <DataSourceBadge block={blk} />
+                      {blk.locked && (
+                        <div
+                          data-export-hide="true"
+                          style={{
+                            position: "absolute", top: 4, right: 4,
+                            width: 18, height: 18, borderRadius: 4,
+                            background: "hsl(var(--background) / 0.9)",
+                            border: "1px solid hsl(var(--border))",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            zIndex: 999990, pointerEvents: "none",
+                          }}
+                          title="Bloco bloqueado"
+                        >
+                          <Lock className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      )}
+                    </Rnd>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-56">
+                    <ContextMenuItem onSelect={() => duplicateBlock(blk.id)}>
+                      Duplicar <ContextMenuShortcut>⌘D</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => removeBlock(blk.id)} className="text-destructive focus:text-destructive">
+                      Excluir <ContextMenuShortcut>Del</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={() => bringForward(blk.id)}>
+                      Trazer para frente <ContextMenuShortcut>⌘]</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => bringToFront(blk.id)}>
+                      Trazer para a frente de tudo
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => sendBack(blk.id)}>
+                      Enviar para trás <ContextMenuShortcut>⌘[</ContextMenuShortcut>
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => sendToBack(blk.id)}>
+                      Enviar para o fundo
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={() => toggleLock(blk.id)}>
+                      {blk.locked ? "Desbloquear posição" : "Bloquear posição"}
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))}
 
               {/* Snap guides overlay */}
