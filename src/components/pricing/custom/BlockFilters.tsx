@@ -122,8 +122,16 @@ export function BlockFilters({
           <div className="h-px flex-1 bg-success/20" />
         </div>
         <div className="grid grid-cols-1 gap-2">
-          {COMERCIAL_FIELDS.map((f) => renderField(f, "comercial"))}
+          {(isBudget
+            ? COMERCIAL_FIELDS.filter((f) => f.key === "canalAjustado")
+            : COMERCIAL_FIELDS
+          ).map((f) => renderField(f, "comercial"))}
         </div>
+        {isBudget && (
+          <p className="mt-1 text-[9px] text-muted-foreground">
+            Base Budget só expõe Canal Ajustado.
+          </p>
+        )}
       </section>
     </div>
   );
