@@ -258,6 +258,30 @@ export function defaultChartStyle(): ChartStyle {
       connectors: true, connectorColor: "#94A3B8", connectorStyle: "dashed",
       showRunningTotal: false, labelPos: "above", gapPct: 30, classify: {},
     },
+    funnel: { direction: "ttb", gapPct: 4, labelMode: "name-percent", slices: {} },
+    treemap: {
+      colorScheme: "categorical",
+      gradientFrom: "#C8102E", gradientTo: "#1C2430",
+      showCategoryLabel: true, showValueLabel: false,
+      labelSize: 11, labelColor: "#FFFFFF",
+      borderColor: "#FFFFFF", borderWidth: 1,
+    },
+    radar: {
+      fillArea: true, fillOpacity: 0.35,
+      gridShape: "polygon", gridColor: "#E2E8F0",
+      axisLabelSize: 11, axisLabelColor: "#64748B",
+    },
+    histogram: {
+      bins: 10, binWidth: null,
+      barColor: "#C8102E", borderColor: "#FFFFFF", borderWidth: 0,
+      cumulative: false,
+    },
+    boxplot: {
+      boxFillColor: "#C8102E",
+      whiskerColor: "#1C2430", whiskerWidth: 1.5,
+      medianColor: "#FFFFFF", medianWidth: 2,
+      showMean: false, showOutliers: true,
+    },
   };
 }
 
