@@ -1273,3 +1273,35 @@ function PaletteButton({
     </button>
   );
 }
+
+// Badge "KE30" / "Budget" mostrado no canto superior-esquerdo de cada bloco
+// de dados durante a edição. Marcado data-edit-only para o exporter remover.
+function DataSourceBadge({ block }: { block: CustomBlock }) {
+  const kinds: CustomBlockKind[] = ["chart", "kpi", "table", "topSku"];
+  if (!kinds.includes(block.kind)) return null;
+  const ds = (block as { dataSource?: "ke30" | "budget" }).dataSource ?? "ke30";
+  const isKe30 = ds === "ke30";
+  return (
+    <div
+      data-edit-only="true"
+      style={{
+        position: "absolute",
+        top: 4,
+        left: 4,
+        zIndex: 50,
+        padding: "1px 6px",
+        borderRadius: 4,
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: 0.5,
+        textTransform: "uppercase",
+        color: "#fff",
+        background: isKe30 ? "rgba(37,99,235,0.92)" : "rgba(147,51,234,0.92)",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
+        pointerEvents: "none",
+      }}
+    >
+      {isKe30 ? "KE30" : "Budget"}
+    </div>
+  );
+}
