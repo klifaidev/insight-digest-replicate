@@ -584,7 +584,7 @@ function BlockSpecificEditor({ block, onChange }: {
 
     case "kpi":
       return <FilteredInspector
-        block={selected!}
+        block={block}
         design={<KpiInspector block={block} onChange={onChange} />}
         filters={block.filters ?? {}}
         onFiltersChange={(f) => onChange({ filters: f } as never)}
