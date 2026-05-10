@@ -14,6 +14,7 @@
 // • Stack size capped at 50 snapshots (zundo `limit` option).
 
 import { create, useStore } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { temporal } from "zundo";
 import { useEffect } from "react";
 import type {
