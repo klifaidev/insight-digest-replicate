@@ -6,7 +6,7 @@ import {
   ResponsiveContainer, ComposedChart, LineChart, BarChart, AreaChart,
   PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, Sector,
   Line, Bar, Area, XAxis, YAxis, CartesianGrid, Legend, Tooltip, LabelList,
-  FunnelChart, Funnel, Treemap,
+  Treemap,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ReferenceLine,
 } from "recharts";
@@ -24,6 +24,10 @@ import { resolveChartFit } from "@/lib/customCapacity";
 import {
   ensureChartStyle, colorForSeries, DEFAULT_PALETTE, type ChartStyle,
 } from "./types";
+import {
+  ChartTooltip, applySort, evalCondColor, renderRefLines,
+  linearFit, movingAvg, resolveBridgeColumns, FunnelSVG,
+} from "./chartHelpers";
 
 // -- helpers ---------------------------------------------------------------
 function fmtVal(v: number, style: ChartStyle, fallback: ReturnType<typeof inferFormat>) {
