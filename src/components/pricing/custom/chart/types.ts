@@ -336,6 +336,8 @@ export function defaultChartStyle(): ChartStyle {
       positiveColor: "#16A34A", negativeColor: "#C8102E", totalColor: "#1C2430",
       connectors: true, connectorColor: "#94A3B8", connectorStyle: "dashed",
       showRunningTotal: false, labelPos: "above", gapPct: 30, classify: {},
+      mode: "pvm",
+      pvm: { base: null, comp: null, periodMode: "month" },
     },
     funnel: { direction: "ttb", gapPct: 4, labelMode: "name-percent", labelPos: "right", slices: {} },
     treemap: {
