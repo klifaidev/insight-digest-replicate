@@ -743,6 +743,22 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             <LabelList dataKey="z" position="top"
               content={makeLabelContent({ style, measureFmt }) as never} />
           )}
+          {/* C3 — labelDim renders dimension value next to each point */}
+          {labelDim && (
+            <LabelList dataKey="__label"
+              content={(p: any) => {
+                if (p.x == null || p.y == null || !p.value) return null;
+                return (
+                  <text x={p.x + 8} y={p.y - 8}
+                    fontSize={style.dataLabels.size}
+                    fill={style.dataLabels.color}
+                    fontWeight={style.dataLabels.bold ? 700 : 400}
+                    fontStyle={style.dataLabels.italic ? "italic" : "normal"}>
+                    {String(p.value)}
+                  </text>
+                );
+              }} />
+          )}
         </Scatter>
       </ScatterChart>
     );
