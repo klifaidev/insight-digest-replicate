@@ -383,11 +383,11 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                       }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
+                        const wasSelected = selectedId === blk.id;
                         setSelectedId(blk.id);
-                        // Toast hint when user tries to drag a locked block.
-                        if (blk.locked && e.button === 0) {
-                          // Only show on actual drag attempts (not pure clicks), so debounce by checking shift/move later.
-                          // Simplification: show on every left-click of a locked block — light, dismissible.
+                        // Only nag on locked blocks that were already focused —
+                        // otherwise every selection click would toast.
+                        if (blk.locked && wasSelected && e.button === 0) {
                           toast("Bloco bloqueado. Clique com botão direito para desbloquear.", { duration: 1800 });
                         }
                       }}
