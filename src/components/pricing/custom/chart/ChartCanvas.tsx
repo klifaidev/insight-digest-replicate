@@ -27,6 +27,7 @@ import {
 import {
   ChartTooltip, applySort, evalCondColor, renderRefLines,
   linearFit, movingAvg, resolveBridgeColumns, FunnelSVG,
+  computeTrendlineSeries,
 } from "./chartHelpers";
 
 // -- helpers ---------------------------------------------------------------
