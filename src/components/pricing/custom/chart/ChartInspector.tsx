@@ -715,14 +715,7 @@ export function ChartInspector({
             onChange={(v) => updPath("treemap", { showCategoryLabel: v })} />
           <ToggleField label="Mostrar valor" value={style.treemap.showValueLabel}
             onChange={(v) => updPath("treemap", { showValueLabel: v })} />
-          <Row label="Tam. fonte">
-            <NumberStepper value={style.treemap.labelSize} min={6} max={24}
-              onChange={(v) => updPath("treemap", { labelSize: v })} suffix="pt" />
-          </Row>
-          <Row label="Cor fonte">
-            <ColorField value={style.treemap.labelColor}
-              onChange={(c) => updPath("treemap", { labelColor: c })} />
-          </Row>
+          {/* Cleanup: tamanho e cor agora controlados pela seção "Rótulos de dados" */}
           <Row label="Cor borda">
             <ColorField value={style.treemap.borderColor}
               onChange={(c) => updPath("treemap", { borderColor: c })} />
