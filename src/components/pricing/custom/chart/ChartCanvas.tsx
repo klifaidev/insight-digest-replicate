@@ -337,7 +337,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = (
       <Comp data={rows}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
@@ -410,7 +410,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <BarChart data={rows} layout="horizontal"
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
         {renderLegend}
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
@@ -449,7 +449,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           stroke={yAx.lineColor} strokeWidth={yAx.lineWidth}
           label={yAx.titleText ? { value: yAx.titleText, angle: -90, position: "insideLeft",
             style: { fontSize: yAx.titleSize, fill: yAx.titleColor } } : undefined} />
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
         {renderLegend}
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
@@ -659,7 +659,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }} />
         <PolarRadiusAxis tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }}
           tickFormatter={axisFmt(yAx, measureFmt)} />
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
@@ -712,7 +712,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           <YAxis yAxisId="right" orientation="right"
             tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
         )}
-        <Tooltip />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
         {renderLegend}
         {seriesList.map((s, i) => {
           const color = colorForSeries(style, s.name, i) ?? style.histogram.barColor;
@@ -876,7 +876,7 @@ function WaterfallChart({
       <YAxis tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
         domain={[style.yAxis.min ?? "auto", style.yAxis.max ?? "auto"]}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip />
+      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
       {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => (
         <ReferenceLine key={`c-${i}`} segment={[
           { x: r.label, y: r.end }, { x: wfRows[i + 1].label, y: r.end },
@@ -945,7 +945,7 @@ function BoxPlot({
       <YAxis domain={[yMin, yMax]}
         tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip />
+      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
       <Bar dataKey="q1" stackId="bp" fill="transparent" isAnimationActive={false} />
       <Bar dataKey={(r: any) => r.q3 - r.q1} stackId="bp"
         isAnimationActive={false}
