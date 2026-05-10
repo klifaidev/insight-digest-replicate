@@ -59,9 +59,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     return { periodos: raw.periodos, series: visible };
   }, [raw, block.h, block.w, block.autoFit, block.maxSeries, block.showOthers]);
 
-  // ---- ranking-style data for pie/donut/bubble/scatter ----
+  // ---- ranking-style data for pie/donut/bubble/scatter/funnel/treemap ----
+  const rankingTypes = ["pie", "donut", "bubble", "scatter", "funnel", "treemap"];
   const ranking = useMemo(() => {
-    if (!["pie", "donut", "bubble", "scatter"].includes(block.chartType)) return [];
+    if (!rankingTypes.includes(block.chartType)) return [];
     return computeTopRanking(
       pricing, block.filters,
       block.breakdown ?? "marca",
@@ -72,7 +73,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // ---- empty states ----
   const seriesEmpty = data.periodos.length === 0 || data.series.length === 0;
   const rankingEmpty = ranking.length === 0;
-  const isRankingChart = ["pie", "donut", "bubble", "scatter"].includes(block.chartType);
+  const isRankingChart = rankingTypes.includes(block.chartType);
 
   if ((isRankingChart && rankingEmpty) || (!isRankingChart && seriesEmpty)) {
     return (
