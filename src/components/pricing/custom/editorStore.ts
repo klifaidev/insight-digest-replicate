@@ -228,23 +228,26 @@ export function useEditorConfig(): CustomSlideConfig | null {
 
 /** Returns { canUndo, canRedo, undoLabel, redoLabel }. Re-renders on changes. */
 export function useUndoRedoState() {
-  return useStore(baseStore.temporal, (t) => {
-    const past = t.pastStates;
-    const fut = t.futureStates;
-    const undoLabel = past.length > 0
-      ? (baseStore.getState().lastActionLabel ?? null)
-      : null;
-    const redoLabel = fut.length > 0
-      ? ((fut[fut.length - 1] as { lastActionLabel?: EditorActionLabel | null })
-          .lastActionLabel ?? null)
-      : null;
-    return {
-      canUndo: past.length > 0,
-      canRedo: fut.length > 0,
-      undoLabel,
-      redoLabel,
-    };
-  });
+  return useStore(
+    baseStore.temporal,
+    useShallow((t) => {
+      const past = t.pastStates;
+      const fut = t.futureStates;
+      const undoLabel = past.length > 0
+        ? (baseStore.getState().lastActionLabel ?? null)
+        : null;
+      const redoLabel = fut.length > 0
+        ? ((fut[fut.length - 1] as { lastActionLabel?: EditorActionLabel | null })
+            .lastActionLabel ?? null)
+        : null;
+      return {
+        canUndo: past.length > 0,
+        canRedo: fut.length > 0,
+        undoLabel,
+        redoLabel,
+      };
+    }),
+  );
 }
 
 /** Hook helper: bind store on mount + global Cmd/Ctrl+Z shortcuts. */
