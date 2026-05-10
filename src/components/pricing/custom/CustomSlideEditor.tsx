@@ -1095,19 +1095,31 @@ function TableBlockEditor({ block, onChange }: {
       <div>
         <Label className="text-[10px] uppercase text-muted-foreground">Medidas</Label>
         <div className="space-y-1">
-          {CUSTOM_TABLE_MEASURES.map((m) => (
-            <button key={m.id}
-              onClick={() => toggleMeasure(m.id)}
-              className={cn(
-                "flex w-full items-center justify-between rounded px-2 py-1 text-xs hover:bg-secondary",
-                block.measures.includes(m.id) && "bg-primary/10 text-primary",
-              )}
-            >
-              <span>{m.label}</span>
-              {block.measures.includes(m.id) && <span className="text-[9px]">✓</span>}
-            </button>
-          ))}
+          {CUSTOM_TABLE_MEASURES.map((m) => {
+            const disabled = block.dataSource === "budget"
+              && BUDGET_UNAVAILABLE_MEASURES.includes(m.id);
+            return (
+              <button key={m.id}
+                onClick={() => { if (!disabled) toggleMeasure(m.id); }}
+                disabled={disabled}
+                title={disabled ? BUDGET_UNAVAILABLE_HINT : undefined}
+                className={cn(
+                  "flex w-full items-center justify-between rounded px-2 py-1 text-xs hover:bg-secondary",
+                  block.measures.includes(m.id) && "bg-primary/10 text-primary",
+                  disabled && "cursor-not-allowed opacity-40 hover:bg-transparent",
+                )}
+              >
+                <span>{m.label}{disabled ? " — indisponível" : ""}</span>
+                {block.measures.includes(m.id) && !disabled && <span className="text-[9px]">✓</span>}
+              </button>
+            );
+          })}
         </div>
+        {block.dataSource === "budget" && (
+          <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+            {BUDGET_UNAVAILABLE_HINT}
+          </p>
+        )}
       </div>
 
       {block.measures.length > 0 && (
