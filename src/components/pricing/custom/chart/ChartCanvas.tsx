@@ -848,6 +848,7 @@ function mixHex(a: string, b: string, t: number): string {
 }
 
 // -- Waterfall (custom Recharts composition) -------------------------------
+// FIX 1+2 — supports both legacy per-period mode AND smart column-builder mode.
 function WaterfallChart({
   block, style, series,
 }: {
@@ -857,42 +858,65 @@ function WaterfallChart({
   series: { name: string; values: number[] }[];
 }) {
   const measureFmt = inferFormat(block.measure);
+  const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const dsRows = block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing;
+
+  // Smart column mode
+  const cols = style.waterfall.columns;
   const items = useMemo(() => {
+    if (cols && cols.length > 0) {
+      const resolved = resolveBridgeColumns(cols, dsRows, block.filters, block.measure);
+      return resolved.map((r) => ({ label: r.label, value: r.value, type: r.type }));
+    }
     const s0 = series[0];
     if (!s0) return [];
     return s0.values.map((v, i) => ({
-      name: String(block.measure),
       label: `P${i + 1}`,
       value: v,
+      type: (style.waterfall.classify[`P${i + 1}`] ?? (v >= 0 ? "positive" : "negative")) as
+        "start" | "positive" | "negative" | "total" | "subtotal",
     }));
-  }, [series, block.measure]);
+  }, [cols, dsRows, block.filters, block.measure, series, style.waterfall.classify]);
 
   const wfRows = useMemo(() => {
     let acc = 0;
     return items.map((it) => {
-      const cls = style.waterfall.classify[it.label] ?? (it.value >= 0 ? "positive" : "negative");
-      const isTotal = cls === "total";
-      const start = isTotal ? 0 : acc;
-      const end = isTotal ? it.value : acc + it.value;
-      const row = {
-        label: it.label,
-        base: Math.min(start, end),
-        delta: Math.abs(end - start),
-        cls,
-        end,
-      };
-      acc = end;
-      return row;
+      let base: number, delta: number, end: number, signed: number;
+      if (it.type === "start" || it.type === "total" || it.type === "subtotal") {
+        const target = it.type === "start" ? it.value
+          : it.type === "subtotal" ? acc
+          : it.value;
+        base = Math.min(0, target);
+        delta = Math.abs(target);
+        end = target;
+        signed = target;
+        acc = target;
+      } else {
+        const v = it.type === "negative" ? -Math.abs(it.value) : Math.abs(it.value);
+        const next = acc + v;
+        base = Math.min(acc, next);
+        delta = Math.max(0.0001, Math.abs(v)); // ensure non-zero so bar is visible
+        end = next;
+        signed = v;
+        acc = next;
+      }
+      return { label: it.label, base, delta, end, signed, type: it.type };
     });
-  }, [items, style.waterfall.classify]);
+  }, [items]);
 
-  const colorOf = (cls: string) =>
-    cls === "positive" ? style.waterfall.positiveColor
-    : cls === "negative" ? style.waterfall.negativeColor
+  const colorOf = (t: string) =>
+    t === "positive" ? style.waterfall.positiveColor
+    : t === "negative" ? style.waterfall.negativeColor
     : style.waterfall.totalColor;
 
   const labelPos = style.waterfall.labelPos === "inside" ? "center"
     : style.waterfall.labelPos === "below" ? "bottom" : "top";
+
+  // Compute Y domain explicitly so empty/edge cases don't render blank
+  const allEnds = wfRows.flatMap((r) => [r.base, r.base + r.delta, r.end]);
+  const yMin = style.yAxis.min ?? Math.min(0, ...allEnds);
+  const yMax = style.yAxis.max ?? Math.max(0, ...allEnds);
 
   return (
     <BarChart data={wfRows} barCategoryGap={`${style.waterfall.gapPct}%`}>
@@ -902,9 +926,10 @@ function WaterfallChart({
       )}
       <XAxis dataKey="label" tick={{ fontSize: style.xAxis.labelSize, fill: style.xAxis.labelColor }} />
       <YAxis tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
-        domain={[style.yAxis.min ?? "auto", style.yAxis.max ?? "auto"]}
+        domain={[yMin, yMax]}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
       <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="waterfall" />} />
+      {renderRefLines(style)}
       {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => (
         <ReferenceLine key={`c-${i}`} segment={[
           { x: r.label, y: r.end }, { x: wfRows[i + 1].label, y: r.end },
@@ -913,15 +938,21 @@ function WaterfallChart({
       ))}
       <Bar isAnimationActive={false} dataKey="base" stackId="wf" fill="transparent" />
       <Bar isAnimationActive={false} dataKey="delta" stackId="wf">
-        {wfRows.map((r) => <Cell key={r.label} fill={colorOf(r.cls)} />)}
+        {wfRows.map((r) => {
+          const baseFill = colorOf(r.type);
+          const fill = evalCondColor(r.signed, style.conditionalRules, baseFill);
+          return <Cell key={r.label} fill={fill} />;
+        })}
         {style.dataLabels.show && (
           <LabelList dataKey="end" position={labelPos as never}
             style={{ fontSize: style.dataLabels.size, fill: style.dataLabels.color,
-              fontWeight: style.dataLabels.bold ? 700 : 400 }}
-            formatter={(v: number) => formatValue(v, measureFmt, "rol", style.dataLabels.decimals)} />
+              fontWeight: style.dataLabels.bold ? 700 : 400,
+              fontStyle: style.dataLabels.italic ? "italic" : "normal" }}
+            formatter={(v: number) => formatValue(v,
+              style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format,
+              "rol", style.dataLabels.decimals)} />
         )}
       </Bar>
-      {/* A.5 — running total line */}
       {style.waterfall.showRunningTotal && (
         <Line type="linear" dataKey="end" isAnimationActive={false}
           stroke={style.waterfall.totalColor} strokeWidth={2}
