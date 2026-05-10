@@ -11,9 +11,11 @@ import { useMonthsInfo } from "@/store/selectors";
 import { Trash2, FileSpreadsheet, Calendar, CheckCircle2, AlertTriangle, Database, Target, Sparkles } from "lucide-react";
 import { monthLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { generateDemoData } from "@/lib/demoData";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useUploadGuard } from "@/store/uploadGuard";
 
 const EXPECTED_COLS = [
   "Periodo (ex.: 005.2025)",
