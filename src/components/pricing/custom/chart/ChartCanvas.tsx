@@ -876,9 +876,15 @@ function WaterfallChart({
           <LabelList dataKey="end" position={labelPos as never}
             style={{ fontSize: style.dataLabels.size, fill: style.dataLabels.color,
               fontWeight: style.dataLabels.bold ? 700 : 400 }}
-            formatter={(v: number) => formatValue(v, measureFmt, "rol")} />
+            formatter={(v: number) => formatValue(v, measureFmt, "rol", style.dataLabels.decimals)} />
         )}
       </Bar>
+      {/* A.5 — running total line */}
+      {style.waterfall.showRunningTotal && (
+        <Line type="linear" dataKey="end" isAnimationActive={false}
+          stroke={style.waterfall.totalColor} strokeWidth={2}
+          dot={{ r: 3, fill: style.waterfall.totalColor }} />
+      )}
     </BarChart>
   );
 }
