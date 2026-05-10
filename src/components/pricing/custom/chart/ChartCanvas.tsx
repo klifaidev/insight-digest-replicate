@@ -760,24 +760,34 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
   );
 }
 
-// -- Treemap tile renderer ------------------------------------------------
-function TreemapTile({ cfg, fmt, ...props }: any) {
+// -- Treemap tile renderer (A.7 — honors dataLabels) ---------------------
+function TreemapTile({ cfg, dl, fmt, ...props }: any) {
   const { x, y, width, height, name, value, fill } = props;
   if (width < 2 || height < 2) return null;
   const showCat = cfg.showCategoryLabel && width > 40 && height > 20;
   const showVal = cfg.showValueLabel && width > 60 && height > 32;
+  const valStr = formatValue(
+    value ?? 0,
+    dl?.format && dl.format !== "auto" ? dl.format : fmt,
+    "rol",
+    dl?.decimals,
+  );
+  const fontWeight = dl?.bold ? 700 : 400;
+  const fontStyle = dl?.italic ? "italic" : "normal";
   return (
     <g>
       <rect x={x} y={y} width={width} height={height}
         style={{ fill, stroke: cfg.borderColor, strokeWidth: cfg.borderWidth }} />
       {showCat && (
         <text x={x + 4} y={y + cfg.labelSize + 2}
-          fontSize={cfg.labelSize} fill={cfg.labelColor}>{name}</text>
+          fontSize={cfg.labelSize} fill={cfg.labelColor}
+          fontWeight={fontWeight} fontStyle={fontStyle}>{name}</text>
       )}
       {showVal && (
         <text x={x + 4} y={y + cfg.labelSize * 2 + 6}
-          fontSize={cfg.labelSize - 1} fill={cfg.labelColor}>
-          {formatValue(value ?? 0, fmt, "rol")}
+          fontSize={cfg.labelSize - 1} fill={cfg.labelColor}
+          fontWeight={fontWeight} fontStyle={fontStyle}>
+          {valStr}
         </text>
       )}
     </g>
