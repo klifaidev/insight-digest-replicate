@@ -1417,3 +1417,72 @@ function AxisSection({ title, axis, onChange, onReset }: {
     </Section>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Bridge PVM picker — modo + base/comparação (alinhado com aba Bridge)
+// ---------------------------------------------------------------------------
+import type { PricingRow } from "@/lib/types";
+import { monthLabel } from "@/lib/format";
+
+function PvmBridgePicker({
+  block, style, dsRows, updPath,
+}: {
+  block: ChartBlock;
+  style: ChartStyle;
+  dsRows: PricingRow[];
+  updPath: <K extends keyof ChartStyle>(key: K, patch: Partial<ChartStyle[K]>) => void;
+}) {
+  const mode = style.waterfall.mode ?? "pvm";
+  const pvm = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const };
+
+  const months = useMemo(() => {
+    const map = new Map<string, { mes: number; ano: number }>();
+    for (const r of dsRows) if (!map.has(r.periodo)) map.set(r.periodo, { mes: r.mes, ano: r.ano });
+    return Array.from(map.entries())
+      .map(([k, v]) => ({ value: k, label: monthLabel(v.mes, v.ano), mes: v.mes, ano: v.ano }))
+      .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+  }, [dsRows]);
+  const fys = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of dsRows) if (r.fy) set.add(r.fy);
+    return Array.from(set).sort().map((f) => ({ value: f, label: f }));
+  }, [dsRows]);
+  const opts = pvm.periodMode === "fy" ? fys : months;
+
+  return (
+    <>
+      <Row label="Modo Bridge">
+        <Segmented value={mode}
+          onChange={(v) => updPath("waterfall", { mode: v as never })}
+          options={[
+            { value: "pvm", label: "PVM (auto)" },
+            { value: "manual", label: "Manual" },
+          ]} />
+      </Row>
+      {mode === "pvm" && (
+        <>
+          <Row label="Período">
+            <Segmented value={pvm.periodMode}
+              onChange={(v) => updPath("waterfall", {
+                pvm: { ...pvm, periodMode: v as never, base: null, comp: null },
+              })}
+              options={[
+                { value: "month", label: "Mês" },
+                { value: "fy", label: "Ano fiscal" },
+              ]} />
+          </Row>
+          <Row label="Base">
+            <SelectField value={pvm.base ?? ""}
+              onChange={(v) => updPath("waterfall", { pvm: { ...pvm, base: v || null } })}
+              options={opts} />
+          </Row>
+          <Row label="Comparação">
+            <SelectField value={pvm.comp ?? ""}
+              onChange={(v) => updPath("waterfall", { pvm: { ...pvm, comp: v || null } })}
+              options={opts} />
+          </Row>
+        </>
+      )}
+    </>
+  );
+}
