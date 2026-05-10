@@ -182,8 +182,10 @@ export function ChartTooltip(props: {
   variant?: "default" | "bubble" | "scatter" | "pie" | "funnel" | "waterfall";
   pieTotal?: number;
   funnelStages?: { name: string; value: number }[];
+  /** C2 — extra row appended to the tooltip body */
+  additionalRow?: { label: string; map: Map<string, number>; fmt: ReturnType<typeof inferFormat>; measure: KpiMeasureId };
 }) {
-  const { active, payload, label, style, measureFmt, variant = "default" } = props;
+  const { active, payload, label, style, measureFmt, variant = "default", additionalRow } = props;
   if (!active || !payload || payload.length === 0) return null;
   const fmt = (v: number) => formatValue(v, style.dataLabels.format === "auto"
     ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals);
@@ -195,6 +197,16 @@ export function ChartTooltip(props: {
     boxShadow: "0 4px 12px rgba(0,0,0,0.35)", minWidth: 140,
   } as const;
 
+  const extraLine = additionalRow && label != null ? (() => {
+    const v = additionalRow.map.get(String(label));
+    if (v == null) return null;
+    return (
+      <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #334155", opacity: 0.85 }}>
+        {additionalRow.label}: {formatValue(v, additionalRow.fmt, additionalRow.measure)}
+      </div>
+    );
+  })() : null;
+
   if (variant === "pie") {
     const p = payload[0];
     const v = Number(p?.value) || 0;
@@ -203,6 +215,7 @@ export function ChartTooltip(props: {
       <div style={card}>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>{p?.name}</div>
         <div>{fmt(v)} <span style={{ opacity: 0.7 }}>({((v / total) * 100).toFixed(1)}%)</span></div>
+        {extraLine}
       </div>
     );
   }
@@ -222,6 +235,7 @@ export function ChartTooltip(props: {
         {prev != null && prev !== 0 && (
           <div style={{ opacity: 0.75 }}>{((v / prev) * 100).toFixed(1)}% do anterior</div>
         )}
+        {extraLine}
       </div>
     );
   }
@@ -233,6 +247,7 @@ export function ChartTooltip(props: {
         <div>X: {fmt(p?.x ?? 0)}</div>
         <div>Y: {fmt(p?.y ?? 0)}</div>
         {variant === "bubble" && <div>Tamanho: {fmt(p?.z ?? 0)}</div>}
+        {extraLine}
       </div>
     );
   }
@@ -244,6 +259,7 @@ export function ChartTooltip(props: {
         <div style={{ fontWeight: 700, marginBottom: 4 }}>{label ?? r.label}</div>
         <div>Δ {fmt(r.signed ?? r.delta ?? 0)}</div>
         <div style={{ opacity: 0.75 }}>Acumulado: {fmt(r.end ?? 0)}</div>
+        {extraLine}
       </div>
     );
   }
@@ -279,6 +295,7 @@ export function ChartTooltip(props: {
             </div>
           );
         })}
+      {extraLine}
     </div>
   );
 }

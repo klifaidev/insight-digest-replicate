@@ -162,9 +162,11 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     [block.dataSource, pricing, budget],
   );
   const xDim = block.fieldWells?.xDim ?? null;
+  // C1 — colorDim overrides breakdown as series-key generator
+  const seriesDim = block.fieldWells?.colorDim ?? block.breakdown;
   const raw = useMemo(
-    () => computeChartSeries(dsRows, block.filters, block.measure, block.breakdown, xDim),
-    [dsRows, block.filters, block.measure, block.breakdown, xDim],
+    () => computeChartSeries(dsRows, block.filters, block.measure, seriesDim, xDim),
+    [dsRows, block.filters, block.measure, seriesDim, xDim],
   );
   const data = useMemo(() => {
     const ranked = [...raw.series].sort((a, z) =>
@@ -200,11 +202,28 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     return { prev, yoy };
   }, [data]);
 
+  // C2 — tooltipMeasure: extra measure value per X label
+  const tooltipExtra = useMemo(() => {
+    const tm = block.fieldWells?.tooltipMeasure;
+    if (!tm) return null;
+    try {
+      const r = computeChartSeries(dsRows, block.filters, tm, null, xDim);
+      const map = new Map<string, number>();
+      r.periodos.forEach((p, i) => {
+        const total = r.series.reduce((s, ser) => s + (ser.values[i] ?? 0), 0);
+        map.set(p.label, total);
+      });
+      const label = KPI_MEASURES_LABEL[tm] ?? tm;
+      const fmt = inferFormat(tm);
+      return { map, label, fmt, measure: tm };
+    } catch { return null; }
+  }, [block.fieldWells?.tooltipMeasure, dsRows, block.filters, xDim]);
+
   // Combo: optional second measure for line series
   const lineSeriesData = useMemo(() => {
     if (block.chartType !== "combo" || !style.measureLine) return null;
-    return computeChartSeries(dsRows, block.filters, style.measureLine, block.breakdown);
-  }, [block.chartType, style.measureLine, dsRows, block.filters, block.breakdown]);
+    return computeChartSeries(dsRows, block.filters, style.measureLine, seriesDim);
+  }, [block.chartType, style.measureLine, dsRows, block.filters, seriesDim]);
 
   // ---- ranking-style data for pie/donut/bubble/scatter/funnel/treemap ----
   const rankingTypes = ["pie", "donut", "bubble", "scatter", "funnel", "treemap"];
@@ -212,7 +231,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     if (!rankingTypes.includes(block.chartType)) return [];
     const base = computeTopRanking(
       dsRows, block.filters,
-      block.breakdown ?? "marca",
+      seriesDim ?? "marca",
       block.measure, 50, "all", null,
     );
     // FIX 2 — apply sortConfig to ranking (pie/donut/funnel/treemap/bubble/scatter)
@@ -226,7 +245,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       return sc.dir === "asc" ? [...base].reverse() : base;
     }
     return base;
-  }, [dsRows, block.filters, block.breakdown, block.measure, block.chartType, block.sortConfig]);
+  }, [dsRows, block.filters, seriesDim, block.measure, block.chartType, block.sortConfig]);
 
   // ---- empty states ----
   const seriesEmpty = data.periodos.length === 0 || data.series.length === 0;
@@ -395,7 +414,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = (
       <Comp data={chartRows}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
@@ -497,7 +516,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <BarChart data={rows} layout="horizontal"
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
@@ -541,7 +560,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           stroke={yAx.lineColor} strokeWidth={yAx.lineWidth}
           label={yAx.titleText ? { value: yAx.titleText, angle: -90, position: "insideLeft",
             style: { fontSize: yAx.titleSize, fill: yAx.titleColor } } : undefined} />
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
@@ -628,7 +647,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     chart = (
       <PieChart>
         <Tooltip content={(p: any) => (
-          <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="pie" pieTotal={pieTotal} />
+          <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="pie" pieTotal={pieTotal} additionalRow={tooltipExtra ?? undefined} />
         )} />
         {renderLegend}
         <Pie data={ranking} isAnimationActive={false} dataKey="value" nameKey="name"
@@ -650,7 +669,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     );
   } else if (ct === "bubble" || ct === "scatter") {
     // A.4 — bubble/scatter use measureX/measureY/measure(size) when set
-    const dim = block.breakdown ?? "marca";
+    const dim = seriesDim ?? "marca";
     const sizeRanking = ranking; // ranks by primary measure (drives size)
     const xRanking = style.measureX
       ? computeTopRanking(dsRows, block.filters, dim, style.measureX, 50, "all", null)
@@ -660,11 +679,23 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       : null;
     const xByName = new Map(xRanking?.map((r) => [r.name, r.value]) ?? []);
     const yByName = new Map(yRanking?.map((r) => [r.name, r.value]) ?? []);
+    // C3 — labelDim: pick representative dimension value per point
+    const labelDim = block.fieldWells?.labelDim ?? null;
+    const labelByName = new Map<string, string>();
+    if (labelDim) {
+      for (const r of dsRows) {
+        const k = String((r as unknown as Record<string, unknown>)[dim] ?? "—");
+        if (labelByName.has(k)) continue;
+        const lv = String((r as unknown as Record<string, unknown>)[labelDim] ?? "");
+        if (lv) labelByName.set(k, lv);
+      }
+    }
     const points = sizeRanking.map((r, i) => ({
       x: xRanking ? (xByName.get(r.name) ?? 0) : (i + 1),
       y: yRanking ? (yByName.get(r.name) ?? 0) : r.value,
       z: r.value,
       name: r.name,
+      __label: labelDim ? (labelByName.get(r.name) ?? "") : "",
     }));
     const xLabel = style.measureX
       ? KPI_MEASURES_LABEL[style.measureX] : "Índice";
@@ -695,7 +726,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           <ZAxis type="number" dataKey="z" range={[style.bubble.minSize, style.bubble.maxSize]} />
         )}
         <Tooltip cursor={{ strokeDasharray: "3 3" }}
-          content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant={ct === "bubble" ? "bubble" : "scatter"} />} />
+          content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant={ct === "bubble" ? "bubble" : "scatter"} additionalRow={tooltipExtra ?? undefined} />} />
         {renderLegend}
         <Scatter data={points} isAnimationActive={false} fill={DEFAULT_PALETTE[0]}
           fillOpacity={style.bubble.fillOpacity}
@@ -711,6 +742,22 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           {ct === "bubble" && style.bubble.showSizeLabel && (
             <LabelList dataKey="z" position="top"
               content={makeLabelContent({ style, measureFmt }) as never} />
+          )}
+          {/* C3 — labelDim renders dimension value next to each point */}
+          {labelDim && (
+            <LabelList dataKey="__label"
+              content={(p: any) => {
+                if (p.x == null || p.y == null || !p.value) return null;
+                return (
+                  <text x={p.x + 8} y={p.y - 8}
+                    fontSize={style.dataLabels.size}
+                    fill={style.dataLabels.color}
+                    fontWeight={style.dataLabels.bold ? 700 : 400}
+                    fontStyle={style.dataLabels.italic ? "italic" : "normal"}>
+                    {String(p.value)}
+                  </text>
+                );
+              }} />
           )}
         </Scatter>
       </ScatterChart>
@@ -760,7 +807,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }} />
         <PolarRadiusAxis tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }}
           tickFormatter={axisFmt(yAx, measureFmt)} />
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
@@ -834,7 +881,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           <YAxis yAxisId="right" orientation="right"
             tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
         )}
-        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
         {renderLegend}
         {seriesList.map((s, i) => {
