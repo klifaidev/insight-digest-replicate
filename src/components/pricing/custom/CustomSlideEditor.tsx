@@ -143,6 +143,8 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const undoRedo = useUndoRedoState();
   const { selectedIds, groupEditMemberId } = useSelection();
   const prefs = useEditorPrefs();
+  const copiedStyle = useCopiedStyle();
+  const [presentOpen, setPresentOpen] = useState(false);
 
   const [fitScale, setFitScale] = useState(1);
   const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
