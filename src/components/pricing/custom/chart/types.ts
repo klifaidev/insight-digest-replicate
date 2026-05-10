@@ -200,6 +200,51 @@ export interface BoxplotStyleCfg {
   showOutliers: boolean;
 }
 
+export type ConditionalOp = ">" | "<" | "=" | "between";
+export interface ConditionalRule {
+  id: string;
+  op: ConditionalOp;
+  threshold: number;
+  threshold2?: number; // for "between"
+  color: string;
+}
+
+export interface ReferenceLineCfg {
+  id: string;
+  value: number;
+  label: string;
+  color: string;
+  style: LineStyle;
+  thickness: number;
+}
+
+export interface TrendlineCfg {
+  enabled: boolean;
+  type: "linear" | "exp" | "ma";
+  maWindow: number; // 2-12 for moving average
+  color: string;
+  thickness: number;
+  style: LineStyle;
+  showR2: boolean;
+}
+
+export interface ForecastCfg {
+  enabled: boolean;
+  periods: number; // 1-6
+  band: boolean;
+}
+
+export interface AnalyticsCfg {
+  refLines: ReferenceLineCfg[];
+  trendline: TrendlineCfg;
+  forecast: ForecastCfg;
+}
+
+export interface SortConfig {
+  field: "period" | "value" | "name";
+  dir: "asc" | "desc";
+}
+
 export interface ChartStyle {
   general: GeneralStyle;
   xAxis: AxisStyle;
@@ -224,6 +269,11 @@ export interface ChartStyle {
   measureX?: KpiMeasureId;
   /** Combo only — measure used by line series */
   measureLine?: KpiMeasureId;
+  /** Conditional formatting rules (bar/column/hbar/waterfall/treemap) */
+  conditionalRules?: ConditionalRule[];
+  conditionalDefault?: string;
+  /** Analytics overlays (cartesian charts) */
+  analytics?: AnalyticsCfg;
 }
 
 export const DEFAULT_PALETTE = [
