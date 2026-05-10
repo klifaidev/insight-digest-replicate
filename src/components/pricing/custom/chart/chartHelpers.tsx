@@ -8,7 +8,7 @@ import { ReferenceLine } from "recharts";
 import type { ChartBlock, KpiMeasureId } from "@/lib/customSlide";
 import type { ChartStyle, ConditionalRule, WaterfallColumn } from "./types";
 import { formatValue, inferFormat, computeChartSeries } from "@/lib/customKpi";
-import type { PricingRow } from "@/store/pricing";
+type PricingRow = any;
 
 // ---- Conditional formatting ---------------------------------------------
 export function evalCondColor(
