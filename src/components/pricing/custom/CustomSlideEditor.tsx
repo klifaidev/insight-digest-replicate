@@ -351,7 +351,10 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                       : "outline outline-1 outline-transparent hover:outline-primary/40",
                   )}
                 >
-                  <div data-block-id={blk.id} data-block-kind={blk.kind} style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
+                  <div data-block-id={blk.id} data-block-kind={blk.kind} style={{
+                    width: "100%", height: "100%",
+                    pointerEvents: blk.kind === "chart" ? "auto" : "none",
+                  }}>
                     <BlockRenderer block={blk} />
                   </div>
                   <DataSourceBadge block={blk} />
