@@ -946,7 +946,7 @@ function BoxPlot({
       <YAxis domain={[yMin, yMax]}
         tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} />} />
       <Bar dataKey="q1" stackId="bp" fill="transparent" isAnimationActive={false} />
       <Bar dataKey={(r: any) => r.q3 - r.q1} stackId="bp"
         isAnimationActive={false}
