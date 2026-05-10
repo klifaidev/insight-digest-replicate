@@ -263,6 +263,54 @@ export function ChartInspector({
           </Row>
         )}
 
+        {/* B.1 — Field wells: Cor / Tooltip / Rótulo */}
+        {["line", "area", "stackedArea", "bar", "column", "hbar",
+          "stackedColumn", "stackedBar", "combo", "scatter", "bubble"].includes(ct) && (
+          <>
+            <Row label="Cor / Legenda">
+              <SelectField value={block.fieldWells?.colorDim ?? "__none__"}
+                onChange={(v) => onChange({
+                  fieldWells: { ...(block.fieldWells ?? {}), colorDim: v === "__none__" ? null : v },
+                })}
+                options={[
+                  { value: "__none__", label: "— Nenhum —" },
+                  { value: "marca", label: "Marca" },
+                  { value: "canalAjustado", label: "Canal" },
+                  { value: "categoria", label: "Categoria" },
+                  { value: "mercado", label: "Mercado" },
+                  { value: "inovacao", label: "Inovação" },
+                ]} />
+            </Row>
+            <Row label="Tooltip extra">
+              <SelectField value={(block.fieldWells?.tooltipMeasure ?? "__none__") as string}
+                onChange={(v) => onChange({
+                  fieldWells: { ...(block.fieldWells ?? {}),
+                    tooltipMeasure: v === "__none__" ? null : v as KpiMeasureId },
+                })}
+                options={[
+                  { value: "__none__", label: "— Nenhuma —" },
+                  ...KPI_MEASURES.map((m) => ({ value: m.id, label: m.label })),
+                ]} />
+            </Row>
+            {(ct === "scatter" || ct === "bubble") && (
+              <Row label="Rótulo de ponto">
+                <SelectField value={block.fieldWells?.labelDim ?? "__none__"}
+                  onChange={(v) => onChange({
+                    fieldWells: { ...(block.fieldWells ?? {}), labelDim: v === "__none__" ? null : v },
+                  })}
+                  options={[
+                    { value: "__none__", label: "— Nenhum —" },
+                    { value: "marca", label: "Marca" },
+                    { value: "canalAjustado", label: "Canal" },
+                    { value: "categoria", label: "Categoria" },
+                    { value: "mercado", label: "Mercado" },
+                    { value: "inovacao", label: "Inovação" },
+                  ]} />
+              </Row>
+            )}
+          </>
+        )}
+
         {/* B.5 — Sort */}
         <Row label="Ordenar por">
           <SelectField value={block.sortConfig?.field ?? "period"}
@@ -270,7 +318,8 @@ export function ChartInspector({
               sortConfig: { field: v as never, dir: block.sortConfig?.dir ?? "asc" },
             })}
             options={[
-              { value: "period", label: "Período" },
+              ...(["pie", "donut", "funnel", "treemap"].includes(ct)
+                ? [] : [{ value: "period", label: "Período" }]),
               { value: "value", label: "Valor" },
               { value: "name", label: "Nome" },
             ]} />
