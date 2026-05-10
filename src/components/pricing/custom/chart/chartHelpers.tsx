@@ -89,6 +89,75 @@ export function movingAvg(ys: number[], window: number): (number | null)[] {
   return out;
 }
 
+/**
+ * Compute trendline + forecast values per row.
+ * Returns one value per (existing periods + forecast periods) for each series row.
+ * The output rows are merged into the chart data with synthetic future labels.
+ */
+export function computeTrendlineSeries(
+  series: { name: string; values: number[] }[],
+  periodLabels: string[],
+  trend: { enabled: boolean; type: "linear" | "exp" | "ma"; maWindow: number },
+  forecast: { enabled: boolean; periods: number },
+): {
+  rows: Record<string, number | string | null>[];
+  r2ByName: Record<string, number>;
+  forecastStartIdx: number;
+  trendKey: (name: string) => string;
+} {
+  const trendKey = (name: string) => `__trend_${name}`;
+  const r2ByName: Record<string, number> = {};
+  if (!trend.enabled) {
+    return { rows: [], r2ByName, forecastStartIdx: periodLabels.length, trendKey };
+  }
+  const fwd = forecast.enabled ? Math.max(1, Math.min(6, forecast.periods)) : 0;
+  const allLabels = [...periodLabels];
+  for (let i = 1; i <= fwd; i++) allLabels.push(`+${i}`);
+  const rows: Record<string, number | string | null>[] = allLabels.map((lb) => ({ __period: lb }));
+
+  for (const s of series) {
+    if (trend.type === "ma") {
+      const ma = movingAvg(s.values, trend.maWindow);
+      ma.forEach((v, i) => { rows[i][trendKey(s.name)] = v; });
+      // no native forecast for MA — extend using last value
+      if (fwd > 0) {
+        const last = ma[ma.length - 1] ?? s.values[s.values.length - 1] ?? 0;
+        for (let i = 0; i < fwd; i++) rows[periodLabels.length + i][trendKey(s.name)] = last;
+      }
+      r2ByName[s.name] = NaN;
+      continue;
+    }
+    if (trend.type === "exp") {
+      // log-linear regression: y = a * exp(b*x) -> ln(y) = ln(a) + b*x ; ignore non-positive
+      const ys: number[] = s.values.map((v) => v > 0 ? Math.log(v) : NaN);
+      const valid = ys.map((y, i) => ({ x: i, y })).filter((p) => isFinite(p.y));
+      if (valid.length < 2) { r2ByName[s.name] = 0; continue; }
+      const fit = linearFit(valid.map((p) => p.y));
+      // refit using mapped indices
+      const meanX = valid.reduce((s2, p) => s2 + p.x, 0) / valid.length;
+      const meanY = valid.reduce((s2, p) => s2 + p.y, 0) / valid.length;
+      let num = 0, den = 0;
+      for (const p of valid) { num += (p.x - meanX) * (p.y - meanY); den += (p.x - meanX) ** 2; }
+      const b = den === 0 ? 0 : num / den;
+      const a = meanY - b * meanX;
+      let ssRes = 0, ssTot = 0;
+      for (const p of valid) {
+        ssRes += (p.y - (a + b * p.x)) ** 2;
+        ssTot += (p.y - meanY) ** 2;
+      }
+      r2ByName[s.name] = ssTot === 0 ? 1 : 1 - ssRes / ssTot;
+      void fit;
+      for (let i = 0; i < allLabels.length; i++) rows[i][trendKey(s.name)] = Math.exp(a + b * i);
+    } else {
+      // linear
+      const fit = linearFit(s.values);
+      r2ByName[s.name] = fit.r2;
+      for (let i = 0; i < allLabels.length; i++) rows[i][trendKey(s.name)] = fit.m * i + fit.b;
+    }
+  }
+  return { rows, r2ByName, forecastStartIdx: periodLabels.length, trendKey };
+}
+
 // ---- Reference lines renderer (recharts <ReferenceLine />) ---------------
 export function renderRefLines(style: ChartStyle, yAxisId = "left"): ReactNode {
   const lines = style.analytics?.refLines ?? [];
