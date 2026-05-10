@@ -16,7 +16,7 @@
 import { create, useStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { temporal } from "zundo";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type {
   BlockGroup,
   CustomBlock,
@@ -33,6 +33,7 @@ export type EditorActionLabel =
   | "Mover bloco"
   | "Mover blocos"
   | "Redimensionar bloco"
+  | "Redimensionar grupo"
   | "Alterar estilo"
   | "Alterar dados"
   | "Duplicar bloco"
@@ -42,7 +43,8 @@ export type EditorActionLabel =
   | "Alterar slide"
   | "Alinhar blocos"
   | "Agrupar blocos"
-  | "Desagrupar blocos";
+  | "Desagrupar blocos"
+  | "Colar estilo";
 
 interface EditorState {
   config: CustomSlideConfig | null;
@@ -554,4 +556,153 @@ export function ungroupBlocksAction(ids: string[]) {
     blocks: c.blocks.map((b) => (b.groupId && groupIds.has(b.groupId)) ? ({ ...b, groupId: undefined } as CustomBlock) : b),
     groups: (c.groups ?? []).filter((g) => !groupIds.has(g.id)),
   }));
+}
+
+// ----- Group resize-as-unit (B8 final) ------------------------------------
+
+/**
+ * Apply a uniform scale to every member of a group (or arbitrary set of ids).
+ * Origin is the top-left of the original bounding box (origX/origY) and the
+ * scale factors come from the new vs original group bbox dimensions.
+ *
+ * Each member is clamped to a minimum of 40×40 — collapsing scales are not
+ * applied to that member; instead its dimension stays at the floor and its
+ * position is still anchored to the scaled origin to keep layout coherent.
+ */
+export function resizeGroupAction(
+  ids: string[],
+  origin: { x: number; y: number; w: number; h: number },
+  next: { x: number; y: number; w: number; h: number },
+) {
+  if (ids.length === 0 || origin.w <= 0 || origin.h <= 0) return;
+  const scaleX = next.w / origin.w;
+  const scaleY = next.h / origin.h;
+  const cur = baseStore.getState().config;
+  if (!cur) return;
+  const set = new Set(ids);
+  const patches = cur.blocks
+    .filter((b) => set.has(b.id) && !b.locked)
+    .map((b) => {
+      const dx = b.x - origin.x;
+      const dy = b.y - origin.y;
+      const newX = next.x + dx * scaleX;
+      const newY = next.y + dy * scaleY;
+      const newW = Math.max(40, b.w * scaleX);
+      const newH = Math.max(40, b.h * scaleY);
+      return {
+        id: b.id,
+        patch: {
+          x: Math.round(newX),
+          y: Math.round(newY),
+          w: Math.round(newW),
+          h: Math.round(newH),
+        } as Partial<CustomBlock>,
+      };
+    });
+  if (patches.length) patchBlocksAction(patches, "Redimensionar grupo");
+}
+
+// ----- Chart style copy / paste (B8.6) ------------------------------------
+
+import type { ChartStyle, SeriesStyle } from "@/components/pricing/custom/chart/types";
+
+interface CopiedStyle {
+  sourceType: import("@/lib/customSlide").CustomChartType;
+  style: Partial<ChartStyle>;
+  sourceId: string;
+}
+
+let _copiedStyle: CopiedStyle | null = null;
+const copyListeners = new Set<() => void>();
+function emitCopy() { copyListeners.forEach((fn) => fn()); }
+
+export function getCopiedStyle(): CopiedStyle | null {
+  return _copiedStyle;
+}
+
+export function copyChartStyleAction(blockId: string): boolean {
+  const cur = baseStore.getState().config;
+  if (!cur) return false;
+  const blk = cur.blocks.find((b) => b.id === blockId);
+  if (!blk || blk.kind !== "chart") return false;
+  const cb = blk as unknown as { chartType: CopiedStyle["sourceType"]; style?: Partial<ChartStyle> };
+  _copiedStyle = {
+    sourceType: cb.chartType,
+    style: JSON.parse(JSON.stringify(cb.style ?? {})),
+    sourceId: blockId,
+  };
+  emitCopy();
+  return true;
+}
+
+const CARTESIAN_TYPES: ReadonlyArray<string> = [
+  "line", "area", "stackedArea", "bar", "column", "stackedColumn",
+  "hbar", "stackedBar", "combo", "scatter", "bubble", "histogram",
+];
+
+/** Apply copied style to target. Returns true if pasted. */
+export function pasteChartStyleAction(blockId: string): boolean {
+  if (!_copiedStyle) return false;
+  const cur = baseStore.getState().config;
+  if (!cur) return false;
+  const blk = cur.blocks.find((b) => b.id === blockId);
+  if (!blk || blk.kind !== "chart") return false;
+  const target = blk as unknown as { chartType: CopiedStyle["sourceType"]; style?: Partial<ChartStyle> };
+  const same = target.chartType === _copiedStyle.sourceType;
+  const src = _copiedStyle.style;
+
+  let nextStyle: Partial<ChartStyle>;
+  if (same) {
+    nextStyle = JSON.parse(JSON.stringify(src));
+  } else {
+    // Cross-type: apply only the compatible subset.
+    const cur = (target.style ?? {}) as Partial<ChartStyle>;
+    const out: Partial<ChartStyle> = JSON.parse(JSON.stringify(cur));
+    if (src.general) out.general = JSON.parse(JSON.stringify(src.general));
+    if (src.grid) out.grid = JSON.parse(JSON.stringify(src.grid));
+    if (src.dataLabels) out.dataLabels = JSON.parse(JSON.stringify(src.dataLabels));
+    const bothCartesian = CARTESIAN_TYPES.includes(target.chartType)
+      && CARTESIAN_TYPES.includes(_copiedStyle.sourceType);
+    if (bothCartesian) {
+      if (src.xAxis) out.xAxis = JSON.parse(JSON.stringify(src.xAxis));
+      if (src.yAxis) out.yAxis = JSON.parse(JSON.stringify(src.yAxis));
+    }
+    // Series colors only — preserve marker/line/etc.
+    if (src.series && Array.isArray(src.series)) {
+      const tgtSeries = (cur.series ?? []) as SeriesStyle[];
+      const merged: SeriesStyle[] = tgtSeries.map((s, i) => {
+        const ss = src.series?.[i];
+        return ss?.color ? { ...s, color: ss.color } : s;
+      });
+      // Keep extra source colors so the renderer uses them when target has fewer entries.
+      if (src.series.length > tgtSeries.length) {
+        for (let i = tgtSeries.length; i < src.series.length; i++) {
+          const ss = src.series[i];
+          merged.push({ key: ss.key ?? `s${i}`, color: ss.color });
+        }
+      }
+      out.series = merged;
+    }
+    nextStyle = out;
+  }
+
+  patchBlockAction(
+    blockId,
+    { style: nextStyle } as Partial<CustomBlock>,
+    "Colar estilo",
+  );
+  return true;
+}
+
+export function clearCopiedStyle() { _copiedStyle = null; emitCopy(); }
+
+/** Hook: returns { hasCopy, sourceId } and re-renders when copy changes. */
+export function useCopiedStyle() {
+  const [, setT] = useState(0);
+  useEffect(() => {
+    const fn = () => setT((n) => n + 1);
+    copyListeners.add(fn);
+    return () => { copyListeners.delete(fn); };
+  }, []);
+  return { hasCopy: !!_copiedStyle, sourceId: _copiedStyle?.sourceId ?? null };
 }
