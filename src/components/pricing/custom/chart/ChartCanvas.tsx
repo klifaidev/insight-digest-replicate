@@ -338,6 +338,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <Comp data={rows}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
@@ -411,6 +412,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
@@ -450,6 +452,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           label={yAx.titleText ? { value: yAx.titleText, angle: -90, position: "insideLeft",
             style: { fontSize: yAx.titleSize, fill: yAx.titleColor } } : undefined} />
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
           const color = colorForSeries(style, s.name, i);
@@ -661,6 +664,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         <PolarRadiusAxis tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }}
           tickFormatter={axisFmt(yAx, measureFmt)} />
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
@@ -734,6 +738,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
         )}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+        {renderRefLines(style)}
         {renderLegend}
         {seriesList.map((s, i) => {
           const color = colorForSeries(style, s.name, i) ?? style.histogram.barColor;
