@@ -32,6 +32,7 @@ import {
   AlignStartVertical, AlignEndVertical,
   AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter,
   Group as GroupIcon, Ungroup as UngroupIcon, Grid3x3,
+  Play, Paintbrush,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
