@@ -1923,7 +1923,7 @@ function GroupOverlay({
     window.addEventListener("mouseup", up);
   };
 
-  const handleStyle = (top: number | "auto", left: number | "auto", right: number | "auto", bottom: number | "auto", cursor: string): React.CSSProperties => ({
+  const handleStyle = (top: number | string | "auto", left: number | string | "auto", right: number | string | "auto", bottom: number | string | "auto", cursor: string): React.CSSProperties => ({
     position: "absolute",
     top: top === "auto" ? "auto" : top,
     left: left === "auto" ? "auto" : left,
