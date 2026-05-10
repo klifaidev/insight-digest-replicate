@@ -179,8 +179,24 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           hidden.reduce((s, ser) => s + (ser.values[i] || 0), 0)),
       });
     }
-    return { periodos: raw.periodos, series: visible };
-  }, [raw, block.h, block.w, block.autoFit, block.maxSeries, block.showOthers]);
+    // B.5 — apply user-defined sort
+    return applySort(raw.periodos, visible, block.sortConfig);
+  }, [raw, block.h, block.w, block.autoFit, block.maxSeries, block.showOthers, block.sortConfig]);
+
+  // Tooltip lookup tables — previous period delta + YoY (best-effort heuristic on label match)
+  const tooltipMaps = useMemo(() => {
+    const prev = new Map<string, Map<string, number>>();
+    const yoy = new Map<string, Map<string, number>>();
+    data.series.forEach((s) => {
+      const pmap = new Map<string, number>(); const ymap = new Map<string, number>();
+      data.periodos.forEach((p, i) => {
+        if (i > 0) pmap.set(p.label, s.values[i - 1] ?? 0);
+        if (i >= 12) ymap.set(p.label, s.values[i - 12] ?? 0);
+      });
+      prev.set(s.name, pmap); yoy.set(s.name, ymap);
+    });
+    return { prev, yoy };
+  }, [data]);
 
   // Combo: optional second measure for line series
   const lineSeriesData = useMemo(() => {
