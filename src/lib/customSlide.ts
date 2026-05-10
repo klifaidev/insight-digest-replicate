@@ -194,6 +194,8 @@ export interface TopSkuBlock extends BaseBlock {
   showOthers?: boolean;
   /** Imprime nota "Mostrando X de Y" no PPT. Default: false */
   exportNote?: boolean;
+  /** Fonte de dados — default "ke30". */
+  dataSource?: BlockDataSource;
 }
 
 export type CustomBlock =
