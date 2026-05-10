@@ -344,3 +344,19 @@ export const KPI_MEASURES: { id: KpiMeasureId; label: string; format: Exclude<Kp
   { id: "mbPct",      label: "MB %",                format: "percent" },
   { id: "precoMedio", label: "Preço Médio (R$/Kg)", format: "currency" },
 ];
+
+// Medidas que NÃO existem na base Budget (apenas KE30 tem custos detalhados).
+export const BUDGET_UNAVAILABLE_MEASURES: readonly string[] = [
+  "mb", "mbPct", "frete", "comissao",
+];
+
+export const BUDGET_UNAVAILABLE_HINT =
+  "Indisponível na fonte Budget — a base Budget não contém custos detalhados (Margem Bruta, Frete, Comissão).";
+
+export function isMeasureAvailable(
+  measureId: string,
+  dataSource: BlockDataSource | undefined,
+): boolean {
+  if (dataSource !== "budget") return true;
+  return !BUDGET_UNAVAILABLE_MEASURES.includes(measureId);
+}

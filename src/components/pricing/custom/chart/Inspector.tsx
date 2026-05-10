@@ -96,11 +96,19 @@ export function ColorField({ value, onChange }:
 
 export function SelectField<T extends string>({
   value, onChange, options,
-}: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[] }) {
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string; disabled?: boolean; title?: string }[];
+}) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value as T)}
       className="h-7 w-full rounded-md border border-input bg-background px-1.5 text-[11px]">
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      {options.map((o) => (
+        <option key={o.value} value={o.value} disabled={o.disabled} title={o.title}>
+          {o.label}{o.disabled ? " — indisponível" : ""}
+        </option>
+      ))}
     </select>
   );
 }

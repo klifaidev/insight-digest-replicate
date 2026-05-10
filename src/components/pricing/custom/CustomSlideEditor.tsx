@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import {
   CANVAS_W, CANVAS_H, FOOTER_H,
   newBlock, newChartBlock, BLOCK_LABELS, KPI_MEASURES,
+  BUDGET_UNAVAILABLE_MEASURES, BUDGET_UNAVAILABLE_HINT,
   type CustomBlock, type CustomBlockKind, type CustomChartType, type CustomSlideConfig,
   type KpiBlock, type ChartBlock, type TopSkuBlock,
 } from "@/lib/customSlide";
@@ -728,6 +729,16 @@ function FilteredInspector({
         (patch as Partial<TopSkuBlock>).measure = "rol";
       }
     }
+    if (block.kind === "table" && pendingSource === "budget") {
+      const tb = block as Extract<CustomBlock, { kind: "table" }>;
+      const filtered = tb.measures.filter((m) => !BUDGET_UNAVAILABLE_MEASURES.includes(m));
+      if (filtered.length !== tb.measures.length) {
+        (patch as Partial<typeof tb>).measures = filtered;
+        if (tb.sortMeasure && BUDGET_UNAVAILABLE_MEASURES.includes(tb.sortMeasure)) {
+          (patch as Partial<typeof tb>).sortMeasure = filtered[0] ?? undefined;
+        }
+      }
+    }
     onChange(patch);
     setPendingSource(null);
   };
@@ -875,11 +886,23 @@ function KpiInspector({ block, onChange }: {
               onValueChange={(v) => onChange({ measure: v as never } as never)}>
               <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {KPI_MEASURES.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
-                ))}
+                {KPI_MEASURES.map((m) => {
+                  const disabled = block.dataSource === "budget"
+                    && BUDGET_UNAVAILABLE_MEASURES.includes(m.id);
+                  return (
+                    <SelectItem key={m.id} value={m.id} disabled={disabled}
+                      title={disabled ? BUDGET_UNAVAILABLE_HINT : undefined}>
+                      {m.label}{disabled ? " — indisponível" : ""}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
+            {block.dataSource === "budget" && (
+              <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+                {BUDGET_UNAVAILABLE_HINT}
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -1072,19 +1095,31 @@ function TableBlockEditor({ block, onChange }: {
       <div>
         <Label className="text-[10px] uppercase text-muted-foreground">Medidas</Label>
         <div className="space-y-1">
-          {CUSTOM_TABLE_MEASURES.map((m) => (
-            <button key={m.id}
-              onClick={() => toggleMeasure(m.id)}
-              className={cn(
-                "flex w-full items-center justify-between rounded px-2 py-1 text-xs hover:bg-secondary",
-                block.measures.includes(m.id) && "bg-primary/10 text-primary",
-              )}
-            >
-              <span>{m.label}</span>
-              {block.measures.includes(m.id) && <span className="text-[9px]">✓</span>}
-            </button>
-          ))}
+          {CUSTOM_TABLE_MEASURES.map((m) => {
+            const disabled = block.dataSource === "budget"
+              && BUDGET_UNAVAILABLE_MEASURES.includes(m.id);
+            return (
+              <button key={m.id}
+                onClick={() => { if (!disabled) toggleMeasure(m.id); }}
+                disabled={disabled}
+                title={disabled ? BUDGET_UNAVAILABLE_HINT : undefined}
+                className={cn(
+                  "flex w-full items-center justify-between rounded px-2 py-1 text-xs hover:bg-secondary",
+                  block.measures.includes(m.id) && "bg-primary/10 text-primary",
+                  disabled && "cursor-not-allowed opacity-40 hover:bg-transparent",
+                )}
+              >
+                <span>{m.label}{disabled ? " — indisponível" : ""}</span>
+                {block.measures.includes(m.id) && !disabled && <span className="text-[9px]">✓</span>}
+              </button>
+            );
+          })}
         </div>
+        {block.dataSource === "budget" && (
+          <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+            {BUDGET_UNAVAILABLE_HINT}
+          </p>
+        )}
       </div>
 
       {block.measures.length > 0 && (
@@ -1166,9 +1201,23 @@ function TopSkuBlockEditor({ block, onChange }: {
             onValueChange={(v) => onChange({ measure: v as never } as never)}>
             <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {KPI_MEASURES.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+              {KPI_MEASURES.map((m) => {
+                const disabled = block.dataSource === "budget"
+                  && BUDGET_UNAVAILABLE_MEASURES.includes(m.id);
+                return (
+                  <SelectItem key={m.id} value={m.id} disabled={disabled}
+                    title={disabled ? BUDGET_UNAVAILABLE_HINT : undefined}>
+                    {m.label}{disabled ? " — indisponível" : ""}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
+          {block.dataSource === "budget" && (
+            <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+              {BUDGET_UNAVAILABLE_HINT}
+            </p>
+          )}
         </div>
       </div>
       <div>
