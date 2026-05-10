@@ -241,19 +241,31 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             <Save className="h-3.5 w-3.5" /> Salvar como modelo
           </Button>
           <Separator className="my-2" />
-          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Adicionar bloco
-          </div>
-          {BLOCK_KINDS.map(({ kind, icon: Icon }) => (
-            <button
-              key={kind}
-              onClick={() => addBlock(kind)}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-left hover:bg-secondary"
-            >
-              <Icon className="h-3.5 w-3.5 text-primary" />
-              {BLOCK_LABELS[kind]}
-            </button>
-          ))}
+
+          <PaletteGroup title="Gráficos" defaultOpen>
+            {CHART_PALETTE.map((it) => (
+              <PaletteButton
+                key={it.id}
+                icon={it.icon}
+                label={it.label}
+                onClick={() => it.kind === "chart" ? addChart(it.chartType) : addBlock(it.kind)}
+              />
+            ))}
+          </PaletteGroup>
+
+          <Separator className="my-2" />
+
+          <PaletteGroup title="Elementos" defaultOpen>
+            {ELEMENT_PALETTE.map((it) => (
+              <PaletteButton
+                key={it.id}
+                icon={it.icon}
+                label={it.label}
+                onClick={() => addBlock(it.kind)}
+              />
+            ))}
+          </PaletteGroup>
+
           <Separator className="my-2" />
           <div className="flex items-center justify-between px-2 text-[11px]">
             <span className="text-muted-foreground">Faixa Harald</span>
