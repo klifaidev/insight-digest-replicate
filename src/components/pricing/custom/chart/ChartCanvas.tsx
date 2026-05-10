@@ -344,8 +344,11 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const seriesEmpty = data.periodos.length === 0 || data.series.length === 0;
   const rankingEmpty = ranking.length === 0;
   const isRankingChart = rankingTypes.includes(block.chartType);
+  // Bridge PVM has its own data path (calcPVM) and own empty state.
+  const isPvmBridge = block.chartType === "waterfall"
+    && (style.waterfall.mode ?? "pvm") === "pvm";
 
-  if ((isRankingChart && rankingEmpty) || (!isRankingChart && seriesEmpty)) {
+  if (!isPvmBridge && ((isRankingChart && rankingEmpty) || (!isRankingChart && seriesEmpty))) {
     return (
       <Wrapper style={style}>
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
