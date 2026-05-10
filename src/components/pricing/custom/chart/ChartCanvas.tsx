@@ -21,6 +21,8 @@ import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking, formatValue, inferFormat } from "@/lib/customKpi";
 import { resolveChartFit } from "@/lib/customCapacity";
+import { useSlideFilters, dimensionLabel } from "../SlideFilterContext";
+import { monthLabel } from "@/lib/format";
 import {
   ensureChartStyle, colorForSeries, DEFAULT_PALETTE, type ChartStyle,
 } from "./types";
@@ -157,13 +159,91 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   const pricing = usePricing((s) => s.rows);
   const budget = useBudget((s) => s.rows);
-  const dsRows = useMemo(
+  const rawDsRows = useMemo(
     () => (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
     [block.dataSource, pricing, budget],
   );
   const xDim = block.fieldWells?.xDim ?? null;
   // C1 — colorDim overrides breakdown as series-key generator
   const seriesDim = block.fieldWells?.colorDim ?? block.breakdown;
+
+  // ---- Cross-filter (Part B.6) ----
+  const cf = useSlideFilters();
+  const participates = block.participatesInCrossFilter !== false;
+  const emits = block.emitsCrossFilter !== false;
+  // Block's own emitted filter (drives dimming, not row filtering on self)
+  const ownFilter = useMemo(
+    () => cf.filters.find((f) => f.sourceBlockId === block.id) ?? null,
+    [cf.filters, block.id],
+  );
+  // Incoming filters from other blocks; matched by dim against this block's xDim/colorDim/breakdown.
+  const myDims = useMemo(() => {
+    const set = new Set<string>();
+    if (xDim) set.add(xDim);
+    if (block.fieldWells?.colorDim) set.add(block.fieldWells.colorDim);
+    if (block.breakdown) set.add(block.breakdown);
+    return set;
+  }, [xDim, block.fieldWells?.colorDim, block.breakdown]);
+  const incoming = useMemo(() => {
+    if (!participates) return [];
+    return cf.filters.filter(
+      (f) => f.sourceBlockId !== block.id && (myDims.has(f.dimension) || f.dimension === "period")
+    );
+  }, [cf.filters, participates, block.id, myDims]);
+  // Apply incoming filters to dsRows
+  const dsRows = useMemo(() => {
+    if (incoming.length === 0) return rawDsRows;
+    return rawDsRows.filter((r) => {
+      for (const f of incoming) {
+        if (f.dimension === "period") {
+          const lbl = monthLabel((r as any).mes, (r as any).ano);
+          if (!f.values.includes(lbl) && !f.values.includes(String((r as any).periodo))) return false;
+        } else {
+          const v = String((r as unknown as Record<string, unknown>)[f.dimension] ?? "");
+          if (!f.values.includes(v)) return false;
+        }
+      }
+      return true;
+    });
+  }, [rawDsRows, incoming]);
+
+  // Determine the dimension this block emits
+  const emitDim: string = (xDim && xDim !== "period" ? xDim
+    : block.breakdown ?? "period");
+
+  // Click handler — emits/toggles a filter on this block's emit dimension
+  const handleEmit = (rawValue: unknown, opts?: { shift?: boolean }) => {
+    if (!emits) return;
+    const v = String(rawValue ?? "");
+    if (!v) return;
+    const filter = { sourceBlockId: block.id, dimension: emitDim, values: [v] };
+    if (opts?.shift) cf.toggleFilter(filter);
+    else {
+      // single click: if same single value already selected, clear; else replace
+      if (ownFilter && ownFilter.values.length === 1 && ownFilter.values[0] === v
+          && ownFilter.dimension === emitDim) {
+        cf.clearFilter(block.id);
+      } else {
+        cf.setFilter(filter);
+      }
+    }
+  };
+
+  // Helper for Recharts top-level onClick (point/bar payload)
+  const chartOnClick = (e: any) => {
+    if (!emits) return;
+    const label = e?.activeLabel ?? e?.activePayload?.[0]?.payload?.__period
+      ?? e?.activePayload?.[0]?.payload?.name;
+    if (label != null) handleEmit(label, { shift: !!e?.shiftKey });
+  };
+
+  // Should a value be dimmed (own filter active and value not selected)?
+  const isDimmed = (value: string) => {
+    if (!ownFilter) return false;
+    if (ownFilter.dimension !== emitDim) return false;
+    return !ownFilter.values.includes(value);
+  };
+
   const raw = useMemo(
     () => computeChartSeries(dsRows, block.filters, block.measure, seriesDim, xDim),
     [dsRows, block.filters, block.measure, seriesDim, xDim],
@@ -412,7 +492,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
     chart = (
-      <Comp data={chartRows}>
+      <Comp data={chartRows} onClick={chartOnClick}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
@@ -513,7 +593,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "bar" || ct === "column" || ct === "stackedColumn") {
     const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
-      <BarChart data={rows} layout="horizontal"
+      <BarChart data={rows} layout="horizontal" onClick={chartOnClick}
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
@@ -546,7 +626,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "hbar" || ct === "stackedBar") {
     const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
-      <BarChart data={rows} layout="vertical"
+      <BarChart data={rows} layout="vertical" onClick={chartOnClick}
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}
         <XAxis type="number" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }}
@@ -645,7 +725,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       );
     } : false;
     chart = (
-      <PieChart>
+      <PieChart onClick={chartOnClick}>
         <Tooltip content={(p: any) => (
           <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="pie" pieTotal={pieTotal} additionalRow={tooltipExtra ?? undefined} />
         )} />
@@ -658,11 +738,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           activeIndex={ranking.map((_, i) => i)}
           activeShape={renderPieShape as never}
           label={pieLabel as never}
+          onClick={(_d: any, idx: number, e: any) =>
+            handleEmit(ranking[idx]?.name, { shift: !!e?.shiftKey })}
         >
           {ranking.map((r, i) => {
             const sl = style.pie.slices[r.name];
             const color = sl?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
-            return <Cell key={r.name} fill={color} />;
+            const op = isDimmed(r.name) ? 0.4 : 1;
+            return <Cell key={r.name} fill={color} fillOpacity={op} />;
           })}
         </Pie>
       </PieChart>
@@ -704,7 +787,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const xFmt = style.measureX ? inferFormat(style.measureX) : measureFmt;
     const yFmt = style.measureY ? inferFormat(style.measureY) : measureFmt;
     chart = (
-      <ScatterChart>
+      <ScatterChart onClick={chartOnClick}>
         {renderGrid}
         <XAxis type="number" dataKey="x" name={xLabel}
           domain={xDomain}
@@ -771,7 +854,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       color: style.funnel.slices[r.name]?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length],
     }));
     chart = (
-      <FunnelSVG data={fdata} style={style} measureFmt={measureFmt} />
+      <FunnelSVG data={fdata} style={style} measureFmt={measureFmt}
+        onSliceClick={(name, e) => handleEmit(name, { shift: !!e.shiftKey })}
+        dimmedNames={ownFilter && ownFilter.dimension === emitDim
+          ? new Set(fdata.map(d => d.name).filter(n => !ownFilter.values.includes(n))) : null} />
     ) as React.ReactElement;
   } else if (ct === "treemap") {
     const total = ranking.reduce((s, r) => s + Math.abs(r.value), 0) || 1;
@@ -793,7 +879,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <Treemap data={tdata} isAnimationActive={false} dataKey="size" nameKey="name"
         stroke={style.treemap.borderColor}
         aspectRatio={4 / 3}
-        content={<TreemapTile cfg={style.treemap} dl={style.dataLabels} fmt={measureFmt} />} />
+        onClick={(node: any) => handleEmit(node?.name)}
+        content={<TreemapTile cfg={style.treemap} dl={style.dataLabels} fmt={measureFmt} dimmedNames={ownFilter && ownFilter.dimension === emitDim ? new Set(ranking.map(r => r.name).filter(n => !ownFilter.values.includes(n))) : null} />} />
     );
   } else if (ct === "radar") {
     const polarGrid = (
@@ -801,7 +888,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         gridType={style.radar.gridShape === "circle" ? "circle" : "polygon"} />
     );
     chart = (
-      <RadarChart data={rows} outerRadius="80%">
+      <RadarChart data={rows} outerRadius="80%" onClick={chartOnClick}>
         {polarGrid}
         <PolarAngleAxis dataKey="__period"
           tick={{ fontSize: style.radar.axisLabelSize, fill: style.radar.axisLabelColor }} />
@@ -917,6 +1004,31 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   return (
     <Wrapper style={style}>
+      {/* Cross-filter badges */}
+      <div style={{ position: "absolute", top: 4, left: 4, zIndex: 5,
+        display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
+        {incoming.map((f) => (
+          <span key={f.sourceBlockId + f.dimension} style={{
+            background: "#1E3A8A", color: "#fff", fontSize: 10,
+            padding: "2px 6px", borderRadius: 9999, fontWeight: 600,
+          }}>
+            {dimensionLabel(f.dimension)}: {f.values.join(", ")}
+          </span>
+        ))}
+        {!participates && (
+          <span style={{ background: "#475569", color: "#fff", fontSize: 9,
+            padding: "1px 5px", borderRadius: 4 }}>🔒 sem filtro</span>
+        )}
+      </div>
+      {ownFilter && (
+        <div style={{ position: "absolute", top: 4, right: 4, zIndex: 5,
+          background: "#C8102E", color: "#fff", fontSize: 10, padding: "2px 6px",
+          borderRadius: 9999, fontWeight: 600, pointerEvents: "auto", cursor: "pointer" }}
+          onClick={(e) => { e.stopPropagation(); cf.clearFilter(block.id); }}
+          title="Limpar filtro deste gráfico">
+          🔍 {ownFilter.values.join(", ")}
+        </div>
+      )}
       {style.general.titleShow && block.title && (
         <div style={{
           fontSize: style.general.titleSize, color: style.general.titleColor,
@@ -943,6 +1055,7 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
         ? `${style.general.borderWidth}px solid ${style.general.borderColor}` : undefined,
       padding: style.general.padding,
       fontFamily: "Calibri, sans-serif", overflow: "hidden",
+      position: "relative",
     }}>
       {children}
     </div>
@@ -950,7 +1063,7 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
 }
 
 // -- Treemap tile renderer (A.7 — honors dataLabels) ---------------------
-function TreemapTile({ cfg, dl, fmt, ...props }: any) {
+function TreemapTile({ cfg, dl, fmt, dimmedNames, ...props }: any) {
   const { x, y, width, height, name, value, fill } = props;
   if (width < 2 || height < 2) return null;
   const showCat = cfg.showCategoryLabel && width > 40 && height > 20;
@@ -965,8 +1078,9 @@ function TreemapTile({ cfg, dl, fmt, ...props }: any) {
   const fontStyle = dl?.italic ? "italic" : "normal";
   const fs = dl?.size ?? 11;
   const fc = dl?.color ?? "#FFFFFF";
+  const op = dimmedNames && dimmedNames.has(name) ? 0.4 : 1;
   return (
-    <g>
+    <g opacity={op}>
       <rect x={x} y={y} width={width} height={height}
         style={{ fill, stroke: cfg.borderColor, strokeWidth: cfg.borderWidth }} />
       {showCat && (

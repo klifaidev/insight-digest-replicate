@@ -182,8 +182,10 @@ export interface ChartBlock extends BaseBlock {
   };
   /** Sort control (Part B.5) */
   sortConfig?: { field: "period" | "value" | "name"; dir: "asc" | "desc" };
-  /** Cross-filter participation (Part B.6 placeholder) */
+  /** Cross-filter participation (Part B.6) — receives filters emitted by other blocks. Default true. */
   participatesInCrossFilter?: boolean;
+  /** Cross-filter emission (Part B.6) — emits filter when user clicks a data point. Default true. */
+  emitsCrossFilter?: boolean;
 }
 
 // ---------------------------------------------------------------------------

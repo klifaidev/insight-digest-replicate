@@ -332,11 +332,14 @@ export function resolveBridgeColumns(
 // ---- Custom Funnel SVG (proper trapezoids) ------------------------------
 export function FunnelSVG({
   data, style, measureFmt, width = 400, height = 300,
+  onSliceClick, dimmedNames,
 }: {
   data: { name: string; value: number; color: string }[];
   style: ChartStyle;
   measureFmt: ReturnType<typeof inferFormat>;
   width?: number; height?: number;
+  onSliceClick?: (name: string, e: React.MouseEvent) => void;
+  dimmedNames?: Set<string> | null;
 }) {
   if (data.length === 0) return null;
   const ordered = style.funnel.direction === "btt" ? [...data].reverse() : data;
@@ -379,7 +382,10 @@ export function FunnelSVG({
         const prev = i > 0 ? ordered[i - 1].value : null;
         const conv = prev && prev !== 0 ? `▼ ${((d.value / prev) * 100).toFixed(0)}%` : null;
         return (
-          <g key={`${d.name}-${i}`}>
+          <g key={`${d.name}-${i}`}
+            opacity={dimmedNames && dimmedNames.has(d.name) ? 0.4 : 1}
+            style={{ cursor: onSliceClick ? "pointer" : undefined }}
+            onClick={(e) => onSliceClick?.(d.name, e)}>
             <path d={path} fill={d.color} />
             <text x={lx} y={ly + dl.size / 3} fontSize={dl.size} fill={dl.color}
               fontWeight={dl.bold ? 700 : 400}

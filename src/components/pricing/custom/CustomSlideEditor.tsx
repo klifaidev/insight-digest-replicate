@@ -40,6 +40,7 @@ import {
   type KpiBlock, type ChartBlock, type TopSkuBlock,
 } from "@/lib/customSlide";
 import { BlockRenderer, CUSTOM_TABLE_MEASURES, CUSTOM_TABLE_DIMS } from "./BlockRenderer";
+import { SlideFilterProvider, useSlideFilters, dimensionLabel } from "./SlideFilterContext";
 import { useMonthsInfo, useFyList } from "@/store/selectors";
 import { cn } from "@/lib/utils";
 import haraldFooterPng from "@/assets/harald-footer-bar.png";
@@ -225,6 +226,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const refreshUserTpls = () => setUserTpls(loadUserTemplates());
 
   return (
+    <SlideFilterProvider slideKey={slideId}>
     <div className="grid h-full min-h-0 grid-cols-[180px_minmax(0,1fr)_300px] gap-3">
       {/* ====== Paleta ====== */}
       <ScrollArea className="rounded-lg border border-border/40 bg-card/40">
@@ -283,6 +285,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
 
       {/* ====== Canvas ====== */}
       <div className="flex min-h-0 min-w-0 flex-col gap-2">
+        <ClearFiltersToolbar />
         <div
           ref={wrapperRef}
           className="relative min-h-0 flex-1 overflow-auto rounded-lg border border-border/40 bg-secondary/20"
@@ -349,7 +352,10 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                       : "outline outline-1 outline-transparent hover:outline-primary/40",
                   )}
                 >
-                  <div data-block-id={blk.id} data-block-kind={blk.kind} style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
+                  <div data-block-id={blk.id} data-block-kind={blk.kind} style={{
+                    width: "100%", height: "100%",
+                    pointerEvents: blk.kind === "chart" ? "auto" : "none",
+                  }}>
                     <BlockRenderer block={blk} />
                   </div>
                   <DataSourceBadge block={blk} />
@@ -504,6 +510,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         </DialogContent>
       </Dialog>
     </div>
+    </SlideFilterProvider>
   );
 }
 
@@ -1351,6 +1358,28 @@ function DataSourceBadge({ block }: { block: CustomBlock }) {
       }}
     >
       {isKe30 ? "KE30" : "Budget"}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ClearFiltersToolbar — slide-level cross-filter clear button (Part B.6)
+// ---------------------------------------------------------------------------
+function ClearFiltersToolbar() {
+  const { filters, clearAll } = useSlideFilters();
+  if (filters.length === 0) return null;
+  const summary = filters
+    .map((f) => `${dimensionLabel(f.dimension)}: ${f.values.join(", ")}`)
+    .join(" · ");
+  return (
+    <div className="flex shrink-0 items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5">
+      <FunnelIcon className="h-3.5 w-3.5 text-primary" />
+      <span className="flex-1 truncate text-[11px] text-foreground/90" title={summary}>
+        Filtros cruzados ativos · {summary}
+      </span>
+      <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={clearAll}>
+        Limpar filtros ({filters.length})
+      </Button>
     </div>
   );
 }

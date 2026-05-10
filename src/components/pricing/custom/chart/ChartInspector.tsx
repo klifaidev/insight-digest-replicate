@@ -394,6 +394,17 @@ export function ChartInspector({
             ]} />
         </Row>
         <ResetButton onClick={() => resetPath("general")} />
+
+        {/* Cross-filter (Part B.6) */}
+        <div className="mt-2 border-t border-border/40 pt-2">
+          <Label className="text-[10px] uppercase text-muted-foreground">Filtro cruzado</Label>
+          <ToggleField label="Emitir filtro ao clicar"
+            value={block.emitsCrossFilter !== false}
+            onChange={(v) => onChange({ emitsCrossFilter: v })} />
+          <ToggleField label="Receber filtros de outros blocos"
+            value={block.participatesInCrossFilter !== false}
+            onChange={(v) => onChange({ participatesInCrossFilter: v })} />
+        </div>
       </Section>
 
       {/* ===== Grid ===== */}
