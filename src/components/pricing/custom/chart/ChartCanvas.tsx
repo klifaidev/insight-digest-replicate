@@ -1004,6 +1004,31 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   return (
     <Wrapper style={style}>
+      {/* Cross-filter badges */}
+      <div style={{ position: "absolute", top: 4, left: 4, zIndex: 5,
+        display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
+        {incoming.map((f) => (
+          <span key={f.sourceBlockId + f.dimension} style={{
+            background: "#1E3A8A", color: "#fff", fontSize: 10,
+            padding: "2px 6px", borderRadius: 9999, fontWeight: 600,
+          }}>
+            {dimensionLabel(f.dimension)}: {f.values.join(", ")}
+          </span>
+        ))}
+        {!participates && (
+          <span style={{ background: "#475569", color: "#fff", fontSize: 9,
+            padding: "1px 5px", borderRadius: 4 }}>🔒 sem filtro</span>
+        )}
+      </div>
+      {ownFilter && (
+        <div style={{ position: "absolute", top: 4, right: 4, zIndex: 5,
+          background: "#C8102E", color: "#fff", fontSize: 10, padding: "2px 6px",
+          borderRadius: 9999, fontWeight: 600, pointerEvents: "auto", cursor: "pointer" }}
+          onClick={(e) => { e.stopPropagation(); cf.clearFilter(block.id); }}
+          title="Limpar filtro deste gráfico">
+          🔍 {ownFilter.values.join(", ")}
+        </div>
+      )}
       {style.general.titleShow && block.title && (
         <div style={{
           fontSize: style.general.titleSize, color: style.general.titleColor,
@@ -1030,6 +1055,7 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
         ? `${style.general.borderWidth}px solid ${style.general.borderColor}` : undefined,
       padding: style.general.padding,
       fontFamily: "Calibri, sans-serif", overflow: "hidden",
+      position: "relative",
     }}>
       {children}
     </div>
