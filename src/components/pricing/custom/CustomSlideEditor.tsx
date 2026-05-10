@@ -309,11 +309,11 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             <span className="text-muted-foreground">Faixa Harald</span>
             <Switch
               checked={config.showHaraldFooter}
-              onCheckedChange={(v) => onChange({ ...config, showHaraldFooter: v })}
+              onCheckedChange={(v) => setShowHaraldFooterAction(v)}
             />
           </div>
           <p className="mt-2 px-2 text-[10px] leading-relaxed text-muted-foreground">
-            Atalhos: <kbd>Del</kbd> excluir · <kbd>⌘D</kbd> duplicar · <kbd>setas</kbd> mover (Shift = 10px)
+            Atalhos: <kbd>⌘Z</kbd> desfazer · <kbd>⌘⇧Z</kbd> refazer · <kbd>Del</kbd> excluir · <kbd>⌘D</kbd> duplicar · <kbd>⌘]</kbd>/<kbd>⌘[</kbd> ordem · <kbd>setas</kbd> mover (Shift = 10px)
           </p>
         </div>
       </ScrollArea>
