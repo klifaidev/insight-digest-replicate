@@ -620,6 +620,23 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                     <ContextMenuItem onSelect={() => toggleLock(blk.id)}>
                       {blk.locked ? "Desbloquear posição" : "Bloquear posição"}
                     </ContextMenuItem>
+                    {blk.kind === "chart" && (
+                      <>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => {
+                          if (copyChartStyleAction(blk.id)) toast.success("Estilo copiado");
+                        }}>
+                          Copiar estilo
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          disabled={!copiedStyle.hasCopy}
+                          onSelect={() => {
+                            if (pasteChartStyleAction(blk.id)) toast.success("Estilo colado");
+                          }}>
+                          Colar estilo
+                        </ContextMenuItem>
+                      </>
+                    )}
                     {selectedIds.length >= 2 && (
                       <>
                         <ContextMenuSeparator />
