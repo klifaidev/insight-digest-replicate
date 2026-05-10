@@ -210,12 +210,23 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const rankingTypes = ["pie", "donut", "bubble", "scatter", "funnel", "treemap"];
   const ranking = useMemo(() => {
     if (!rankingTypes.includes(block.chartType)) return [];
-    return computeTopRanking(
+    const base = computeTopRanking(
       dsRows, block.filters,
       block.breakdown ?? "marca",
       block.measure, 50, "all", null,
     );
-  }, [dsRows, block.filters, block.breakdown, block.measure, block.chartType]);
+    // FIX 2 — apply sortConfig to ranking (pie/donut/funnel/treemap/bubble/scatter)
+    const sc = block.sortConfig;
+    if (!sc) return base;
+    if (sc.field === "name") {
+      return [...base].sort((a, b) => sc.dir === "asc"
+        ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+    }
+    if (sc.field === "value") {
+      return sc.dir === "asc" ? [...base].reverse() : base;
+    }
+    return base;
+  }, [dsRows, block.filters, block.breakdown, block.measure, block.chartType, block.sortConfig]);
 
   // ---- empty states ----
   const seriesEmpty = data.periodos.length === 0 || data.series.length === 0;
