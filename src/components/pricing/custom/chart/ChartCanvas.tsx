@@ -202,6 +202,23 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     return { prev, yoy };
   }, [data]);
 
+  // C2 — tooltipMeasure: extra measure value per X label
+  const tooltipExtra = useMemo(() => {
+    const tm = block.fieldWells?.tooltipMeasure;
+    if (!tm) return null;
+    try {
+      const r = computeChartSeries(dsRows, block.filters, tm, null, xDim);
+      const map = new Map<string, number>();
+      r.periodos.forEach((p, i) => {
+        const total = r.series.reduce((s, ser) => s + (ser.values[i] ?? 0), 0);
+        map.set(p.label, total);
+      });
+      const label = KPI_MEASURES_LABEL[tm] ?? tm;
+      const fmt = inferFormat(tm);
+      return { map, label, fmt, measure: tm };
+    } catch { return null; }
+  }, [block.fieldWells?.tooltipMeasure, dsRows, block.filters, xDim]);
+
   // Combo: optional second measure for line series
   const lineSeriesData = useMemo(() => {
     if (block.chartType !== "combo" || !style.measureLine) return null;
