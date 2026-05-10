@@ -1189,9 +1189,23 @@ function TopSkuBlockEditor({ block, onChange }: {
             onValueChange={(v) => onChange({ measure: v as never } as never)}>
             <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {KPI_MEASURES.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+              {KPI_MEASURES.map((m) => {
+                const disabled = block.dataSource === "budget"
+                  && BUDGET_UNAVAILABLE_MEASURES.includes(m.id);
+                return (
+                  <SelectItem key={m.id} value={m.id} disabled={disabled}
+                    title={disabled ? BUDGET_UNAVAILABLE_HINT : undefined}>
+                    {m.label}{disabled ? " — indisponível" : ""}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
+          {block.dataSource === "budget" && (
+            <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+              {BUDGET_UNAVAILABLE_HINT}
+            </p>
+          )}
         </div>
       </div>
       <div>
