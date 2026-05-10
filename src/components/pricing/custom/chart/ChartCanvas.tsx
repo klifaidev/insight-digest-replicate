@@ -471,6 +471,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               yAxisId="left" />
           );
         })}
+        {/* FIX 3 — forecast confidence band (Area between [lo, up]) */}
+        {bandOn && trendOut && data.series.map((s) => (
+          <Area key={`band_${s.name}`} isAnimationActive={false}
+            dataKey={`__band_${s.name}`}
+            stroke="none" fill={trendCfg!.color} fillOpacity={0.2}
+            connectNulls yAxisId="left"
+            legendType="none" />
+        ))}
         {/* Combo: line series from second measure */}
         {ct === "combo" && lineSeriesData && lineSeriesData.series.map((s, i) => {
           const color = DEFAULT_PALETTE[(data.series.length + i) % DEFAULT_PALETTE.length];
