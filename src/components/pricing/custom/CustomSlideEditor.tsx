@@ -771,11 +771,18 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
       {/* ====== Inspector ====== */}
       <ScrollArea className="rounded-lg border border-border/40 bg-card/40">
         <div className="space-y-3 p-3">
-          {!selected ? (
+          {multiSelected.length >= 2 ? (
+            <MultiSelectInspector
+              selectedIds={selectedIds}
+              blocks={multiSelected}
+              hasGroup={multiSelected.some((b) => !!b.groupId)}
+            />
+          ) : !selected ? (
             <div className="space-y-2 px-1 text-[12px] text-muted-foreground">
               <p className="font-medium text-foreground">Slide personalizado</p>
               <p>Adicione blocos pela paleta à esquerda. Clique em um bloco para editar suas propriedades aqui.</p>
-              <p>Arraste pelas bordas para mover, use os cantos para redimensionar. Linhas vermelhas mostram alinhamento com outros blocos.</p>
+              <p>Arraste pelas bordas para mover, use os cantos para redimensionar. Linhas azuis mostram alinhamento com outros blocos.</p>
+              <p>Segure <kbd>Shift</kbd> e clique para selecionar vários blocos. Arraste no fundo para selecionar com retângulo.</p>
             </div>
           ) : (
             <>
