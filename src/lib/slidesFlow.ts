@@ -80,7 +80,7 @@ export interface SlideTypeMeta {
 export const SLIDE_CATALOG: SlideTypeMeta[] = [
   {
     kind: "bridge_pvm",
-    title: "Bridge PVM",
+    title: "Bridge",
     description: "Decomposição da variação de margem (Volume, Preço, Custo, Frete, Comissão, Outros) entre dois períodos.",
     icon: "GitBranch",
     accent: "blue",
@@ -132,7 +132,7 @@ export function defaultItem(kind: SlideKind): SlideItem {
   switch (kind) {
     case "bridge_pvm":
       return {
-        id, kind, label: "Bridge PVM",
+        id, kind, label: "Bridge",
         config: { mode: "month", base: null, comp: null, filters: {} },
       };
     case "budget_evo":
