@@ -953,58 +953,11 @@ function TableBlockEditor({ block, onChange }: {
 }
 
 // ---------------------------------------------------------------------------
+import { ChartInspector } from "./chart/ChartInspector";
 function ChartBlockEditor({ block, onChange }: {
   block: ChartBlock; onChange: (p: Partial<CustomBlock>) => void;
 }) {
-  return (
-    <div className="space-y-2">
-      <Field label="Título" value={block.title ?? ""}
-        onChange={(v) => onChange({ title: v } as never)} />
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label className="text-[10px] uppercase text-muted-foreground">Tipo</Label>
-          <Select value={block.chartType}
-            onValueChange={(v) => onChange({ chartType: v as never } as never)}>
-            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="line">Linha</SelectItem>
-              <SelectItem value="bar">Barra</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="text-[10px] uppercase text-muted-foreground">Medida</Label>
-          <Select value={block.measure}
-            onValueChange={(v) => onChange({ measure: v as never } as never)}>
-            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {KPI_MEASURES.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div>
-        <Label className="text-[10px] uppercase text-muted-foreground">Quebrar por</Label>
-        <Select value={block.breakdown ?? "__none__"}
-          onValueChange={(v) => onChange({ breakdown: v === "__none__" ? null : v } as never)}>
-          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">— Série única —</SelectItem>
-            <SelectItem value="marca">Marca</SelectItem>
-            <SelectItem value="canalAjustado">Canal Ajustado</SelectItem>
-            <SelectItem value="categoria">Categoria</SelectItem>
-            <SelectItem value="mercado">Mercado</SelectItem>
-            <SelectItem value="inovacao">Inovação/Regular</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1">
-        <ToggleRow label="Grade" value={block.showGrid} onChange={(v) => onChange({ showGrid: v } as never)} />
-        <ToggleRow label="Legenda" value={block.showLegend} onChange={(v) => onChange({ showLegend: v } as never)} />
-        <ToggleRow label="Rótulos" value={block.showLabels} onChange={(v) => onChange({ showLabels: v } as never)} />
-      </div>
-    </div>
-  );
+  return <ChartInspector block={block} onChange={onChange as never} />;
 }
 
 function TopSkuBlockEditor({ block, onChange }: {
