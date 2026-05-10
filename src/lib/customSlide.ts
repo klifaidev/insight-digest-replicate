@@ -170,6 +170,8 @@ export interface ChartBlock extends BaseBlock {
   exportNote?: boolean;
   /** Estilo PowerPoint-grade — opcional p/ retro-compatibilidade. */
   style?: Partial<ChartStyle>;
+  /** Fonte de dados — default "ke30". */
+  dataSource?: BlockDataSource;
 }
 
 // ---------------------------------------------------------------------------
