@@ -162,49 +162,69 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const selected = config.blocks.find((b) => b.id === selectedId) ?? null;
   const zTop = config.blocks.reduce((m, b) => Math.max(m, b.z), 0);
 
-  const update = (next: CustomBlock[]) => onChange({ ...config, blocks: next });
-  const updateBlock = (id: string, patch: Partial<CustomBlock>) =>
-    update(config.blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as CustomBlock) : b)));
+  // Bind the parent's config <-> internal Zustand+temporal store.
+  useEditorBinding(config, onChange, slideId);
+  const undoRedo = useUndoRedoState();
+
+  const updateBlock = (id: string, patch: Partial<CustomBlock>) => {
+    // Decide undo bucket based on which fields changed.
+    const keys = Object.keys(patch);
+    const isMove = keys.every((k) => k === "x" || k === "y");
+    const isResize = keys.some((k) => k === "w" || k === "h");
+    const isOrder = keys.length === 1 && keys[0] === "z";
+    const isLock = keys.length === 1 && keys[0] === "locked";
+    const label = isLock ? "Bloquear / Desbloquear"
+      : isOrder ? "Alterar ordem"
+      : isResize ? "Redimensionar bloco"
+      : isMove ? "Mover bloco"
+      : "Alterar dados";
+    patchBlockAction(id, patch, label);
+  };
   const addBlock = (kind: CustomBlockKind) => {
-    const blk = newBlock(kind, zTop);
-    update([...config.blocks, blk]);
-    setSelectedId(blk.id);
+    const id = addBlockAction(kind);
+    if (id) setSelectedId(id);
   };
   const addChart = (chartType: CustomChartType) => {
-    const blk = newChartBlock(chartType, zTop);
-    update([...config.blocks, blk]);
-    setSelectedId(blk.id);
+    const id = addChartBlockAction(chartType);
+    if (id) setSelectedId(id);
   };
   const removeBlock = (id: string) => {
-    update(config.blocks.filter((b) => b.id !== id));
-    setSelectedId(null);
+    deleteBlockAction(id);
+    setSelectedId((cur) => (cur === id ? null : cur));
   };
   const duplicateBlock = (id: string) => {
-    const orig = config.blocks.find((b) => b.id === id);
-    if (!orig) return;
-    const clone = { ...JSON.parse(JSON.stringify(orig)), id: crypto.randomUUID(),
-      x: orig.x + 20, y: orig.y + 20, z: zTop + 1 } as CustomBlock;
-    update([...config.blocks, clone]);
-    setSelectedId(clone.id);
+    const newId = duplicateBlockAction(id);
+    if (newId) setSelectedId(newId);
   };
-  const bringForward = (id: string) =>
-    updateBlock(id, { z: zTop + 1 } as Partial<CustomBlock>);
-  const sendBack = (id: string) => {
-    const minZ = config.blocks.reduce((m, b) => Math.min(m, b.z), 0);
-    updateBlock(id, { z: minZ - 1 } as Partial<CustomBlock>);
-  };
+  const bringForward = (id: string) => bringForwardAction(id);
+  const sendBack = (id: string) => sendBackAction(id);
+  const bringToFront = (id: string) => bringToFrontAction(id);
+  const sendToBack = (id: string) => sendToBackAction(id);
+  const toggleLock = (id: string) => toggleLockAction(id);
 
   // Atalhos de teclado
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const inField = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+
+      // Undo / redo work even without a selection and outside text fields only.
+      if (!inField && (e.metaKey || e.ctrlKey)) {
+        const k = e.key.toLowerCase();
+        if (k === "z" && !e.shiftKey) { e.preventDefault(); undoAction(); return; }
+        if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); redoAction(); return; }
+      }
+      if (inField) return;
       if (!selectedId) return;
       const cur = config.blocks.find((b) => b.id === selectedId);
       if (!cur) return;
+      const isLocked = !!cur.locked;
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeBlock(selectedId); return; }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") { e.preventDefault(); duplicateBlock(selectedId); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key === "]") { e.preventDefault(); bringForward(selectedId); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key === "[") { e.preventDefault(); sendBack(selectedId); return; }
       if (e.key === "Escape") { setSelectedId(null); return; }
+      if (isLocked) return; // Locked blocks ignore arrow-key nudges.
       const step = e.shiftKey ? 10 : 1;
       if (e.key === "ArrowUp")    { e.preventDefault(); updateBlock(selectedId, { y: Math.max(0, cur.y - step) }); }
       if (e.key === "ArrowDown")  { e.preventDefault(); updateBlock(selectedId, { y: Math.min(CANVAS_H - cur.h, cur.y + step) }); }
