@@ -1146,21 +1146,53 @@ function mixHex(a: string, b: string, t: number): string {
 // -- Waterfall (custom Recharts composition) -------------------------------
 // FIX 1+2 — supports both legacy per-period mode AND smart column-builder mode.
 function WaterfallChart({
-  block, style, series,
+  block, style, series, dsRows: dsRowsProp,
 }: {
   block: ChartBlock;
   style: ChartStyle;
   rows: Record<string, number | string>[];
   series: { name: string; values: number[] }[];
+  dsRows?: PricingRow[];
 }) {
   const measureFmt = inferFormat(block.measure);
   const pricing = usePricing((s) => s.rows);
+  const metric = usePricing((s) => s.metric);
   const budget = useBudget((s) => s.rows);
-  const dsRows = block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing;
+  const dsRows = dsRowsProp
+    ?? (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing);
 
-  // Smart column mode
+  const wfMode = style.waterfall.mode ?? "pvm";
+  const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const };
+
+  // PVM mode — decomposição igual à aba Bridge
+  const pvmItems = useMemo(() => {
+    if (wfMode !== "pvm") return null;
+    if (!pvmCfg.base || !pvmCfg.comp || pvmCfg.base === pvmCfg.comp) return [];
+    const filtered = applyFilters(dsRows, block.filters, null);
+    const labels = pvmCfg.periodMode === "month" ? {
+      base: (() => { const r = filtered.find((x) => x.periodo === pvmCfg.base); return r ? monthLabel(r.mes, r.ano) : pvmCfg.base!; })(),
+      comp: (() => { const r = filtered.find((x) => x.periodo === pvmCfg.comp); return r ? monthLabel(r.mes, r.ano) : pvmCfg.comp!; })(),
+    } : undefined;
+    try {
+      const r = calcPVM(filtered, metric, pvmCfg.base, pvmCfg.comp, pvmCfg.periodMode, labels);
+      const t = (v: number): "positive" | "negative" => v >= 0 ? "positive" : "negative";
+      return [
+        { label: r.baseLabel,    value: r.base,       type: "start" as const },
+        { label: "Volume",       value: r.volume,     type: t(r.volume) },
+        { label: "Preço",        value: r.price,      type: t(r.price) },
+        { label: "Custo",        value: r.cost,       type: t(r.cost) },
+        { label: "Frete",        value: r.freight,    type: t(r.freight) },
+        { label: "Comissão",     value: r.commission, type: t(r.commission) },
+        { label: "Outros",       value: r.others,     type: t(r.others) },
+        { label: r.currentLabel, value: r.current,    type: "total" as const },
+      ];
+    } catch { return []; }
+  }, [wfMode, pvmCfg.base, pvmCfg.comp, pvmCfg.periodMode, dsRows, block.filters, metric]);
+
+  // Smart column / fallback (modo manual)
   const cols = style.waterfall.columns;
   const items = useMemo(() => {
+    if (wfMode === "pvm") return pvmItems ?? [];
     if (cols && cols.length > 0) {
       const resolved = resolveBridgeColumns(cols, dsRows, block.filters, block.measure);
       return resolved.map((r) => ({ label: r.label, value: r.value, type: r.type }));
@@ -1173,7 +1205,20 @@ function WaterfallChart({
       type: (style.waterfall.classify[`P${i + 1}`] ?? (v >= 0 ? "positive" : "negative")) as
         "start" | "positive" | "negative" | "total" | "subtotal",
     }));
-  }, [cols, dsRows, block.filters, block.measure, series, style.waterfall.classify]);
+  }, [wfMode, pvmItems, cols, dsRows, block.filters, block.measure, series, style.waterfall.classify]);
+
+  // Empty state for PVM when base/comp not set
+  if (wfMode === "pvm" && (!pvmCfg.base || !pvmCfg.comp || pvmCfg.base === pvmCfg.comp)) {
+    return (
+      <div style={{
+        width: "100%", height: "100%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: "#64748B", fontFamily: "Calibri", fontSize: 13, textAlign: "center", padding: 12,
+      }}>
+        Configure <b style={{ margin: "0 4px" }}>base</b> e <b style={{ margin: "0 4px" }}>comparação</b> da Bridge no inspetor.
+      </div>
+    );
+  }
 
   const wfRows = useMemo(() => {
     let acc = 0;
