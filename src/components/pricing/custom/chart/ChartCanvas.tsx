@@ -11,6 +11,8 @@ import {
 } from "recharts";
 import type { ChartBlock } from "@/lib/customSlide";
 import { usePricing } from "@/store/pricing";
+import { useBudget } from "@/store/budget";
+import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking, formatValue, inferFormat } from "@/lib/customKpi";
 import { resolveChartFit } from "@/lib/customCapacity";
 import {
