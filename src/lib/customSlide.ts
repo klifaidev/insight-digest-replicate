@@ -115,6 +115,8 @@ export interface BridgeBlock extends BaseBlock {
 export interface TableBlock extends BaseBlock {
   kind: "table";
   source: "ke30";
+  /** Fonte de dados — default "ke30". */
+  dataSource?: BlockDataSource;
   measures: string[];
   rowDims: string[];
   colDim: string | null;
