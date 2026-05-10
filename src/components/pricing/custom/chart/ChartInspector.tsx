@@ -669,7 +669,7 @@ export function ChartInspector({
             <NumberStepper value={style.waterfall.gapPct} min={0} max={80}
               onChange={(v) => updPath("waterfall", { gapPct: v })} suffix="%" />
           </Row>
-          {detectedCategories.length > 0 && (
+          {(style.waterfall.mode ?? "pvm") === "manual" && detectedCategories.length > 0 && (
             <div className="space-y-1">
               <div className="text-[10px] font-semibold uppercase text-muted-foreground">Classificação</div>
               {detectedCategories.map((label, i) => {
