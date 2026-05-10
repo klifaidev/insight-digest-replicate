@@ -598,7 +598,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         {ct === "bubble" && (
           <ZAxis type="number" dataKey="z" range={[style.bubble.minSize, style.bubble.maxSize]} />
         )}
-        <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+        <Tooltip cursor={{ strokeDasharray: "3 3" }}
+          content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant={ct === "bubble" ? "bubble" : "scatter"} />} />
         {renderLegend}
         <Scatter data={points} isAnimationActive={false} fill={DEFAULT_PALETTE[0]}
           fillOpacity={style.bubble.fillOpacity}
@@ -876,7 +877,7 @@ function WaterfallChart({
       <YAxis tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
         domain={[style.yAxis.min ?? "auto", style.yAxis.max ?? "auto"]}
         tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} />} />
+      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="waterfall" />} />
       {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => (
         <ReferenceLine key={`c-${i}`} segment={[
           { x: r.label, y: r.end }, { x: wfRows[i + 1].label, y: r.end },
