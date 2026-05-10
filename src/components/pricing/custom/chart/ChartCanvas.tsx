@@ -303,6 +303,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // ---- renderers per chart type ----
   let chart: React.ReactNode = null;
   const forceStack = ct === "stackedColumn" || ct === "stackedBar" || ct === "stackedArea";
+  const cats = data.periodos.map((p) => p.label);
+  const stack100Fmt = (v: number) => `${(v as number).toFixed(0)}%`;
 
   if (ct === "line" || ct === "area" || ct === "stackedArea" || ct === "combo") {
     const Comp = (ct === "area" || ct === "stackedArea") ? AreaChart
@@ -329,8 +331,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 yAxisId="left">
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("area", dlPos) as never}
-                    style={labelStyle}
-                    formatter={(v: number) => fmtVal(v, style, measureFmt)} />
+                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
                 )}
               </Area>
             );
@@ -343,8 +344,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 yAxisId={cfg?.secondaryAxis ? "right" : "left"}>
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
-                    style={labelStyle}
-                    formatter={(v: number) => fmtVal(v, style, measureFmt)} />
+                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
                 )}
               </Bar>
             );
@@ -362,8 +362,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               } : false}>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("line", dlPos) as never}
-                  style={labelStyle}
-                  formatter={(v: number) => fmtVal(v, style, measureFmt)} />
+                  content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
               )}
             </Line>
           );
@@ -398,8 +397,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
-                  style={labelStyle}
-                  formatter={(v: number) => isStack100 ? `${(v as number).toFixed(0)}%` : fmtVal(v, style, measureFmt)} />
+                  content={makeLabelContent({
+                    style, measureFmt, seriesName: s.name, categories: cats,
+                    customFmt: isStack100 ? stack100Fmt : undefined,
+                  }) as never} />
               )}
             </Bar>
           );
@@ -413,10 +414,16 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}
         <XAxis type="number" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }}
+          stroke={xAx.lineColor} strokeWidth={xAx.lineWidth}
           domain={xDomain}
-          tickFormatter={isStack100 ? (v: number) => `${v.toFixed(0)}%` : axisFmt(xAx, measureFmt)} />
+          tickFormatter={isStack100 ? stack100Fmt : axisFmt(xAx, measureFmt)}
+          label={xAx.titleText ? { value: xAx.titleText, position: "insideBottom", offset: -5,
+            style: { fontSize: xAx.titleSize, fill: xAx.titleColor } } : undefined} />
         <YAxis type="category" dataKey="__period"
-          tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
+          tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }}
+          stroke={yAx.lineColor} strokeWidth={yAx.lineWidth}
+          label={yAx.titleText ? { value: yAx.titleText, angle: -90, position: "insideLeft",
+            style: { fontSize: yAx.titleSize, fill: yAx.titleColor } } : undefined} />
         <Tooltip />
         {renderLegend}
         {data.series.map((s, i) => {
@@ -428,8 +435,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stroke={style.bar.borderColor} strokeWidth={style.bar.borderWidth}>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("bar-horizontal", dlPos) as never}
-                  style={labelStyle}
-                  formatter={(v: number) => isStack100 ? `${(v as number).toFixed(0)}%` : fmtVal(v, style, measureFmt)} />
+                  content={makeLabelContent({
+                    style, measureFmt, seriesName: s.name, categories: cats,
+                    customFmt: isStack100 ? stack100Fmt : undefined, anchor: "start",
+                  }) as never} />
               )}
             </Bar>
           );
