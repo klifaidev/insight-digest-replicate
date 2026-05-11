@@ -368,8 +368,40 @@ export function ChartInspector({
         )}
       </Section>
 
+      {/* ===== Interatividade — moved out of "Geral" ===== */}
+      <Section title="Interatividade">
+        <ToggleField label="Emitir filtro ao clicar"
+          value={block.emitsCrossFilter !== false}
+          onChange={(v) => onChange({ emitsCrossFilter: v })} />
+        <ToggleField label="Receber filtros de outros blocos"
+          value={block.participatesInCrossFilter !== false}
+          onChange={(v) => onChange({ participatesInCrossFilter: v })} />
+      </Section>
+        </TabsContent>
+
+        {/* ============================ VISUAL TAB ============================ */}
+        <TabsContent value="visual" className="mt-3 space-y-3">
+      {/* Quick style presets */}
+      <div className="rounded-lg border border-border/50 bg-card/40 p-3">
+        <div className="mb-2 text-[12px] font-medium text-foreground/85">Estilos rápidos</div>
+        <div className="grid grid-cols-5 gap-1.5">
+          {STYLE_PRESETS.map((p) => (
+            <button key={p.id} type="button"
+              onClick={() => updStyle(buildStylePresetPatch(p.id as StylePresetId, style))}
+              className="flex flex-col items-center gap-1 rounded-md border border-border/40 p-1.5 text-[10px] text-muted-foreground transition-colors hover:border-primary/50 hover:bg-secondary hover:text-foreground">
+              <PresetThumbnail id={p.id as StylePresetId} />
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ===== General ===== */}
       <Section title="Geral">
+        <div>
+          <Label className="text-[12px] font-normal text-muted-foreground">Título</Label>
+          <Input className="mt-1 h-8 text-[13px]" value={block.title ?? ""}
+            onChange={(e) => onChange({ title: e.target.value })} />
         <div>
           <Label className="text-[10px] uppercase text-muted-foreground">Título</Label>
           <Input className="h-7 text-xs" value={block.title ?? ""}
