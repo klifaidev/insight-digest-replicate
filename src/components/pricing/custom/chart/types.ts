@@ -157,6 +157,10 @@ export interface WaterfallStyleCfg {
     base: string | null;
     comp: string | null;
     periodMode: "fy" | "month";
+    /** "effects" = Volume/Preço/Custo/...; ou nome de uma dimensão (marca, categoria, etc.) */
+    decomposition?: string;
+    /** Top N itens quando decomposition é uma dimensão (resto vira "Outros"). */
+    topN?: number;
   };
 }
 
@@ -337,7 +341,7 @@ export function defaultChartStyle(): ChartStyle {
       connectors: true, connectorColor: "#94A3B8", connectorStyle: "dashed",
       showRunningTotal: false, labelPos: "above", gapPct: 30, classify: {},
       mode: "pvm",
-      pvm: { base: null, comp: null, periodMode: "month" },
+      pvm: { base: null, comp: null, periodMode: "month", decomposition: "effects", topN: 6 },
     },
     funnel: { direction: "ttb", gapPct: 4, labelMode: "name-percent", labelPos: "right", slices: {} },
     treemap: {

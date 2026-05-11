@@ -1164,20 +1164,79 @@ function WaterfallChart({
     ?? (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing);
 
   const wfMode = style.waterfall.mode ?? "pvm";
-  const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const };
+  const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, decomposition: "effects", topN: 6 };
+  const decomposition = pvmCfg.decomposition ?? "effects";
+  const topN = pvmCfg.topN ?? 6;
 
-  // PVM mode — decomposição igual à aba Bridge
+  // PVM mode — decomposição igual à aba Bridge (com auto-default de base/comp)
   const pvmItems = useMemo(() => {
     if (wfMode !== "pvm") return null;
-    if (!pvmCfg.base || !pvmCfg.comp || pvmCfg.base === pvmCfg.comp) return [];
     const filtered = applyFilters(dsRows, block.filters, null);
+    if (filtered.length === 0) return [];
+
+    // Auto-default base/comp: primeiro e último período disponíveis no recorte atual
+    let baseKey = pvmCfg.base;
+    let compKey = pvmCfg.comp;
+    if (!baseKey || !compKey || baseKey === compKey) {
+      if (pvmCfg.periodMode === "fy") {
+        const fys = Array.from(new Set(filtered.map((r) => r.fy))).sort();
+        if (fys.length < 2) return [];
+        baseKey = fys[0];
+        compKey = fys[fys.length - 1];
+      } else {
+        const periods = Array.from(
+          new Map(filtered.map((r) => [r.periodo, { mes: r.mes, ano: r.ano }])).entries(),
+        ).sort((a, b) => a[1].ano - b[1].ano || a[1].mes - b[1].mes);
+        if (periods.length < 2) return [];
+        baseKey = periods[0][0];
+        compKey = periods[periods.length - 1][0];
+      }
+    }
+
     const labels = pvmCfg.periodMode === "month" ? {
-      base: (() => { const r = filtered.find((x) => x.periodo === pvmCfg.base); return r ? monthLabel(r.mes, r.ano) : pvmCfg.base!; })(),
-      comp: (() => { const r = filtered.find((x) => x.periodo === pvmCfg.comp); return r ? monthLabel(r.mes, r.ano) : pvmCfg.comp!; })(),
+      base: (() => { const r = filtered.find((x) => x.periodo === baseKey); return r ? monthLabel(r.mes, r.ano) : baseKey!; })(),
+      comp: (() => { const r = filtered.find((x) => x.periodo === compKey); return r ? monthLabel(r.mes, r.ano) : compKey!; })(),
     } : undefined;
+
     try {
-      const r = calcPVM(filtered, metric, pvmCfg.base, pvmCfg.comp, pvmCfg.periodMode, labels);
+      const r = calcPVM(filtered, metric, baseKey!, compKey!, pvmCfg.periodMode, labels);
       const t = (v: number): "positive" | "negative" => v >= 0 ? "positive" : "negative";
+
+      // ---- Decomposição por dimensão (Marca, Categoria, etc.) ----
+      if (decomposition && decomposition !== "effects") {
+        const keyOf = (row: PricingRow) => (pvmCfg.periodMode === "fy" ? row.fy : row.periodo);
+        const margemOf = (row: PricingRow) =>
+          metric === "cm" ? row.contribMarginal : row.margemBruta;
+        const baseAgg = new Map<string, number>();
+        const compAgg = new Map<string, number>();
+        for (const row of filtered) {
+          const dimVal = String((row as unknown as Record<string, unknown>)[decomposition] ?? "—") || "—";
+          const k = keyOf(row);
+          if (k === baseKey) baseAgg.set(dimVal, (baseAgg.get(dimVal) ?? 0) + margemOf(row));
+          else if (k === compKey) compAgg.set(dimVal, (compAgg.get(dimVal) ?? 0) + margemOf(row));
+        }
+        const allDims = new Set([...baseAgg.keys(), ...compAgg.keys()]);
+        const deltas = Array.from(allDims).map((d) => ({
+          name: d,
+          delta: (compAgg.get(d) ?? 0) - (baseAgg.get(d) ?? 0),
+        })).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
+        const top = deltas.slice(0, topN);
+        const rest = deltas.slice(topN);
+        const restSum = rest.reduce((s, x) => s + x.delta, 0);
+
+        const items: { label: string; value: number; type: "start" | "positive" | "negative" | "total" }[] = [
+          { label: r.baseLabel, value: r.base, type: "start" },
+          ...top.map((x) => ({ label: x.name, value: x.delta, type: t(x.delta) })),
+        ];
+        if (rest.length > 0) {
+          items.push({ label: `Outros (${rest.length})`, value: restSum, type: t(restSum) });
+        }
+        items.push({ label: r.currentLabel, value: r.current, type: "total" });
+        return items;
+      }
+
+      // ---- Decomposição padrão por efeitos PVM ----
       return [
         { label: r.baseLabel,    value: r.base,       type: "start" as const },
         { label: "Volume",       value: r.volume,     type: t(r.volume) },
@@ -1189,7 +1248,7 @@ function WaterfallChart({
         { label: r.currentLabel, value: r.current,    type: "total" as const },
       ];
     } catch { return []; }
-  }, [wfMode, pvmCfg.base, pvmCfg.comp, pvmCfg.periodMode, dsRows, block.filters, metric]);
+  }, [wfMode, pvmCfg.base, pvmCfg.comp, pvmCfg.periodMode, decomposition, topN, dsRows, block.filters, metric]);
 
   // Smart column / fallback (modo manual)
   const cols = style.waterfall.columns;
@@ -1243,16 +1302,13 @@ function WaterfallChart({
   const labelPos = style.waterfall.labelPos === "inside" ? "center"
     : style.waterfall.labelPos === "below" ? "bottom" : "top";
 
-  // Empty state for PVM when base/comp not set (after all hooks)
-  if (wfMode === "pvm" && (!pvmCfg.base || !pvmCfg.comp || pvmCfg.base === pvmCfg.comp)) {
+  // Empty state for PVM when there isn't enough data (e.g. only one period in the slice)
+  if (wfMode === "pvm" && wfRows.length === 0) {
     return (
-      <div style={{
-        width: "100%", height: "100%",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: "#64748B", fontFamily: "Calibri", fontSize: 13, textAlign: "center", padding: 12,
-      }}>
-        Configure <b style={{ margin: "0 4px" }}>base</b> e <b style={{ margin: "0 4px" }}>comparação</b> da Bridge no inspetor.
-      </div>
+      <BarChart data={[{ label: "Sem dados suficientes para a Bridge", base: 0, delta: 0, end: 0, signed: 0, type: "start" as const }]}>
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} />
+        <YAxis hide domain={[0, 1]} />
+      </BarChart>
     );
   }
 
