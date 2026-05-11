@@ -1,7 +1,7 @@
 // ChartCanvas — single Recharts-based renderer for every ChartBlock variant.
 // Reads the unified ChartStyle so the inspector can drive every visual knob.
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer, ComposedChart, LineChart, BarChart, AreaChart,
   PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, Sector,
@@ -1312,69 +1312,106 @@ function WaterfallChart({
   const labelPos = style.waterfall.labelPos === "inside" ? "center"
     : style.waterfall.labelPos === "below" ? "bottom" : "top";
 
-  // Empty state for PVM when there isn't enough data (e.g. only one period in the slice)
-  if (wfMode === "pvm" && wfRows.length === 0) {
-    return (
-      <svg width="100%" height="100%" viewBox="0 0 1000 320" preserveAspectRatio="xMidYMid meet">
-        <line x1="35" y1="210" x2="965" y2="210" stroke={style.grid.color} strokeWidth="1" />
-        <text x="500" y="226" textAnchor="middle" fontSize="12" fill={style.xAxis.labelColor}>
-          Sem dados suficientes para a Bridge
-        </text>
-      </svg>
-    );
-  }
-
-  // Compute Y domain explicitly so empty/edge cases don't render blank
-  const allEnds = wfRows.flatMap((r) => [r.base, r.base + r.delta, r.end]);
-  const yMin = style.yAxis.min ?? Math.min(0, ...allEnds);
-  const yMax = style.yAxis.max ?? Math.max(0, ...allEnds);
-
-  const W = 1000, H = 320;
-  const m = { top: 34, right: 24, bottom: 62, left: style.yAxis.show ? 76 : 24 };
-  const plotW = W - m.left - m.right;
-  const plotH = H - m.top - m.bottom;
-  const range = yMax - yMin || 1;
-  const yOf = (v: number) => m.top + (1 - (v - yMin) / range) * plotH;
-  const slot = plotW / Math.max(1, wfRows.length);
-  const barW = Math.max(12, Math.min(74, slot * (1 - style.waterfall.gapPct / 120)));
-  const zeroY = yOf(0);
-  const valFmt = (v: number) => formatValue(v, style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals);
-
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
-      {style.grid.show && [0, 0.25, 0.5, 0.75, 1].map((t) => {
-        const y = m.top + t * plotH;
-        return <line key={t} x1={m.left} y1={y} x2={W - m.right} y2={y} stroke={style.grid.color} strokeDasharray={style.grid.style === "dashed" ? "5 5" : undefined} />;
-      })}
-      {style.xAxis.show && <line x1={m.left} y1={zeroY} x2={W - m.right} y2={zeroY} stroke={style.xAxis.lineColor} strokeWidth={style.xAxis.lineWidth} />}
-      {style.yAxis.show && <line x1={m.left} y1={m.top} x2={m.left} y2={m.top + plotH} stroke={style.yAxis.lineColor} strokeWidth={style.yAxis.lineWidth} />}
-      {style.yAxis.show && [yMin, (yMin + yMax) / 2, yMax].map((v) => (
-        <text key={v} x={m.left - 8} y={yOf(v) + 4} textAnchor="end" fontSize={style.yAxis.labelSize} fill={style.yAxis.labelColor}>{formatValue(v, measureFmt, "rol")}</text>
-      ))}
-      {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => {
-        const x1 = m.left + slot * i + slot / 2 + barW / 2;
-        const x2 = m.left + slot * (i + 1) + slot / 2 - barW / 2;
-        return <line key={`c-${i}`} x1={x1} y1={yOf(r.end)} x2={x2} y2={yOf(r.end)} stroke={style.waterfall.connectorColor} strokeDasharray={dashArr(style.waterfall.connectorStyle)} />;
-      })}
-      {wfRows.map((r, i) => {
-        const cx = m.left + slot * i + slot / 2;
-        const x = cx - barW / 2;
-        const y0 = yOf(r.base);
-        const y1 = yOf(r.base + r.delta);
-        const y = Math.min(y0, y1);
-        const h = Math.max(2, Math.abs(y1 - y0));
-        const fill = evalCondColor(r.signed, style.conditionalRules, colorOf(r.type));
-        const labelY = labelPos === "center" ? y + h / 2 : labelPos === "bottom" ? Math.max(y0, y1) + 14 : y - 6;
+    <FluidSvg>
+      {(W, H) => {
+        if (wfMode === "pvm" && wfRows.length === 0) {
+          return (
+            <svg width={W} height={H}>
+              <line x1="35" y1={H / 2} x2={W - 35} y2={H / 2} stroke={style.grid.color} strokeWidth="1" />
+              <text x={W / 2} y={H / 2 + 16} textAnchor="middle" fontSize="12" fill={style.xAxis.labelColor}>
+                Sem dados suficientes para a Bridge
+              </text>
+            </svg>
+          );
+        }
+
+        const allEnds = wfRows.flatMap((r) => [r.base, r.base + r.delta, r.end]);
+        const yMin = style.yAxis.min ?? Math.min(0, ...allEnds);
+        const yMax = style.yAxis.max ?? Math.max(0, ...allEnds);
+
+        // Fluid margins — scale modestly with size so labels never get cropped
+        const labelFs = Math.max(9, Math.min(14, Math.round(Math.min(W, H) / 28)));
+        const dlFs = Math.max(9, Math.min(style.dataLabels.size, Math.round(H / 22)));
+        const m = {
+          top: Math.max(20, H * 0.08),
+          right: Math.max(16, W * 0.025),
+          bottom: Math.max(40, H * 0.16),
+          left: style.yAxis.show ? Math.max(56, W * 0.07) : Math.max(16, W * 0.025),
+        };
+        const plotW = Math.max(10, W - m.left - m.right);
+        const plotH = Math.max(10, H - m.top - m.bottom);
+        const range = yMax - yMin || 1;
+        const yOf = (v: number) => m.top + (1 - (v - yMin) / range) * plotH;
+        const slot = plotW / Math.max(1, wfRows.length);
+        const barW = Math.max(6, Math.min(slot * 0.9, slot * (1 - style.waterfall.gapPct / 120)));
+        const zeroY = yOf(0);
+        const valFmt = (v: number) => formatValue(v, style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals);
+        const truncLabel = (lbl: string) => {
+          const maxChars = Math.max(4, Math.floor(slot / (labelFs * 0.6)));
+          return lbl.length > maxChars ? `${lbl.slice(0, Math.max(1, maxChars - 1))}…` : lbl;
+        };
+
         return (
-          <g key={r.label}>
-            <rect x={x} y={y} width={barW} height={h} fill={fill} rx="2" />
-            {style.dataLabels.show && <text x={cx} y={labelY} textAnchor="middle" fontSize={style.dataLabels.size} fill={style.dataLabels.color} fontWeight={style.dataLabels.bold ? 700 : 400}>{valFmt(r.end)}</text>}
-            <text x={cx} y={H - 32} textAnchor="middle" fontSize={style.xAxis.labelSize} fill={style.xAxis.labelColor}>{r.label.length > 16 ? `${r.label.slice(0, 15)}…` : r.label}</text>
-          </g>
+          <svg width={W} height={H}>
+            {style.grid.show && [0, 0.25, 0.5, 0.75, 1].map((t) => {
+              const y = m.top + t * plotH;
+              return <line key={t} x1={m.left} y1={y} x2={W - m.right} y2={y} stroke={style.grid.color} strokeDasharray={style.grid.style === "dashed" ? "5 5" : undefined} />;
+            })}
+            {style.xAxis.show && <line x1={m.left} y1={zeroY} x2={W - m.right} y2={zeroY} stroke={style.xAxis.lineColor} strokeWidth={style.xAxis.lineWidth} />}
+            {style.yAxis.show && <line x1={m.left} y1={m.top} x2={m.left} y2={m.top + plotH} stroke={style.yAxis.lineColor} strokeWidth={style.yAxis.lineWidth} />}
+            {style.yAxis.show && [yMin, (yMin + yMax) / 2, yMax].map((v) => (
+              <text key={v} x={m.left - 8} y={yOf(v) + 4} textAnchor="end" fontSize={Math.max(9, Math.min(style.yAxis.labelSize, labelFs))} fill={style.yAxis.labelColor}>{formatValue(v, measureFmt, "rol")}</text>
+            ))}
+            {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => {
+              const x1 = m.left + slot * i + slot / 2 + barW / 2;
+              const x2 = m.left + slot * (i + 1) + slot / 2 - barW / 2;
+              return <line key={`c-${i}`} x1={x1} y1={yOf(r.end)} x2={x2} y2={yOf(r.end)} stroke={style.waterfall.connectorColor} strokeDasharray={dashArr(style.waterfall.connectorStyle)} />;
+            })}
+            {wfRows.map((r, i) => {
+              const cx = m.left + slot * i + slot / 2;
+              const x = cx - barW / 2;
+              const y0 = yOf(r.base);
+              const y1 = yOf(r.base + r.delta);
+              const y = Math.min(y0, y1);
+              const h = Math.max(2, Math.abs(y1 - y0));
+              const fill = evalCondColor(r.signed, style.conditionalRules, colorOf(r.type));
+              const labelY = labelPos === "center" ? y + h / 2 : labelPos === "bottom" ? Math.max(y0, y1) + dlFs + 2 : y - 6;
+              return (
+                <g key={r.label}>
+                  <rect x={x} y={y} width={barW} height={h} fill={fill} rx="2" />
+                  {style.dataLabels.show && <text x={cx} y={labelY} textAnchor="middle" fontSize={dlFs} fill={style.dataLabels.color} fontWeight={style.dataLabels.bold ? 700 : 400}>{valFmt(r.end)}</text>}
+                  <text x={cx} y={H - Math.max(12, m.bottom * 0.45)} textAnchor="middle" fontSize={labelFs} fill={style.xAxis.labelColor}>{truncLabel(r.label)}</text>
+                </g>
+              );
+            })}
+            {style.waterfall.showRunningTotal && <polyline points={wfRows.map((r, i) => `${m.left + slot * i + slot / 2},${yOf(r.end)}`).join(" ")} fill="none" stroke={style.waterfall.totalColor} strokeWidth="2" />}
+          </svg>
         );
-      })}
-      {style.waterfall.showRunningTotal && <polyline points={wfRows.map((r, i) => `${m.left + slot * i + slot / 2},${yOf(r.end)}`).join(" ")} fill="none" stroke={style.waterfall.totalColor} strokeWidth="2" />}
-    </svg>
+      }}
+    </FluidSvg>
+  );
+}
+
+// Measures its container and renders an SVG at the actual pixel size,
+// so the Bridge reflows fluidly (like Recharts' ResponsiveContainer does).
+function FluidSvg({ children }: { children: (w: number, h: number) => React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    if (!ref.current) return;
+    const el = ref.current;
+    const ro = new ResizeObserver(() => {
+      setSize({ w: el.clientWidth, h: el.clientHeight });
+    });
+    ro.observe(el);
+    setSize({ w: el.clientWidth, h: el.clientHeight });
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={ref} style={{ width: "100%", height: "100%" }}>
+      {size.w > 0 && size.h > 0 ? children(size.w, size.h) : null}
+    </div>
   );
 }
 
