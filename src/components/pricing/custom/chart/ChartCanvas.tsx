@@ -881,7 +881,15 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       </ScatterChart>
     );
   } else if (ct === "waterfall") {
-    chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} dsRows={dsRows} />;
+    chart = (
+      <WaterfallChart
+        block={block}
+        style={style}
+        rows={rows}
+        series={data.series}
+        dsRows={dsRows}
+      />
+    );
   } else if (ct === "funnel") {
     // FIX 3 — replace recharts Funnel (broken triangles) with custom SVG trapezoids
     const fdata = ranking.map((r, i) => ({
@@ -1073,9 +1081,11 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         }}>{block.title}</div>
       )}
       <div style={{ flex: 1, minHeight: 0 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          {chart as React.ReactElement}
-        </ResponsiveContainer>
+        {ct === "waterfall" ? chart as React.ReactElement : (
+          <ResponsiveContainer width="100%" height="100%">
+            {chart as React.ReactElement}
+          </ResponsiveContainer>
+        )}
       </div>
     </Wrapper>
   );
@@ -1305,10 +1315,12 @@ function WaterfallChart({
   // Empty state for PVM when there isn't enough data (e.g. only one period in the slice)
   if (wfMode === "pvm" && wfRows.length === 0) {
     return (
-      <BarChart data={[{ label: "Sem dados suficientes para a Bridge", base: 0, delta: 0, end: 0, signed: 0, type: "start" as const }]}>
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} />
-        <YAxis hide domain={[0, 1]} />
-      </BarChart>
+      <svg width="100%" height="100%" viewBox="0 0 1000 320" preserveAspectRatio="none">
+        <line x1="35" y1="210" x2="965" y2="210" stroke={style.grid.color} strokeWidth="1" />
+        <text x="500" y="226" textAnchor="middle" fontSize="12" fill={style.xAxis.labelColor}>
+          Sem dados suficientes para a Bridge
+        </text>
+      </svg>
     );
   }
 
@@ -1317,47 +1329,52 @@ function WaterfallChart({
   const yMin = style.yAxis.min ?? Math.min(0, ...allEnds);
   const yMax = style.yAxis.max ?? Math.max(0, ...allEnds);
 
+  const W = 1000, H = 320;
+  const m = { top: 34, right: 24, bottom: 62, left: style.yAxis.show ? 76 : 24 };
+  const plotW = W - m.left - m.right;
+  const plotH = H - m.top - m.bottom;
+  const range = yMax - yMin || 1;
+  const yOf = (v: number) => m.top + (1 - (v - yMin) / range) * plotH;
+  const slot = plotW / Math.max(1, wfRows.length);
+  const barW = Math.max(12, Math.min(74, slot * (1 - style.waterfall.gapPct / 120)));
+  const zeroY = yOf(0);
+  const valFmt = (v: number) => formatValue(v, style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals);
+
   return (
-    <BarChart data={wfRows} barCategoryGap={`${style.waterfall.gapPct}%`}>
-      {style.grid.show && (
-        <CartesianGrid stroke={style.grid.color}
-          strokeDasharray={style.grid.style === "dashed" ? "3 3" : "0"} />
-      )}
-      <XAxis dataKey="label" tick={{ fontSize: style.xAxis.labelSize, fill: style.xAxis.labelColor }} />
-      <YAxis tick={{ fontSize: style.yAxis.labelSize, fill: style.yAxis.labelColor }}
-        domain={[yMin, yMax]}
-        tickFormatter={(v: number) => formatValue(v, measureFmt, "rol")} />
-      <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} variant="waterfall" />} />
-      {renderRefLines(style)}
-      {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => (
-        <ReferenceLine key={`c-${i}`} segment={[
-          { x: r.label, y: r.end }, { x: wfRows[i + 1].label, y: r.end },
-        ]} stroke={style.waterfall.connectorColor}
-          strokeDasharray={dashArr(style.waterfall.connectorStyle)} />
+    <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      {style.grid.show && [0, 0.25, 0.5, 0.75, 1].map((t) => {
+        const y = m.top + t * plotH;
+        return <line key={t} x1={m.left} y1={y} x2={W - m.right} y2={y} stroke={style.grid.color} strokeDasharray={style.grid.style === "dashed" ? "5 5" : undefined} />;
+      })}
+      {style.xAxis.show && <line x1={m.left} y1={zeroY} x2={W - m.right} y2={zeroY} stroke={style.xAxis.lineColor} strokeWidth={style.xAxis.lineWidth} />}
+      {style.yAxis.show && <line x1={m.left} y1={m.top} x2={m.left} y2={m.top + plotH} stroke={style.yAxis.lineColor} strokeWidth={style.yAxis.lineWidth} />}
+      {style.yAxis.show && [yMin, (yMin + yMax) / 2, yMax].map((v) => (
+        <text key={v} x={m.left - 8} y={yOf(v) + 4} textAnchor="end" fontSize={style.yAxis.labelSize} fill={style.yAxis.labelColor}>{formatValue(v, measureFmt, "rol")}</text>
       ))}
-      <Bar isAnimationActive={false} dataKey="base" stackId="wf" fill="transparent" />
-      <Bar isAnimationActive={false} dataKey="delta" stackId="wf">
-        {wfRows.map((r) => {
-          const baseFill = colorOf(r.type);
-          const fill = evalCondColor(r.signed, style.conditionalRules, baseFill);
-          return <Cell key={r.label} fill={fill} />;
-        })}
-        {style.dataLabels.show && (
-          <LabelList dataKey="end" position={labelPos as never}
-            style={{ fontSize: style.dataLabels.size, fill: style.dataLabels.color,
-              fontWeight: style.dataLabels.bold ? 700 : 400,
-              fontStyle: style.dataLabels.italic ? "italic" : "normal" }}
-            formatter={(v: number) => formatValue(v,
-              style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format,
-              "rol", style.dataLabels.decimals)} />
-        )}
-      </Bar>
-      {style.waterfall.showRunningTotal && (
-        <Line type="linear" dataKey="end" isAnimationActive={false}
-          stroke={style.waterfall.totalColor} strokeWidth={2}
-          dot={{ r: 3, fill: style.waterfall.totalColor }} />
-      )}
-    </BarChart>
+      {style.waterfall.connectors && wfRows.slice(0, -1).map((r, i) => {
+        const x1 = m.left + slot * i + slot / 2 + barW / 2;
+        const x2 = m.left + slot * (i + 1) + slot / 2 - barW / 2;
+        return <line key={`c-${i}`} x1={x1} y1={yOf(r.end)} x2={x2} y2={yOf(r.end)} stroke={style.waterfall.connectorColor} strokeDasharray={dashArr(style.waterfall.connectorStyle)} />;
+      })}
+      {wfRows.map((r, i) => {
+        const cx = m.left + slot * i + slot / 2;
+        const x = cx - barW / 2;
+        const y0 = yOf(r.base);
+        const y1 = yOf(r.base + r.delta);
+        const y = Math.min(y0, y1);
+        const h = Math.max(2, Math.abs(y1 - y0));
+        const fill = evalCondColor(r.signed, style.conditionalRules, colorOf(r.type));
+        const labelY = labelPos === "center" ? y + h / 2 : labelPos === "bottom" ? Math.max(y0, y1) + 14 : y - 6;
+        return (
+          <g key={r.label}>
+            <rect x={x} y={y} width={barW} height={h} fill={fill} rx="2" />
+            {style.dataLabels.show && <text x={cx} y={labelY} textAnchor="middle" fontSize={style.dataLabels.size} fill={style.dataLabels.color} fontWeight={style.dataLabels.bold ? 700 : 400}>{valFmt(r.end)}</text>}
+            <text x={cx} y={H - 32} textAnchor="middle" fontSize={style.xAxis.labelSize} fill={style.xAxis.labelColor}>{r.label.length > 16 ? `${r.label.slice(0, 15)}…` : r.label}</text>
+          </g>
+        );
+      })}
+      {style.waterfall.showRunningTotal && <polyline points={wfRows.map((r, i) => `${m.left + slot * i + slot / 2},${yOf(r.end)}`).join(" ")} fill="none" stroke={style.waterfall.totalColor} strokeWidth="2" />}
+    </svg>
   );
 }
 
