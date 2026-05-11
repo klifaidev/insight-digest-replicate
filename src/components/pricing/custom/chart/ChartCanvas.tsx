@@ -1341,7 +1341,7 @@ function WaterfallChart({
   const valFmt = (v: number) => formatValue(v, style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals);
 
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+    <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
       {style.grid.show && [0, 0.25, 0.5, 0.75, 1].map((t) => {
         const y = m.top + t * plotH;
         return <line key={t} x1={m.left} y1={y} x2={W - m.right} y2={y} stroke={style.grid.color} strokeDasharray={style.grid.style === "dashed" ? "5 5" : undefined} />;
