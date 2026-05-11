@@ -6,6 +6,7 @@ import {
   LineChart, AreaChart, BarChart3, BarChartHorizontal,
   PieChart, Donut, ScatterChart, Circle, Filter,
   Hexagon, Radar, BarChart, Layers, ChevronsRight,
+  ChartNoAxesColumn, AlignJustify, BoxSelect,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,9 +24,9 @@ const GROUPS: Item[][] = [
   [
     { value: "bar", label: "Coluna", icon: <BarChart3 className="h-4 w-4" /> },
     { value: "column", label: "Coluna agrupada", icon: <BarChart3 className="h-4 w-4" /> },
-    { value: "stackedColumn", label: "Coluna empilhada", icon: <Layers className="h-4 w-4 rotate-90" /> },
+    { value: "stackedColumn", label: "Coluna empilhada", icon: <ChartNoAxesColumn className="h-4 w-4" /> },
     { value: "hbar", label: "Barra", icon: <BarChartHorizontal className="h-4 w-4" /> },
-    { value: "stackedBar", label: "Barra empilhada", icon: <Layers className="h-4 w-4" /> },
+    { value: "stackedBar", label: "Barra empilhada", icon: <AlignJustify className="h-4 w-4" /> },
   ],
   [
     { value: "pie", label: "Pizza", icon: <PieChart className="h-4 w-4" /> },
@@ -40,8 +41,8 @@ const GROUPS: Item[][] = [
   [
     { value: "waterfall", label: "Waterfall", icon: <ChevronsRight className="h-4 w-4" /> },
     { value: "radar", label: "Radar", icon: <Radar className="h-4 w-4" /> },
-    { value: "histogram", label: "Histograma", icon: <BarChart3 className="h-4 w-4" /> },
-    { value: "boxplot", label: "Caixa", icon: <BarChart3 className="h-4 w-4" /> },
+    { value: "histogram", label: "Histograma", icon: <BarChart className="h-4 w-4" /> },
+    { value: "boxplot", label: "Caixa", icon: <BoxSelect className="h-4 w-4" /> },
   ],
 ];
 
