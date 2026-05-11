@@ -803,8 +803,8 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
       </div>
 
       {/* ====== Inspector ====== */}
-      <ScrollArea className="rounded-lg border border-border/40 bg-card/40">
-        <div className="space-y-3 p-3">
+      <div className="min-w-0 overflow-y-auto overflow-x-hidden rounded-lg border border-border/40 bg-card/40">
+        <div className="min-w-0 space-y-3 p-3">
           {multiSelected.length >= 2 ? (
             <MultiSelectInspector
               selectedIds={selectedIds}
