@@ -881,7 +881,15 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       </ScatterChart>
     );
   } else if (ct === "waterfall") {
-    chart = <WaterfallChart block={block} style={style} rows={rows} series={data.series} dsRows={dsRows} />;
+    chart = (
+      <WaterfallChart
+        block={block}
+        style={style}
+        rows={rows}
+        series={data.series}
+        dsRows={dsRows}
+      />
+    );
   } else if (ct === "funnel") {
     // FIX 3 — replace recharts Funnel (broken triangles) with custom SVG trapezoids
     const fdata = ranking.map((r, i) => ({
@@ -1073,9 +1081,25 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         }}>{block.title}</div>
       )}
       <div style={{ flex: 1, minHeight: 0 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          {chart as React.ReactElement}
-        </ResponsiveContainer>
+        {ct === "waterfall" ? (
+          <ResponsiveContainer width="100%" height="100%">
+            {({ width, height }) => (
+              <WaterfallChart
+                block={block}
+                style={style}
+                rows={rows}
+                series={data.series}
+                dsRows={dsRows}
+                width={width}
+                height={height}
+              />
+            )}
+          </ResponsiveContainer>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            {chart as React.ReactElement}
+          </ResponsiveContainer>
+        )}
       </div>
     </Wrapper>
   );
