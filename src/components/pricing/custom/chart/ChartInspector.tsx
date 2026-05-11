@@ -17,18 +17,42 @@ import {
 } from "./Inspector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ChartTypePicker } from "./ChartTypePicker";
+import { STYLE_PRESETS, buildStylePresetPatch, type StylePresetId } from "./stylePresets";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
 import { Trash2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Patch = Partial<ChartBlock>;
 
 function rid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const PRESET_THUMB_COLORS: Record<StylePresetId, string[]> = {
+  default: ["#C8102E", "#1C2430", "#0F766E", "#7C3AED"],
+  minimal: ["#E2E8F0", "#CBD5E1", "#94A3B8", "#64748B"],
+  bold: ["#0B1220", "#C8102E", "#EA580C", "#2563EB"],
+  monochrome: ["#0B1220", "#334155", "#64748B", "#94A3B8"],
+  harald: ["#C8102E", "#1C2430", "#0F766E", "#EA580C"],
+};
+
+function PresetThumbnail({ id }: { id: StylePresetId }) {
+  const colors = PRESET_THUMB_COLORS[id];
+  return (
+    <div className="flex h-6 w-full items-end gap-0.5 rounded-sm bg-secondary/40 p-0.5">
+      {colors.map((c, i) => (
+        <div key={i} className="flex-1 rounded-sm"
+          style={{ background: c, height: `${40 + i * 15}%` }} />
+      ))}
+    </div>
+  );
 }
 
 // Position options per chart family
@@ -158,15 +182,35 @@ export function ChartInspector({
     style.series.find((x) => x.key === key) ?? { key };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {/* Chart type picker — always visible at top */}
+      <div className="rounded-lg border border-border/50 bg-card/40 px-2 py-2">
+        <ChartTypePicker value={ct} onChange={(v) => onChange({ chartType: v })} />
+      </div>
+
+      <Tabs defaultValue="dados" className="w-full">
+        <TabsList className="grid h-9 w-full grid-cols-3 rounded-full bg-secondary/40 p-1">
+          <TabsTrigger value="dados" className="h-7 rounded-full text-[12px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Dados</TabsTrigger>
+          <TabsTrigger value="visual" className="h-7 rounded-full text-[12px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Visual</TabsTrigger>
+          <TabsTrigger value="analises" className="h-7 rounded-full text-[12px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Análises</TabsTrigger>
+        </TabsList>
+
+        {/* ============================ DADOS TAB ============================ */}
+        <TabsContent value="dados" className="mt-3 space-y-3">
       {/* ===== Data ===== */}
-      <Section title="Dados" defaultOpen>
-        <Row label="Tipo">
-          <SelectField value={ct as string}
-            onChange={(v) => onChange({ chartType: v as ChartBlock["chartType"] })}
-            options={ALL_TYPES} />
-        </Row>
+      <Section title="Medidas e dimensões" defaultOpen>
         <Row label="Medida">
+          <SelectField value={block.measure}
+            onChange={(v) => onChange({ measure: v as KpiMeasureId })}
+            options={KPI_MEASURES.map((m) => ({
+              value: m.id,
+              label: m.label,
+              disabled: block.dataSource === "budget"
+                && BUDGET_UNAVAILABLE_MEASURES.includes(m.id),
+              title: block.dataSource === "budget"
+                && BUDGET_UNAVAILABLE_MEASURES.includes(m.id)
+                ? BUDGET_UNAVAILABLE_HINT : undefined,
+            }))} />
           <SelectField value={block.measure}
             onChange={(v) => onChange({ measure: v as KpiMeasureId })}
             options={KPI_MEASURES.map((m) => ({
@@ -344,11 +388,39 @@ export function ChartInspector({
         )}
       </Section>
 
+      {/* ===== Interatividade — moved out of "Geral" ===== */}
+      <Section title="Interatividade">
+        <ToggleField label="Emitir filtro ao clicar"
+          value={block.emitsCrossFilter !== false}
+          onChange={(v) => onChange({ emitsCrossFilter: v })} />
+        <ToggleField label="Receber filtros de outros blocos"
+          value={block.participatesInCrossFilter !== false}
+          onChange={(v) => onChange({ participatesInCrossFilter: v })} />
+      </Section>
+        </TabsContent>
+
+        {/* ============================ VISUAL TAB ============================ */}
+        <TabsContent value="visual" className="mt-3 space-y-3">
+      {/* Quick style presets */}
+      <div className="rounded-lg border border-border/50 bg-card/40 p-3">
+        <div className="mb-2 text-[12px] font-medium text-foreground/85">Estilos rápidos</div>
+        <div className="grid grid-cols-5 gap-1.5">
+          {STYLE_PRESETS.map((p) => (
+            <button key={p.id} type="button"
+              onClick={() => updStyle(buildStylePresetPatch(p.id as StylePresetId, style))}
+              className="flex flex-col items-center gap-1 rounded-md border border-border/40 p-1.5 text-[10px] text-muted-foreground transition-colors hover:border-primary/50 hover:bg-secondary hover:text-foreground">
+              <PresetThumbnail id={p.id as StylePresetId} />
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ===== General ===== */}
       <Section title="Geral">
         <div>
-          <Label className="text-[10px] uppercase text-muted-foreground">Título</Label>
-          <Input className="h-7 text-xs" value={block.title ?? ""}
+          <Label className="text-[12px] font-normal text-muted-foreground">Título</Label>
+          <Input className="mt-1 h-8 text-[13px]" value={block.title ?? ""}
             onChange={(e) => onChange({ title: e.target.value })} />
         </div>
         <ToggleField label="Mostrar título" value={style.general.titleShow}
@@ -394,17 +466,6 @@ export function ChartInspector({
             ]} />
         </Row>
         <ResetButton onClick={() => resetPath("general")} />
-
-        {/* Cross-filter (Part B.6) */}
-        <div className="mt-2 border-t border-border/40 pt-2">
-          <Label className="text-[10px] uppercase text-muted-foreground">Filtro cruzado</Label>
-          <ToggleField label="Emitir filtro ao clicar"
-            value={block.emitsCrossFilter !== false}
-            onChange={(v) => onChange({ emitsCrossFilter: v })} />
-          <ToggleField label="Receber filtros de outros blocos"
-            value={block.participatesInCrossFilter !== false}
-            onChange={(v) => onChange({ participatesInCrossFilter: v })} />
-        </div>
       </Section>
 
       {/* ===== Grid ===== */}
@@ -978,6 +1039,10 @@ export function ChartInspector({
         </Section>
       )}
 
+        </TabsContent>
+
+        {/* ============================ ANÁLISES TAB ============================ */}
+        <TabsContent value="analises" className="mt-3 space-y-3">
       {/* B.2 — Conditional formatting */}
       {["bar", "column", "hbar", "waterfall", "treemap"].includes(ct) && (
         <ConditionalSection
@@ -993,6 +1058,13 @@ export function ChartInspector({
           analytics={style.analytics!}
           onChange={(p) => updPath("analytics", p as never)} />
       )}
+      {!["bar", "column", "hbar", "waterfall", "treemap", "line", "area", "combo", "scatter", "bubble"].includes(ct) && (
+        <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-[12px] text-muted-foreground">
+          Sem análises disponíveis para este tipo de gráfico.
+        </div>
+      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
