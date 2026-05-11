@@ -45,9 +45,9 @@ export function Section({
 
 export function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <Label className="text-[12px] font-normal text-muted-foreground">{label}</Label>
-      <div className="flex-1 max-w-[62%]">{children}</div>
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <Label className="min-w-0 flex-1 truncate text-[12px] font-normal text-muted-foreground">{label}</Label>
+      <div className="min-w-0 flex-1 max-w-[62%]">{children}</div>
     </div>
   );
 }
@@ -132,7 +132,7 @@ export function SelectField<T extends string>({
   const safe = options.find((o) => o.value === value) ? value : (options[0]?.value as T);
   return (
     <RxSelect value={safe} onValueChange={(v) => onChange(v as T)}>
-      <SelectTrigger className="h-8 px-2 text-[13px]">
+      <SelectTrigger className="h-8 w-full min-w-0 px-2 text-[13px] [&>span]:truncate">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
