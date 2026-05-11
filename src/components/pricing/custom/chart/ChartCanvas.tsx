@@ -1158,15 +1158,13 @@ function mixHex(a: string, b: string, t: number): string {
 // -- Waterfall (custom Recharts composition) -------------------------------
 // FIX 1+2 — supports both legacy per-period mode AND smart column-builder mode.
 function WaterfallChart({
-  block, style, series, dsRows: dsRowsProp, width, height,
+  block, style, series, dsRows: dsRowsProp,
 }: {
   block: ChartBlock;
   style: ChartStyle;
   rows: Record<string, number | string>[];
   series: { name: string; values: number[] }[];
   dsRows?: PricingRow[];
-  width?: number;
-  height?: number;
 }) {
   const measureFmt = inferFormat(block.measure);
   const pricing = usePricing((s) => s.rows);
@@ -1179,15 +1177,6 @@ function WaterfallChart({
   const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, decomposition: "effects", topN: 6 };
   const decomposition = pvmCfg.decomposition ?? "effects";
   const topN = pvmCfg.topN ?? 6;
-  const chartSize = width != null && height != null ? { width, height } : {};
-
-  const wrap = (node: React.ReactElement) => (
-    width != null && height != null ? node : (
-      <ResponsiveContainer width="100%" height="100%">
-        {node}
-      </ResponsiveContainer>
-    )
-  );
 
   // PVM mode — decomposição igual à aba Bridge (com auto-default de base/comp)
   const pvmItems = useMemo(() => {
