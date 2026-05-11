@@ -869,7 +869,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             </>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Templates dialog */}
       <Dialog open={tplOpen} onOpenChange={setTplOpen}>
