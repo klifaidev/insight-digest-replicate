@@ -13,8 +13,9 @@ import {
 } from "./types";
 import {
   Section, Row, ToggleField, NumberStepper, ColorField, SelectField,
-  Segmented, Slider, ResetButton,
+  Segmented, Slider,
 } from "./Inspector";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -25,7 +26,7 @@ import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Patch = Partial<ChartBlock>;
@@ -406,7 +407,7 @@ export function ChartInspector({
       </div>
 
       {/* ===== General ===== */}
-      <Section title="Geral">
+      <Section title="Geral" onReset={() => resetPath("general")}>
         <div>
           <Label className="text-[12px] font-normal text-muted-foreground">Título</Label>
           <Input className="mt-1 h-8 text-[13px]" value={block.title ?? ""}
@@ -454,12 +455,11 @@ export function ChartInspector({
               { value: "right", label: "Direita" },
             ]} />
         </Row>
-        <ResetButton onClick={() => resetPath("general")} />
       </Section>
 
       {/* ===== Grid ===== */}
       {S.showGrid && (
-        <Section title="Grade">
+        <Section title="Grade" onReset={() => resetPath("grid")}>
           <ToggleField label="Mostrar grade" value={style.grid.show}
             onChange={(v) => updPath("grid", { show: v })} />
           <Row label="Cor"><ColorField value={style.grid.color}
@@ -469,7 +469,6 @@ export function ChartInspector({
               onChange={(v) => updPath("grid", { style: v as never })}
               options={[{ value: "solid", label: "Sólido" }, { value: "dashed", label: "Tracejado" }]} />
           </Row>
-          <ResetButton onClick={() => resetPath("grid")} />
         </Section>
       )}
 
@@ -491,7 +490,7 @@ export function ChartInspector({
       )}
 
       {/* ===== Data labels ===== */}
-      <Section title="Rótulos de dados">
+      <Section title="Rótulos de dados" onReset={() => resetPath("dataLabels")}>
         <ToggleField label="Mostrar" value={style.dataLabels.show}
           onChange={(v) => updPath("dataLabels", { show: v })} />
         <Row label="Tamanho">
@@ -551,12 +550,11 @@ export function ChartInspector({
           <NumberStepper value={style.dataLabels.borderWidth} min={0} max={5}
             onChange={(v) => updPath("dataLabels", { borderWidth: v })} suffix="px" />
         </Row>
-        <ResetButton onClick={() => resetPath("dataLabels")} />
       </Section>
 
       {/* ===== Type-specific: Bar ===== */}
       {S.showBar && (
-        <Section title="Barras">
+        <Section title="Barras" onReset={() => resetPath("bar")}>
           <Row label="Modo">
             <SelectField value={style.bar.mode}
               onChange={(v) => updPath("bar", { mode: v as never })}
@@ -580,13 +578,12 @@ export function ChartInspector({
             <NumberStepper value={style.bar.borderWidth} min={0} max={5}
               onChange={(v) => updPath("bar", { borderWidth: v })} suffix="px" />
           </Row>
-          <ResetButton onClick={() => resetPath("bar")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Pie/Donut ===== */}
       {S.isPie && (
-        <Section title="Pizza/Rosca">
+        <Section title="Pizza/Rosca" onReset={() => resetPath("pie")}>
           {ct === "donut" && (
             <Row label="Furo">
               <NumberStepper value={style.pie.donutHolePct} min={0} max={80}
@@ -614,12 +611,12 @@ export function ChartInspector({
           </Row>
           {detectedRanking.length > 0 && (
             <div className="space-y-1.5">
-              <div className="text-[10px] font-semibold uppercase text-muted-foreground">Fatias</div>
+              <div className="text-[12px] font-medium text-muted-foreground">Fatias</div>
               {detectedRanking.map((name, i) => {
                 const sl = style.pie.slices[name] ?? {};
                 return (
-                  <div key={name} className="space-y-1 rounded border border-border/30 p-1.5">
-                    <div className="text-[10px] font-medium truncate">{name}</div>
+                  <div key={name} className="space-y-1.5 rounded border border-border/30 p-2.5">
+                    <div className="text-[12px] font-medium truncate">{name}</div>
                     <Row label="Cor">
                       <ColorField value={sl.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
                         onChange={(c) => updPath("pie", {
@@ -637,13 +634,12 @@ export function ChartInspector({
               })}
             </div>
           )}
-          <ResetButton onClick={() => resetPath("pie")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Bubble ===== */}
       {ct === "bubble" && (
-        <Section title="Bolhas">
+        <Section title="Bolhas" onReset={() => resetPath("bubble")}>
           <Row label="Tam. mín">
             <NumberStepper value={style.bubble.minSize} min={20} max={500}
               onChange={(v) => updPath("bubble", { minSize: v })} suffix="px" />
@@ -665,24 +661,22 @@ export function ChartInspector({
           <ToggleField label="Mostrar tamanho como rótulo"
             value={style.bubble.showSizeLabel}
             onChange={(v) => updPath("bubble", { showSizeLabel: v })} />
-          <ResetButton onClick={() => resetPath("bubble")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Area ===== */}
       {S.showArea && (
-        <Section title="Área">
+        <Section title="Área" onReset={() => resetPath("area")}>
           <ToggleField label="Empilhado" value={style.area.stacked}
             onChange={(v) => updPath("area", { stacked: v })} />
           <ToggleField label="Linha por cima" value={style.area.lineOnTop}
             onChange={(v) => updPath("area", { lineOnTop: v })} />
-          <ResetButton onClick={() => resetPath("area")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Waterfall ===== */}
       {ct === "waterfall" && (
-        <Section title="Waterfall">
+        <Section title="Waterfall" onReset={() => resetPath("waterfall")}>
           <PvmBridgePicker block={block} style={style} dsRows={dsRows} updPath={updPath} />
           <Row label="Cor positiva"><ColorField value={style.waterfall.positiveColor}
             onChange={(c) => updPath("waterfall", { positiveColor: c })} /></Row>
@@ -721,7 +715,7 @@ export function ChartInspector({
           </Row>
           {(style.waterfall.mode ?? "pvm") === "manual" && detectedCategories.length > 0 && (
             <div className="space-y-1">
-              <div className="text-[10px] font-semibold uppercase text-muted-foreground">Classificação</div>
+              <div className="text-[12px] font-medium text-muted-foreground">Classificação</div>
               {detectedCategories.map((label, i) => {
                 const lbl = `P${i + 1}`;
                 const current = style.waterfall.classify[lbl] ?? "positive";
@@ -741,13 +735,12 @@ export function ChartInspector({
               })}
             </div>
           )}
-          <ResetButton onClick={() => resetPath("waterfall")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Funnel ===== */}
       {ct === "funnel" && (
-        <Section title="Funil">
+        <Section title="Funil" onReset={() => resetPath("funnel")}>
           <Row label="Direção">
             <Segmented value={style.funnel.direction}
               onChange={(v) => updPath("funnel", { direction: v as never })}
@@ -782,7 +775,7 @@ export function ChartInspector({
           </Row>
           {detectedRanking.length > 0 && (
             <div className="space-y-1.5">
-              <div className="text-[10px] font-semibold uppercase text-muted-foreground">Estágios</div>
+              <div className="text-[12px] font-medium text-muted-foreground">Estágios</div>
               {detectedRanking.map((name, i) => {
                 const sl = style.funnel.slices[name] ?? {};
                 return (
@@ -796,13 +789,12 @@ export function ChartInspector({
               })}
             </div>
           )}
-          <ResetButton onClick={() => resetPath("funnel")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Treemap ===== */}
       {ct === "treemap" && (
-        <Section title="Mapa de árvore">
+        <Section title="Mapa de árvore" onReset={() => resetPath("treemap")}>
           <Row label="Esquema de cor">
             <Segmented value={style.treemap.colorScheme}
               onChange={(v) => updPath("treemap", { colorScheme: v as never })}
@@ -836,13 +828,12 @@ export function ChartInspector({
             <NumberStepper value={style.treemap.borderWidth} min={0} max={5}
               onChange={(v) => updPath("treemap", { borderWidth: v })} suffix="px" />
           </Row>
-          <ResetButton onClick={() => resetPath("treemap")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Radar ===== */}
       {S.isRadar && (
-        <Section title="Radar">
+        <Section title="Radar" onReset={() => resetPath("radar")}>
           <ToggleField label="Preencher área" value={style.radar.fillArea}
             onChange={(v) => updPath("radar", { fillArea: v })} />
           <Row label="Opac. preenchimento">
@@ -869,19 +860,18 @@ export function ChartInspector({
             <ColorField value={style.radar.axisLabelColor}
               onChange={(c) => updPath("radar", { axisLabelColor: c })} />
           </Row>
-          <ResetButton onClick={() => resetPath("radar")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Histogram ===== */}
       {ct === "histogram" && (
-        <Section title="Histograma">
+        <Section title="Histograma" onReset={() => resetPath("histogram")}>
           <Row label="Nº de bins">
             <NumberStepper value={style.histogram.bins} min={2} max={100}
               onChange={(v) => updPath("histogram", { bins: v })} />
           </Row>
           <Row label="Largura bin">
-            <Input type="number" className="h-7 text-[11px]"
+            <Input type="number" className="h-8 text-[13px]"
               value={style.histogram.binWidth ?? ""} placeholder="auto"
               onChange={(e) => updPath("histogram", {
                 binWidth: e.target.value === "" ? null : parseFloat(e.target.value),
@@ -901,13 +891,12 @@ export function ChartInspector({
           </Row>
           <ToggleField label="Linha cumulativa" value={style.histogram.cumulative}
             onChange={(v) => updPath("histogram", { cumulative: v })} />
-          <ResetButton onClick={() => resetPath("histogram")} />
         </Section>
       )}
 
       {/* ===== Type-specific: Boxplot ===== */}
       {ct === "boxplot" && (
-        <Section title="Caixa (Box & Whisker)">
+        <Section title="Caixa (Box & Whisker)" onReset={() => resetPath("boxplot")}>
           <Row label="Cor caixa">
             <ColorField value={style.boxplot.boxFillColor}
               onChange={(c) => updPath("boxplot", { boxFillColor: c })} />
@@ -932,21 +921,20 @@ export function ChartInspector({
             onChange={(v) => updPath("boxplot", { showMean: v })} />
           <ToggleField label="Mostrar outliers" value={style.boxplot.showOutliers}
             onChange={(v) => updPath("boxplot", { showOutliers: v })} />
-          <ResetButton onClick={() => resetPath("boxplot")} />
         </Section>
       )}
 
       {/* ===== Series (color overrides + per-series style) ===== */}
       {S.showSeries && (
-        <Section title="Séries">
-          <p className="text-[10px] text-muted-foreground">
+        <Section title="Séries" onReset={() => updStyle({ series: [] })}>
+          <p className="text-[12px] text-muted-foreground">
             Cores e estilos por série. {detectedSeries.length === 0 && "(Nenhuma série detectada — usando padrão.)"}
           </p>
           {(detectedSeries.length === 0 ? ["Total"] : detectedSeries).map((name, i) => {
             const cfg = getSeriesCfg(name);
             return (
-              <div key={name} className="space-y-1 rounded border border-border/30 p-1.5">
-                <div className="text-[10px] font-medium truncate">{name}</div>
+              <div key={name} className="space-y-1.5 rounded border border-border/30 p-2.5">
+                <div className="text-[12px] font-medium truncate">{name}</div>
                 <Row label="Cor">
                   <ColorField value={cfg.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]}
                     onChange={(c) => updSeries(name, { color: c })} />
@@ -1024,7 +1012,6 @@ export function ChartInspector({
               </div>
             );
           })}
-          <ResetButton onClick={() => updStyle({ series: [] })} />
         </Section>
       )}
 
@@ -1089,27 +1076,27 @@ function AnalyticsSection({ analytics, onChange }: {
     <Section title="Análises">
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <Label className="text-[10px] uppercase text-muted-foreground">Linhas de referência</Label>
+          <Label className="text-[12px] font-medium text-muted-foreground">Linhas de referência</Label>
           <button type="button" onClick={addRef} disabled={refs.length >= 3}
             className="flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[10px] hover:bg-secondary disabled:opacity-40">
             <Plus className="h-3 w-3" /> Adicionar
           </button>
         </div>
         {refs.map((rl, i) => (
-          <div key={rl.id} className="space-y-1 rounded border border-border/30 p-1.5">
+          <div key={rl.id} className="space-y-1.5 rounded border border-border/30 p-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium">#{i + 1}</span>
+              <span className="text-[12px] font-medium">#{i + 1}</span>
               <button type="button" onClick={() => delRef(i)}
                 className="text-muted-foreground hover:text-destructive">
                 <Trash2 className="h-3 w-3" />
               </button>
             </div>
             <Row label="Valor Y">
-              <Input type="number" className="h-7 text-[11px]" value={rl.value}
+              <Input type="number" className="h-8 text-[13px]" value={rl.value}
                 onChange={(e) => updRef(i, { value: parseFloat(e.target.value) || 0 })} />
             </Row>
             <Row label="Rótulo">
-              <Input className="h-7 text-[11px]" value={rl.label}
+              <Input className="h-8 text-[13px]" value={rl.label}
                 onChange={(e) => updRef(i, { label: e.target.value })} />
             </Row>
             <Row label="Cor"><ColorField value={rl.color} onChange={(c) => updRef(i, { color: c })} /></Row>
@@ -1129,8 +1116,8 @@ function AnalyticsSection({ analytics, onChange }: {
         ))}
       </div>
 
-      <div className="mt-2 space-y-1.5 rounded border border-border/30 p-1.5">
-        <div className="text-[10px] font-semibold uppercase text-muted-foreground">Tendência</div>
+      <div className="mt-2 space-y-1.5 rounded border border-border/30 p-2.5">
+        <div className="text-[12px] font-medium text-muted-foreground">Tendência</div>
         <ToggleField label="Habilitar" value={trend.enabled}
           onChange={(v) => onChange({ trendline: { ...trend, enabled: v } })} />
         <Row label="Tipo">
@@ -1167,8 +1154,8 @@ function AnalyticsSection({ analytics, onChange }: {
           onChange={(v) => onChange({ trendline: { ...trend, showR2: v } })} />
       </div>
 
-      <div className="mt-2 space-y-1.5 rounded border border-border/30 p-1.5">
-        <div className="text-[10px] font-semibold uppercase text-muted-foreground">Previsão</div>
+      <div className="mt-2 space-y-1.5 rounded border border-border/30 p-2.5">
+        <div className="text-[12px] font-medium text-muted-foreground">Previsão</div>
         <ToggleField label="Habilitar" value={fc.enabled}
           onChange={(v) => onChange({ forecast: { ...fc, enabled: v } })} />
         <Row label="Períodos à frente">
@@ -1207,21 +1194,21 @@ function ConditionalSection({ rules, defaultColor, onRules, onDefault }: {
   return (
     <Section title="Formatação condicional">
       <div className="flex items-center justify-between">
-        <Label className="text-[10px] uppercase text-muted-foreground">Regras</Label>
+        <Label className="text-[12px] font-medium text-muted-foreground">Regras</Label>
         <button type="button" onClick={add} disabled={rules.length >= 5}
           className="flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[10px] hover:bg-secondary disabled:opacity-40">
           <Plus className="h-3 w-3" /> Adicionar
         </button>
       </div>
       {rules.map((r, i) => (
-        <div key={r.id} className="space-y-1 rounded border border-border/30 p-1.5">
+        <div key={r.id} className="space-y-1.5 rounded border border-border/30 p-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium">#{i + 1}</span>
+            <span className="text-[12px] font-medium">#{i + 1}</span>
             <div className="flex gap-1">
-              <button type="button" onClick={() => move(i, -1)}
-                className="text-[10px] text-muted-foreground hover:text-foreground">↑</button>
-              <button type="button" onClick={() => move(i, 1)}
-                className="text-[10px] text-muted-foreground hover:text-foreground">↓</button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7"
+                onClick={() => move(i, -1)}><ChevronUp className="h-3.5 w-3.5" /></Button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7"
+                onClick={() => move(i, 1)}><ChevronDown className="h-3.5 w-3.5" /></Button>
               <button type="button" onClick={() => del(i)}
                 className="text-muted-foreground hover:text-destructive">
                 <Trash2 className="h-3 w-3" />
@@ -1238,12 +1225,12 @@ function ConditionalSection({ rules, defaultColor, onRules, onDefault }: {
               ]} />
           </Row>
           <Row label="Valor">
-            <Input type="number" className="h-7 text-[11px]" value={r.threshold}
+            <Input type="number" className="h-8 text-[13px]" value={r.threshold}
               onChange={(e) => upd(i, { threshold: parseFloat(e.target.value) || 0 })} />
           </Row>
           {r.op === "between" && (
             <Row label="Valor 2">
-              <Input type="number" className="h-7 text-[11px]" value={r.threshold2 ?? 0}
+              <Input type="number" className="h-8 text-[13px]" value={r.threshold2 ?? 0}
                 onChange={(e) => upd(i, { threshold2: parseFloat(e.target.value) || 0 })} />
             </Row>
           )}
@@ -1325,8 +1312,8 @@ function BridgeColumnBuilder({ block, value, setValue, dsRows }: {
   }]);
 
   return (
-    <div className="mt-2 space-y-1.5 rounded border border-border/30 p-1.5">
-      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Colunas (Bridge)</div>
+    <div className="mt-2 space-y-1.5 rounded border border-border/30 p-2.5">
+      <div className="text-[12px] font-medium text-muted-foreground">Colunas (Bridge)</div>
       <div className="flex flex-wrap gap-1">
         {presets.map((p) => (
           <button key={p.label} type="button" onClick={() => setValue(p.build())}
@@ -1341,14 +1328,14 @@ function BridgeColumnBuilder({ block, value, setValue, dsRows }: {
         </p>
       )}
       {value.map((c, i) => (
-        <div key={c.id} className="space-y-1 rounded border border-border/30 p-1.5">
+        <div key={c.id} className="space-y-1.5 rounded border border-border/30 p-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium">#{i + 1}</span>
+            <span className="text-[12px] font-medium">#{i + 1}</span>
             <div className="flex gap-1">
-              <button type="button" onClick={() => move(i, -1)}
-                className="text-[10px] text-muted-foreground hover:text-foreground">↑</button>
-              <button type="button" onClick={() => move(i, 1)}
-                className="text-[10px] text-muted-foreground hover:text-foreground">↓</button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7"
+                onClick={() => move(i, -1)}><ChevronUp className="h-3.5 w-3.5" /></Button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7"
+                onClick={() => move(i, 1)}><ChevronDown className="h-3.5 w-3.5" /></Button>
               <button type="button" onClick={() => del(i)}
                 className="text-muted-foreground hover:text-destructive">
                 <Trash2 className="h-3 w-3" />
@@ -1356,7 +1343,7 @@ function BridgeColumnBuilder({ block, value, setValue, dsRows }: {
             </div>
           </div>
           <Row label="Rótulo">
-            <Input className="h-7 text-[11px]" value={c.label}
+            <Input className="h-8 text-[13px]" value={c.label}
               onChange={(e) => upd(i, { label: e.target.value })} />
           </Row>
           <Row label="Tipo">
@@ -1381,7 +1368,7 @@ function BridgeColumnBuilder({ block, value, setValue, dsRows }: {
           </Row>
           {c.measure == null && (
             <Row label="Valor">
-              <Input type="number" className="h-7 text-[11px]" value={c.manualValue ?? 0}
+              <Input type="number" className="h-8 text-[13px]" value={c.manualValue ?? 0}
                 onChange={(e) => upd(i, { manualValue: parseFloat(e.target.value) || 0 })} />
             </Row>
           )}
@@ -1398,7 +1385,7 @@ function BridgeColumnBuilder({ block, value, setValue, dsRows }: {
           </Row>
           {c.filterDim && (
             <Row label="Valor filtro">
-              <Input className="h-7 text-[11px]" value={c.filterValue ?? ""}
+              <Input className="h-8 text-[13px]" value={c.filterValue ?? ""}
                 onChange={(e) => upd(i, { filterValue: e.target.value })} />
             </Row>
           )}
@@ -1419,12 +1406,12 @@ function AxisSection({ title, axis, onChange, onReset }: {
   onReset: () => void;
 }) {
   return (
-    <Section title={title}>
+    <Section title={title} onReset={onReset}>
       <ToggleField label="Mostrar eixo" value={axis.show}
         onChange={(v) => onChange({ show: v })} />
-      <div>
-        <Label className="text-[10px] uppercase text-muted-foreground">Título do eixo</Label>
-        <Input className="h-7 text-xs" value={axis.titleText}
+      <div className="space-y-1">
+        <Label className="text-[12px] font-medium text-muted-foreground">Título do eixo</Label>
+        <Input className="h-8 text-[13px]" value={axis.titleText}
           onChange={(e) => onChange({ titleText: e.target.value })} />
       </div>
       <Row label="Tam. título">
@@ -1450,12 +1437,12 @@ function AxisSection({ title, axis, onChange, onReset }: {
       <ToggleField label="Marcações" value={axis.ticks}
         onChange={(v) => onChange({ ticks: v })} />
       <Row label="Mín">
-        <Input type="number" className="h-7 text-[11px]"
+        <Input type="number" className="h-8 text-[13px]"
           value={axis.min ?? ""} placeholder="auto"
           onChange={(e) => onChange({ min: e.target.value === "" ? null : parseFloat(e.target.value) })} />
       </Row>
       <Row label="Máx">
-        <Input type="number" className="h-7 text-[11px]"
+        <Input type="number" className="h-8 text-[13px]"
           value={axis.max ?? ""} placeholder="auto"
           onChange={(e) => onChange({ max: e.target.value === "" ? null : parseFloat(e.target.value) })} />
       </Row>
@@ -1474,7 +1461,6 @@ function AxisSection({ title, axis, onChange, onReset }: {
         <NumberStepper value={axis.decimals} min={0} max={4}
           onChange={(v) => onChange({ decimals: v })} />
       </Row>
-      <ResetButton onClick={onReset} />
     </Section>
   );
 }
