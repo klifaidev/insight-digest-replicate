@@ -1396,9 +1396,9 @@ function WaterfallChart({
 // Measures its container and renders an SVG at the actual pixel size,
 // so the Bridge reflows fluidly (like Recharts' ResponsiveContainer does).
 function FluidSvg({ children }: { children: (w: number, h: number) => React.ReactNode }) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [size, setSize] = React.useState({ w: 0, h: 0 });
-  React.useEffect(() => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
     if (!ref.current) return;
     const el = ref.current;
     const ro = new ResizeObserver(() => {
