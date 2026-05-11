@@ -402,10 +402,6 @@ export function ChartInspector({
           <Label className="text-[12px] font-normal text-muted-foreground">Título</Label>
           <Input className="mt-1 h-8 text-[13px]" value={block.title ?? ""}
             onChange={(e) => onChange({ title: e.target.value })} />
-        <div>
-          <Label className="text-[10px] uppercase text-muted-foreground">Título</Label>
-          <Input className="h-7 text-xs" value={block.title ?? ""}
-            onChange={(e) => onChange({ title: e.target.value })} />
         </div>
         <ToggleField label="Mostrar título" value={style.general.titleShow}
           onChange={(v) => updPath("general", { titleShow: v })} />
