@@ -35,6 +35,26 @@ function rid(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+const PRESET_THUMB_COLORS: Record<StylePresetId, string[]> = {
+  default: ["#C8102E", "#1C2430", "#0F766E", "#7C3AED"],
+  minimal: ["#E2E8F0", "#CBD5E1", "#94A3B8", "#64748B"],
+  bold: ["#0B1220", "#C8102E", "#EA580C", "#2563EB"],
+  monochrome: ["#0B1220", "#334155", "#64748B", "#94A3B8"],
+  harald: ["#C8102E", "#1C2430", "#0F766E", "#EA580C"],
+};
+
+function PresetThumbnail({ id }: { id: StylePresetId }) {
+  const colors = PRESET_THUMB_COLORS[id];
+  return (
+    <div className="flex h-6 w-full items-end gap-0.5 rounded-sm bg-secondary/40 p-0.5">
+      {colors.map((c, i) => (
+        <div key={i} className="flex-1 rounded-sm"
+          style={{ background: c, height: `${40 + i * 15}%` }} />
+      ))}
+    </div>
+  );
+}
+
 // Position options per chart family
 function positionOptions(ct: ChartBlock["chartType"]) {
   if (ct === "pie" || ct === "donut") {
