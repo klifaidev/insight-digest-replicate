@@ -1148,13 +1148,15 @@ function mixHex(a: string, b: string, t: number): string {
 // -- Waterfall (custom Recharts composition) -------------------------------
 // FIX 1+2 — supports both legacy per-period mode AND smart column-builder mode.
 function WaterfallChart({
-  block, style, series, dsRows: dsRowsProp,
+  block, style, series, dsRows: dsRowsProp, width, height,
 }: {
   block: ChartBlock;
   style: ChartStyle;
   rows: Record<string, number | string>[];
   series: { name: string; values: number[] }[];
   dsRows?: PricingRow[];
+  width?: number;
+  height?: number;
 }) {
   const measureFmt = inferFormat(block.measure);
   const pricing = usePricing((s) => s.rows);
@@ -1167,6 +1169,7 @@ function WaterfallChart({
   const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, decomposition: "effects", topN: 6 };
   const decomposition = pvmCfg.decomposition ?? "effects";
   const topN = pvmCfg.topN ?? 6;
+  const chartSize = width != null && height != null ? { width, height } : {};
 
   // PVM mode — decomposição igual à aba Bridge (com auto-default de base/comp)
   const pvmItems = useMemo(() => {
@@ -1305,7 +1308,7 @@ function WaterfallChart({
   // Empty state for PVM when there isn't enough data (e.g. only one period in the slice)
   if (wfMode === "pvm" && wfRows.length === 0) {
     return (
-      <BarChart data={[{ label: "Sem dados suficientes para a Bridge", base: 0, delta: 0, end: 0, signed: 0, type: "start" as const }]}>
+      <BarChart {...chartSize} data={[{ label: "Sem dados suficientes para a Bridge", base: 0, delta: 0, end: 0, signed: 0, type: "start" as const }]}>
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} />
         <YAxis hide domain={[0, 1]} />
       </BarChart>
@@ -1318,7 +1321,7 @@ function WaterfallChart({
   const yMax = style.yAxis.max ?? Math.max(0, ...allEnds);
 
   return (
-    <BarChart data={wfRows} barCategoryGap={`${style.waterfall.gapPct}%`}>
+    <BarChart {...chartSize} data={wfRows} barCategoryGap={`${style.waterfall.gapPct}%`}>
       {style.grid.show && (
         <CartesianGrid stroke={style.grid.color}
           strokeDasharray={style.grid.style === "dashed" ? "3 3" : "0"} />
