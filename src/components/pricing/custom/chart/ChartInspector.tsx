@@ -1019,6 +1019,10 @@ export function ChartInspector({
         </Section>
       )}
 
+        </TabsContent>
+
+        {/* ============================ ANÁLISES TAB ============================ */}
+        <TabsContent value="analises" className="mt-3 space-y-3">
       {/* B.2 — Conditional formatting */}
       {["bar", "column", "hbar", "waterfall", "treemap"].includes(ct) && (
         <ConditionalSection
@@ -1034,6 +1038,13 @@ export function ChartInspector({
           analytics={style.analytics!}
           onChange={(p) => updPath("analytics", p as never)} />
       )}
+      {!["bar", "column", "hbar", "waterfall", "treemap", "line", "area", "combo", "scatter", "bubble"].includes(ct) && (
+        <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-[12px] text-muted-foreground">
+          Sem análises disponíveis para este tipo de gráfico.
+        </div>
+      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
