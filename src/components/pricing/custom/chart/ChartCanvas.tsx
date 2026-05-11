@@ -1315,7 +1315,7 @@ function WaterfallChart({
   // Empty state for PVM when there isn't enough data (e.g. only one period in the slice)
   if (wfMode === "pvm" && wfRows.length === 0) {
     return (
-      <svg width="100%" height="100%" viewBox="0 0 1000 320" preserveAspectRatio="none">
+      <svg width="100%" height="100%" viewBox="0 0 1000 320" preserveAspectRatio="xMidYMid meet">
         <line x1="35" y1="210" x2="965" y2="210" stroke={style.grid.color} strokeWidth="1" />
         <text x="500" y="226" textAnchor="middle" fontSize="12" fill={style.xAxis.labelColor}>
           Sem dados suficientes para a Bridge
@@ -1341,7 +1341,7 @@ function WaterfallChart({
   const valFmt = (v: number) => formatValue(v, style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals);
 
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+    <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
       {style.grid.show && [0, 0.25, 0.5, 0.75, 1].map((t) => {
         const y = m.top + t * plotH;
         return <line key={t} x1={m.left} y1={y} x2={W - m.right} y2={y} stroke={style.grid.color} strokeDasharray={style.grid.style === "dashed" ? "5 5" : undefined} />;
