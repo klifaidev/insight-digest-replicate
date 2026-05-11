@@ -132,7 +132,7 @@ export function SelectField<T extends string>({
   const safe = options.find((o) => o.value === value) ? value : (options[0]?.value as T);
   return (
     <RxSelect value={safe} onValueChange={(v) => onChange(v as T)}>
-      <SelectTrigger className="h-8 px-2 text-[13px]">
+      <SelectTrigger className="h-8 w-full min-w-0 px-2 text-[13px] [&>span]:truncate">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
