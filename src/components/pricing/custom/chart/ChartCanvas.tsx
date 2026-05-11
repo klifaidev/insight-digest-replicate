@@ -1181,6 +1181,14 @@ function WaterfallChart({
   const topN = pvmCfg.topN ?? 6;
   const chartSize = width != null && height != null ? { width, height } : {};
 
+  const wrap = (node: React.ReactElement) => (
+    width != null && height != null ? node : (
+      <ResponsiveContainer width="100%" height="100%">
+        {node}
+      </ResponsiveContainer>
+    )
+  );
+
   // PVM mode — decomposição igual à aba Bridge (com auto-default de base/comp)
   const pvmItems = useMemo(() => {
     if (wfMode !== "pvm") return null;
@@ -1317,7 +1325,7 @@ function WaterfallChart({
 
   // Empty state for PVM when there isn't enough data (e.g. only one period in the slice)
   if (wfMode === "pvm" && wfRows.length === 0) {
-    return (
+    return wrap(
       <BarChart {...chartSize} data={[{ label: "Sem dados suficientes para a Bridge", base: 0, delta: 0, end: 0, signed: 0, type: "start" as const }]}>
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} />
         <YAxis hide domain={[0, 1]} />
@@ -1330,7 +1338,7 @@ function WaterfallChart({
   const yMin = style.yAxis.min ?? Math.min(0, ...allEnds);
   const yMax = style.yAxis.max ?? Math.max(0, ...allEnds);
 
-  return (
+  return wrap(
     <BarChart {...chartSize} data={wfRows} barCategoryGap={`${style.waterfall.gapPct}%`}>
       {style.grid.show && (
         <CartesianGrid stroke={style.grid.color}
