@@ -1081,25 +1081,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         }}>{block.title}</div>
       )}
       <div style={{ flex: 1, minHeight: 0 }}>
-        {ct === "waterfall" ? (
-          <ResponsiveContainer width="100%" height="100%">
-            {({ width, height }) => (
-              <WaterfallChart
-                block={block}
-                style={style}
-                rows={rows}
-                series={data.series}
-                dsRows={dsRows}
-                width={width}
-                height={height}
-              />
-            )}
-          </ResponsiveContainer>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            {chart as React.ReactElement}
-          </ResponsiveContainer>
-        )}
+        <ResponsiveContainer width="100%" height="100%">
+          {chart as React.ReactElement}
+        </ResponsiveContainer>
       </div>
     </Wrapper>
   );
