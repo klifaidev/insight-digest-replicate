@@ -17,12 +17,16 @@ import {
 } from "./Inspector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ChartTypePicker } from "./ChartTypePicker";
+import { STYLE_PRESETS, buildStylePresetPatch, type StylePresetId } from "./stylePresets";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
 import { Trash2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Patch = Partial<ChartBlock>;
 
