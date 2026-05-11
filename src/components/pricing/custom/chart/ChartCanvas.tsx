@@ -1315,7 +1315,7 @@ function WaterfallChart({
   // Empty state for PVM when there isn't enough data (e.g. only one period in the slice)
   if (wfMode === "pvm" && wfRows.length === 0) {
     return (
-      <svg width="100%" height="100%" viewBox="0 0 1000 320" preserveAspectRatio="none">
+      <svg width="100%" height="100%" viewBox="0 0 1000 320" preserveAspectRatio="xMidYMid meet">
         <line x1="35" y1="210" x2="965" y2="210" stroke={style.grid.color} strokeWidth="1" />
         <text x="500" y="226" textAnchor="middle" fontSize="12" fill={style.xAxis.labelColor}>
           Sem dados suficientes para a Bridge
