@@ -1481,6 +1481,30 @@ function PvmBridgePicker({
               onChange={(v) => updPath("waterfall", { pvm: { ...pvm, comp: v || null } })}
               options={opts} />
           </Row>
+          <Row label="Decomposição">
+            <SelectField value={pvm.decomposition ?? "effects"}
+              onChange={(v) => updPath("waterfall", { pvm: { ...pvm, decomposition: v } })}
+              options={[
+                { value: "effects",      label: "Efeitos (Volume/Preço/Custo…)" },
+                { value: "marca",        label: "Marca" },
+                { value: "categoria",    label: "Categoria" },
+                { value: "subcategoria", label: "Subcategoria" },
+                { value: "formato",      label: "Formato" },
+                { value: "canal",        label: "Canal" },
+                { value: "canalAjustado",label: "Canal ajustado" },
+                { value: "mercado",      label: "Mercado" },
+                { value: "regional",     label: "Regional" },
+                { value: "uf",           label: "UF" },
+                { value: "sku",          label: "SKU (item)" },
+                { value: "skuDesc",      label: "SKU (descrição)" },
+              ]} />
+          </Row>
+          {(pvm.decomposition ?? "effects") !== "effects" && (
+            <Row label="Top N">
+              <NumberStepper value={pvm.topN ?? 6} min={3} max={20}
+                onChange={(v) => updPath("waterfall", { pvm: { ...pvm, topN: v } })} />
+            </Row>
+          )}
         </>
       )}
     </>
