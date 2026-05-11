@@ -157,6 +157,10 @@ export interface WaterfallStyleCfg {
     base: string | null;
     comp: string | null;
     periodMode: "fy" | "month";
+    /** "effects" = Volume/Preço/Custo/...; ou nome de uma dimensão (marca, categoria, etc.) */
+    decomposition?: string;
+    /** Top N itens quando decomposition é uma dimensão (resto vira "Outros"). */
+    topN?: number;
   };
 }
 
