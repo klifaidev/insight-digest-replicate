@@ -211,17 +211,6 @@ export function ChartInspector({
                 && BUDGET_UNAVAILABLE_MEASURES.includes(m.id)
                 ? BUDGET_UNAVAILABLE_HINT : undefined,
             }))} />
-          <SelectField value={block.measure}
-            onChange={(v) => onChange({ measure: v as KpiMeasureId })}
-            options={KPI_MEASURES.map((m) => ({
-              value: m.id,
-              label: m.label,
-              disabled: block.dataSource === "budget"
-                && BUDGET_UNAVAILABLE_MEASURES.includes(m.id),
-              title: block.dataSource === "budget"
-                && BUDGET_UNAVAILABLE_MEASURES.includes(m.id)
-                ? BUDGET_UNAVAILABLE_HINT : undefined,
-            }))} />
         </Row>
         {S.isCombo && (
           <Row label="Medida da linha">
