@@ -162,15 +162,35 @@ export function ChartInspector({
     style.series.find((x) => x.key === key) ?? { key };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {/* Chart type picker — always visible at top */}
+      <div className="rounded-lg border border-border/50 bg-card/40 px-2 py-2">
+        <ChartTypePicker value={ct} onChange={(v) => onChange({ chartType: v })} />
+      </div>
+
+      <Tabs defaultValue="dados" className="w-full">
+        <TabsList className="grid h-9 w-full grid-cols-3 rounded-full bg-secondary/40 p-1">
+          <TabsTrigger value="dados" className="h-7 rounded-full text-[12px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Dados</TabsTrigger>
+          <TabsTrigger value="visual" className="h-7 rounded-full text-[12px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Visual</TabsTrigger>
+          <TabsTrigger value="analises" className="h-7 rounded-full text-[12px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Análises</TabsTrigger>
+        </TabsList>
+
+        {/* ============================ DADOS TAB ============================ */}
+        <TabsContent value="dados" className="mt-3 space-y-3">
       {/* ===== Data ===== */}
-      <Section title="Dados" defaultOpen>
-        <Row label="Tipo">
-          <SelectField value={ct as string}
-            onChange={(v) => onChange({ chartType: v as ChartBlock["chartType"] })}
-            options={ALL_TYPES} />
-        </Row>
+      <Section title="Medidas e dimensões" defaultOpen>
         <Row label="Medida">
+          <SelectField value={block.measure}
+            onChange={(v) => onChange({ measure: v as KpiMeasureId })}
+            options={KPI_MEASURES.map((m) => ({
+              value: m.id,
+              label: m.label,
+              disabled: block.dataSource === "budget"
+                && BUDGET_UNAVAILABLE_MEASURES.includes(m.id),
+              title: block.dataSource === "budget"
+                && BUDGET_UNAVAILABLE_MEASURES.includes(m.id)
+                ? BUDGET_UNAVAILABLE_HINT : undefined,
+            }))} />
           <SelectField value={block.measure}
             onChange={(v) => onChange({ measure: v as KpiMeasureId })}
             options={KPI_MEASURES.map((m) => ({
