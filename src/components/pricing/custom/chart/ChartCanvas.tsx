@@ -72,8 +72,12 @@ function makeLabelContent(opts: {
 }) {
   const { style: cs, measureFmt, seriesName, categories, customFmt, anchor = "middle", seriesColor } = opts;
   const dl = cs.dataLabels;
-  return (props: { x?: number; y?: number; value?: number | string; index?: number }) => {
-    if (props.x == null || props.y == null || props.value == null) return null;
+  return (props: {
+    x?: number; y?: number; cx?: number; cy?: number; width?: number; height?: number;
+    viewBox?: { x?: number; y?: number; width?: number; height?: number; cx?: number; cy?: number };
+    position?: string; offset?: number; value?: number | string; index?: number;
+  }) => {
+    if (props.value == null) return null;
     let text: string;
     if (customFmt) {
       text = customFmt(props.value as number | string);
@@ -104,9 +108,31 @@ function makeLabelContent(opts: {
     const padX = 3, padY = 2;
     const approxW = text.length * fs * 0.55 + padX * 2;
     const approxH = fs + padY * 2;
-    const rx = anchor === "middle" ? props.x - approxW / 2
-      : anchor === "end" ? props.x - approxW : props.x;
-    const ry = props.y - approxH + padY;
+    const vb = props.viewBox ?? {};
+    const x = Number(vb.x ?? props.x ?? vb.cx ?? props.cx ?? 0);
+    const y = Number(vb.y ?? props.y ?? vb.cy ?? props.cy ?? 0);
+    const w = Number(vb.width ?? props.width ?? 0);
+    const h = Number(vb.height ?? props.height ?? 0);
+    const off = props.offset ?? 5;
+    const pos = props.position ?? "top";
+    const verticalSign = h >= 0 ? 1 : -1;
+    const horizontalSign = w >= 0 ? 1 : -1;
+    let tx = x + w / 2;
+    let ty = y - verticalSign * off;
+    let textAnchor: "middle" | "start" | "end" = "middle";
+    let baseline: "central" | "hanging" | "auto" = verticalSign > 0 ? "auto" : "hanging";
+    if (pos === "bottom") { ty = y + h + verticalSign * off; baseline = verticalSign > 0 ? "hanging" : "auto"; }
+    else if (pos === "left") { tx = x - horizontalSign * off; ty = y + h / 2; textAnchor = horizontalSign > 0 ? "end" : "start"; baseline = "central"; }
+    else if (pos === "right") { tx = x + w + horizontalSign * off; ty = y + h / 2; textAnchor = horizontalSign > 0 ? "start" : "end"; baseline = "central"; }
+    else if (pos === "insideLeft") { tx = x + horizontalSign * off; ty = y + h / 2; textAnchor = horizontalSign > 0 ? "start" : "end"; baseline = "central"; }
+    else if (pos === "insideRight") { tx = x + w - horizontalSign * off; ty = y + h / 2; textAnchor = horizontalSign > 0 ? "end" : "start"; baseline = "central"; }
+    else if (pos === "insideTop") { tx = x + w / 2; ty = y + verticalSign * off; baseline = verticalSign > 0 ? "hanging" : "auto"; }
+    else if (pos === "insideBottom") { tx = x + w / 2; ty = y + h - verticalSign * off; baseline = verticalSign > 0 ? "auto" : "hanging"; }
+    else if (pos === "center") { tx = x + w / 2; ty = y + h / 2; baseline = "central"; }
+    else if (w === 0 && h === 0 && anchor !== "middle") textAnchor = anchor;
+    const rx = textAnchor === "middle" ? tx - approxW / 2
+      : textAnchor === "end" ? tx - approxW : tx;
+    const ry = baseline === "central" ? ty - approxH / 2 : baseline === "hanging" ? ty - padY : ty - approxH + padY;
     const showBg = dl.bgOpacity > 0 || dl.borderWidth > 0;
     return (
       <g>
@@ -115,9 +141,10 @@ function makeLabelContent(opts: {
             fill={dl.bgColor} fillOpacity={dl.bgOpacity}
             stroke={dl.borderColor} strokeWidth={dl.borderWidth} />
         )}
-        <text x={props.x} y={props.y - padY}
+        <text x={tx} y={ty}
           fontSize={fs} fill={color}
-          textAnchor={anchor}
+          textAnchor={textAnchor}
+          dominantBaseline={baseline}
           fontWeight={dl.bold ? 700 : 400}
           fontStyle={dl.italic ? "italic" : "normal"}>{text}</text>
       </g>
