@@ -495,6 +495,16 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     fontStyle: style.dataLabels.italic ? "italic" : "normal" };
   const dlPos = style.dataLabels.position;
 
+  // Reserve extra padding around the plot area so the first/last data labels
+  // (and rotated axis ticks) never get clipped at the chart edges. Scales
+  // gently with the data-label font size when labels are visible.
+  const dlOn = !!style.dataLabels.show;
+  const dlSize = Math.max(10, style.dataLabels.size || 12);
+  const sideRoom = dlOn ? Math.round(dlSize * 2.4) : 12;
+  const topRoom = dlOn ? Math.round(dlSize * 1.6) : 12;
+  const chartMargin = { top: topRoom, right: sideRoom, left: sideRoom, bottom: 8 };
+  const hbarMargin = { top: 12, right: dlOn ? Math.round(dlSize * 3) : 24, left: 8, bottom: 8 };
+
   // ---- renderers per chart type ----
   let chart: React.ReactNode = null;
   const forceStack = ct === "stackedColumn" || ct === "stackedBar" || ct === "stackedArea";
@@ -550,7 +560,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
     chart = (
-      <Comp data={chartRows} onClick={chartOnClick}>
+      <Comp data={chartRows} onClick={chartOnClick} margin={chartMargin}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
@@ -666,7 +676,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "bar" || ct === "column" || ct === "stackedColumn") {
     const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
-      <BarChart data={rows} layout="horizontal" onClick={chartOnClick}
+      <BarChart data={rows} layout="horizontal" onClick={chartOnClick} margin={chartMargin}
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
@@ -702,7 +712,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "hbar" || ct === "stackedBar") {
     const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
-      <BarChart data={rows} layout="vertical" onClick={chartOnClick}
+      <BarChart data={rows} layout="vertical" onClick={chartOnClick} margin={hbarMargin}
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}
         <XAxis type="number" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }}
@@ -885,7 +895,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const xFmt = style.measureX ? inferFormat(style.measureX) : measureFmt;
     const yFmt = style.measureY ? inferFormat(style.measureY) : measureFmt;
     chart = (
-      <ScatterChart onClick={chartOnClick}>
+      <ScatterChart onClick={chartOnClick} margin={chartMargin}>
         {renderGrid}
         <XAxis type="number" dataKey="x" name={xLabel}
           domain={xDomain}
@@ -1072,7 +1082,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       });
     }
     chart = (
-      <ComposedChart data={buckets} barCategoryGap="2%">
+      <ComposedChart data={buckets} barCategoryGap="2%" margin={{ top: 24, right: 24, left: 8, bottom: 8 }}>
         {renderGrid}
         <XAxis dataKey="bin" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }} />
         <YAxis yAxisId="left" tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
@@ -1531,7 +1541,7 @@ function BoxPlot({
   const yMax = style.yAxis.max ?? (all.length ? Math.max(...all) : 1);
 
   return (
-    <ComposedChart data={stats}>
+    <ComposedChart data={stats} margin={{ top: 24, right: 24, left: 8, bottom: 8 }}>
       <CartesianGrid stroke={style.grid.color}
         strokeDasharray={style.grid.style === "dashed" ? "3 3" : "0"} />
       <XAxis dataKey="name" tick={{ fontSize: style.xAxis.labelSize, fill: style.xAxis.labelColor }} />
