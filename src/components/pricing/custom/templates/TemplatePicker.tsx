@@ -238,7 +238,14 @@ export function TemplatePicker({ open, onOpenChange, onApply, onApplyDeck }: Pro
                     width={256} height={144}
                   />
                 </div>
-                <div className="text-[15px] font-medium leading-tight">{selected.tpl.name}</div>
+                <div className="flex items-center gap-2 text-[15px] font-medium leading-tight">
+                  {selected.tpl.name}
+                  {selected.kind === "builtin" && selected.tpl.isDeck && (
+                    <Badge variant="default" className="h-5 gap-1 rounded-full px-2 text-[10px] font-normal">
+                      <Layers className="h-3 w-3" /> Deck · {selected.tpl.slides.length} slides
+                    </Badge>
+                  )}
+                </div>
                 <p className="mt-1 text-[12px] leading-snug text-muted-foreground line-clamp-3">
                   {selected.kind === "builtin"
                     ? selected.tpl.description
