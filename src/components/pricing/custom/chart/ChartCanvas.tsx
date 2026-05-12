@@ -676,7 +676,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "bar" || ct === "column" || ct === "stackedColumn") {
     const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
-      <BarChart data={rows} layout="horizontal" onClick={chartOnClick}
+      <BarChart data={rows} layout="horizontal" onClick={chartOnClick} margin={chartMargin}
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}{xAxis}{yAxis}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
