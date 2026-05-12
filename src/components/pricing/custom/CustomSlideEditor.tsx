@@ -52,9 +52,7 @@ import { useMonthsInfo, useFyList } from "@/store/selectors";
 import { cn } from "@/lib/utils";
 import haraldFooterPng from "@/assets/harald-footer-bar.png";
 import { registerCustomCanvas } from "@/lib/customCanvasRegistry";
-import {
-  loadUserTemplates, saveUserTemplate, type CustomTemplate,
-} from "@/lib/customTemplates";
+import { saveUserTemplate } from "@/lib/customTemplates";
 import { TemplatePicker } from "./templates/TemplatePicker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
