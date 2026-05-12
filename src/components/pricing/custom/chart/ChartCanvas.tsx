@@ -1388,8 +1388,8 @@ function WaterfallChart({
     : t === "negative" ? style.waterfall.negativeColor
     : style.waterfall.totalColor;
 
-  // FIX 4 — fallback to generic dataLabels.position when waterfall-specific is not set
-  const effectiveWfPos = String(style.waterfall.labelPos ?? style.dataLabels.position ?? "above");
+  // The inspector now exposes Waterfall label position through the generic Data Labels control.
+  const effectiveWfPos = String(style.dataLabels.position ?? style.waterfall.labelPos ?? "above");
   const labelPos = effectiveWfPos === "inside" || effectiveWfPos === "center" ? "center"
     : effectiveWfPos === "below" || effectiveWfPos === "bottom" || effectiveWfPos === "inside-base" ? "bottom" : "top";
 
