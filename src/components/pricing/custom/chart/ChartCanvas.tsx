@@ -560,7 +560,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
     chart = (
-      <Comp data={chartRows} onClick={chartOnClick}>
+      <Comp data={chartRows} onClick={chartOnClick} margin={chartMargin}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
