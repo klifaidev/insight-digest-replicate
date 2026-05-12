@@ -712,7 +712,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   } else if (ct === "hbar" || ct === "stackedBar") {
     const stacked = forceStack || style.bar.mode === "stacked" || style.bar.mode === "stacked100";
     chart = (
-      <BarChart data={rows} layout="vertical" onClick={chartOnClick}
+      <BarChart data={rows} layout="vertical" onClick={chartOnClick} margin={hbarMargin}
         barCategoryGap={`${style.bar.gapPct}%`}>
         {renderGrid}
         <XAxis type="number" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }}
