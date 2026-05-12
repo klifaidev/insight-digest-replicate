@@ -549,7 +549,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 yAxisId="left">
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("area", dlPos) as never}
-                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
+                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
                 )}
               </Area>
             );
@@ -569,7 +569,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 })}
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
-                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
+                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
                 )}
               </Bar>
             );
@@ -590,7 +590,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               connectNulls>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("line", dlPos) as never}
-                  content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
+                  content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
               )}
             </Line>
           );
