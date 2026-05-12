@@ -866,9 +866,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               fillOpacity={isDimmed(p.name) ? 0.4 : (style.bubble.fillOpacity ?? 1)} />
           ))}
           {style.dataLabels.show && (
-            <LabelList dataKey="name" position={mapPos("scatter", dlPos) as never}
+            <LabelList dataKey="z" position={mapPos("scatter", dlPos) as never}
               content={makeLabelContent({ style, measureFmt,
-                customFmt: (_v) => "" }) as never} />
+                categories: points.map((p) => p.name) }) as never} />
           )}
           {ct === "bubble" && style.bubble.showSizeLabel && (
             <LabelList dataKey="z" position="top"
