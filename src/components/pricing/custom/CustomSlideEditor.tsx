@@ -871,31 +871,12 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         </div>
       </div>
 
-      {/* Templates dialog */}
-      <Dialog open={tplOpen} onOpenChange={setTplOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Aplicar modelo</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-2">
-            {[...BUILTIN_TEMPLATES, ...userTpls].map((t) => (
-              <div key={t.id} className="group relative rounded-lg border border-border/40 bg-card/60 p-3 hover:border-primary/60">
-                <button className="block w-full text-left"
-                  onClick={() => { onChange(applyTemplate(t)); setTplOpen(false); toast.success(`Modelo "${t.name}" aplicado`); }}>
-                  <div className="text-sm font-medium">{t.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{t.description ?? `${t.config.blocks.length} blocos`}</div>
-                  {t.builtin && <Badge variant="secondary" className="mt-2 text-[9px]">Built-in</Badge>}
-                </button>
-                {!t.builtin && (
-                  <Button size="icon" variant="ghost"
-                    className="absolute right-1 top-1 h-6 w-6 opacity-0 group-hover:opacity-100 hover:text-destructive"
-                    onClick={(e) => { e.stopPropagation(); deleteUserTemplate(t.id); refreshUserTpls(); toast.success("Modelo removido"); }}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Templates picker */}
+      <TemplatePicker
+        open={tplOpen}
+        onOpenChange={setTplOpen}
+        onApply={(cfg) => { onChange(cfg); toast.success("Modelo aplicado"); }}
+      />
 
       {/* Save template dialog */}
       <Dialog open={saveTplOpen} onOpenChange={setSaveTplOpen}>
