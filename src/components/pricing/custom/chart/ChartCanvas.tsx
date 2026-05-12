@@ -1040,7 +1040,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position="top"
                   content={makeLabelContent({ style, measureFmt,
-                    customFmt: (v) => Number.isInteger(v) ? String(v) : v.toFixed(0) }) as never} />
+                    customFmt: (v) => { const n = Number(v); return Number.isInteger(n) ? String(n) : n.toFixed(0); } }) as never} />
               )}
             </Bar>
           );
