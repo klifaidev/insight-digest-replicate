@@ -767,13 +767,32 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         default: body = `${name}: ${pct}`;
       }
       const text = dl.showCategory ? `${name} · ${body}` : body;
+      const anchor: "start" | "end" | "middle" = inside ? "middle" : (x > cx ? "start" : "end");
+      let color = dl.color;
+      if (dl.autoContrast) {
+        const ref = dl.bgOpacity > 0 ? dl.bgColor : (inside ? (props.fill ?? "#FFFFFF") : (style.general?.background ?? "#FFFFFF"));
+        color = luminance(ref) > 0.55 ? "#000000" : "#FFFFFF";
+      }
+      const padX = 3, padY = 2;
+      const approxW = text.length * dl.size * 0.55 + padX * 2;
+      const approxH = dl.size + padY * 2;
+      const rx = anchor === "middle" ? x - approxW / 2 : anchor === "end" ? x - approxW : x;
+      const ry = y - approxH / 2;
+      const showBg = dl.bgOpacity > 0 || dl.borderWidth > 0;
       return (
-        <text x={x} y={y} fill={dl.color}
-          fontSize={dl.size}
-          fontWeight={dl.bold ? 700 : 400}
-          fontStyle={dl.italic ? "italic" : "normal"}
-          textAnchor={x > cx ? "start" : "end"}
-          dominantBaseline="central">{text}</text>
+        <g>
+          {showBg && (
+            <rect x={rx} y={ry} width={approxW} height={approxH} rx={2}
+              fill={dl.bgColor} fillOpacity={dl.bgOpacity}
+              stroke={dl.borderColor} strokeWidth={dl.borderWidth} />
+          )}
+          <text x={x} y={y} fill={color}
+            fontSize={dl.size}
+            fontWeight={dl.bold ? 700 : 400}
+            fontStyle={dl.italic ? "italic" : "normal"}
+            textAnchor={anchor}
+            dominantBaseline="central">{text}</text>
+        </g>
       );
     } : false;
     chart = (
