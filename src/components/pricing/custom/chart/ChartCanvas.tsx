@@ -66,16 +66,22 @@ function makeLabelContent(opts: {
   measureFmt: ReturnType<typeof inferFormat>;
   seriesName?: string;
   categories?: string[];
-  customFmt?: (v: number) => string;
+  customFmt?: (v: number | string) => string;
   anchor?: "middle" | "start" | "end";
+  seriesColor?: string;
 }) {
-  const { style: cs, measureFmt, seriesName, categories, customFmt, anchor = "middle" } = opts;
+  const { style: cs, measureFmt, seriesName, categories, customFmt, anchor = "middle", seriesColor } = opts;
   const dl = cs.dataLabels;
   return (props: { x?: number; y?: number; value?: number | string; index?: number }) => {
     if (props.x == null || props.y == null || props.value == null) return null;
-    const num = typeof props.value === "number" ? props.value : Number(props.value);
-    if (!isFinite(num)) return null;
-    let text = customFmt ? customFmt(num) : fmtVal(num, cs, measureFmt);
+    let text: string;
+    if (customFmt) {
+      text = customFmt(props.value as number | string);
+    } else {
+      const num = typeof props.value === "number" ? props.value : Number(props.value);
+      if (!isFinite(num)) return null;
+      text = fmtVal(num, cs, measureFmt);
+    }
     const prefix: string[] = [];
     if (dl.showSeries && seriesName) prefix.push(seriesName);
     if (dl.showCategory && categories && props.index != null) {
@@ -84,8 +90,15 @@ function makeLabelContent(opts: {
     }
     if (prefix.length) text = `${prefix.join(" · ")}: ${text}`;
     let color = dl.color;
-    if (dl.autoContrast && dl.bgOpacity > 0) {
-      color = luminance(dl.bgColor) > 0.55 ? "#000000" : "#FFFFFF";
+    // FIX 11 — auto-contrast works even without explicit bg
+    if (dl.autoContrast) {
+      const insidePos = ["inside-end", "inside-base", "center", "inside"].includes(dl.position);
+      const ref = dl.bgOpacity > 0
+        ? dl.bgColor
+        : insidePos && seriesColor
+          ? seriesColor
+          : (cs.general?.background ?? "#FFFFFF");
+      color = luminance(ref) > 0.55 ? "#000000" : "#FFFFFF";
     }
     const fs = dl.size;
     const padX = 3, padY = 2;
@@ -536,7 +549,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 yAxisId="left">
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("area", dlPos) as never}
-                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
+                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
                 )}
               </Area>
             );
@@ -556,7 +569,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 })}
                 {style.dataLabels.show && (
                   <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
-                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
+                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
                 )}
               </Bar>
             );
@@ -577,7 +590,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               connectNulls>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("line", dlPos) as never}
-                  content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats }) as never} />
+                  content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
               )}
             </Line>
           );
@@ -613,7 +626,12 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             <Line key={`__line_${s.name}`} isAnimationActive={false}
               dataKey={`__line_${s.name}`} name={`${s.name} (linha)`}
               type="monotone" stroke={color} strokeWidth={2.5}
-              yAxisId="right" dot={{ r: 3, fill: color }} />
+              yAxisId="right" dot={{ r: 3, fill: color }}>
+              {style.dataLabels.show && (
+                <LabelList dataKey={`__line_${s.name}`} position={mapPos("line", dlPos) as never}
+                  content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
+              )}
+            </Line>
           );
         })}
       </Comp>
@@ -646,7 +664,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
                   content={makeLabelContent({
                     style, measureFmt, seriesName: s.name, categories: cats,
-                    customFmt: isStack100 ? stack100Fmt : undefined,
+                    customFmt: isStack100 ? stack100Fmt : undefined, seriesColor: color,
                   }) as never} />
               )}
             </Bar>
@@ -691,7 +709,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 <LabelList dataKey={s.name} position={mapPos("bar-horizontal", dlPos) as never}
                   content={makeLabelContent({
                     style, measureFmt, seriesName: s.name, categories: cats,
-                    customFmt: isStack100 ? stack100Fmt : undefined, anchor: "start",
+                    customFmt: isStack100 ? stack100Fmt : undefined, anchor: "start", seriesColor: color,
                   }) as never} />
               )}
             </Bar>
@@ -749,13 +767,32 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         default: body = `${name}: ${pct}`;
       }
       const text = dl.showCategory ? `${name} · ${body}` : body;
+      const anchor: "start" | "end" | "middle" = inside ? "middle" : (x > cx ? "start" : "end");
+      let color = dl.color;
+      if (dl.autoContrast) {
+        const ref = dl.bgOpacity > 0 ? dl.bgColor : (inside ? (props.fill ?? "#FFFFFF") : (style.general?.background ?? "#FFFFFF"));
+        color = luminance(ref) > 0.55 ? "#000000" : "#FFFFFF";
+      }
+      const padX = 3, padY = 2;
+      const approxW = text.length * dl.size * 0.55 + padX * 2;
+      const approxH = dl.size + padY * 2;
+      const rx = anchor === "middle" ? x - approxW / 2 : anchor === "end" ? x - approxW : x;
+      const ry = y - approxH / 2;
+      const showBg = dl.bgOpacity > 0 || dl.borderWidth > 0;
       return (
-        <text x={x} y={y} fill={dl.color}
-          fontSize={dl.size}
-          fontWeight={dl.bold ? 700 : 400}
-          fontStyle={dl.italic ? "italic" : "normal"}
-          textAnchor={x > cx ? "start" : "end"}
-          dominantBaseline="central">{text}</text>
+        <g>
+          {showBg && (
+            <rect x={rx} y={ry} width={approxW} height={approxH} rx={2}
+              fill={dl.bgColor} fillOpacity={dl.bgOpacity}
+              stroke={dl.borderColor} strokeWidth={dl.borderWidth} />
+          )}
+          <text x={x} y={y} fill={color}
+            fontSize={dl.size}
+            fontWeight={dl.bold ? 700 : 400}
+            fontStyle={dl.italic ? "italic" : "normal"}
+            textAnchor={anchor}
+            dominantBaseline="central">{text}</text>
+        </g>
       );
     } : false;
     chart = (
@@ -853,9 +890,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               fillOpacity={isDimmed(p.name) ? 0.4 : (style.bubble.fillOpacity ?? 1)} />
           ))}
           {style.dataLabels.show && (
-            <LabelList dataKey="name" position={mapPos("scatter", dlPos) as never}
+            <LabelList dataKey="z" position={mapPos("scatter", dlPos) as never}
               content={makeLabelContent({ style, measureFmt,
-                customFmt: (_v) => "" }) as never} />
+                categories: points.map((p) => p.name) }) as never} />
           )}
           {ct === "bubble" && style.bubble.showSizeLabel && (
             <LabelList dataKey="z" position="top"
@@ -948,15 +985,20 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const dotRenderer = dl.show ? (props: any) => {
             const { cx, cy, value } = props;
             if (cx == null || cy == null) return <g />;
-            const off = dl.position === "below" ? 12 : -8;
+            const pos = dl.position;
+            let dx = 0, dy = -8;
+            let anchor: "middle" | "start" | "end" = "middle";
+            if (pos === "below") { dx = 0; dy = 12; anchor = "middle"; }
+            else if (pos === "left") { dx = -8; dy = 4; anchor = "end"; }
+            else if (pos === "right") { dx = 8; dy = 4; anchor = "start"; }
             const fmt = dl.format === "auto" ? measureFmt : dl.format;
             return (
               <g>
                 <circle cx={cx} cy={cy} r={2.5} fill={color} />
-                <text x={cx} y={cy + off} fontSize={dl.size} fill={dl.color}
+                <text x={cx + dx} y={cy + dy} fontSize={dl.size} fill={dl.color}
                   fontWeight={dl.bold ? 700 : 400}
                   fontStyle={dl.italic ? "italic" : "normal"}
-                  textAnchor="middle">
+                  textAnchor={anchor}>
                   {formatValue(Number(value) || 0, fmt, "rol", dl.decimals)}
                 </text>
               </g>
@@ -1027,7 +1069,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position="top"
                   content={makeLabelContent({ style, measureFmt,
-                    customFmt: (v) => Number.isInteger(v) ? String(v) : v.toFixed(0) }) as never} />
+                    customFmt: (v) => { const n = Number(v); return Number.isInteger(n) ? String(n) : n.toFixed(0); } }) as never} />
               )}
             </Bar>
           );
@@ -1111,6 +1153,16 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
 function TreemapTile({ cfg, dl, fmt, dimmedNames, ...props }: any) {
   const { x, y, width, height, name, value, fill } = props;
   if (width < 2 || height < 2) return null;
+  // FIX 5 — dl.show is master gate; when off, render only the rect
+  if (dl && !dl.show) {
+    const op = dimmedNames && dimmedNames.has(name) ? 0.4 : 1;
+    return (
+      <g opacity={op}>
+        <rect x={x} y={y} width={width} height={height}
+          style={{ fill, stroke: cfg.borderColor, strokeWidth: cfg.borderWidth }} />
+      </g>
+    );
+  }
   const showCat = cfg.showCategoryLabel && width > 40 && height > 20;
   const showVal = cfg.showValueLabel && width > 60 && height > 32;
   const valStr = formatValue(
@@ -1309,8 +1361,10 @@ function WaterfallChart({
     : t === "negative" ? style.waterfall.negativeColor
     : style.waterfall.totalColor;
 
-  const labelPos = style.waterfall.labelPos === "inside" ? "center"
-    : style.waterfall.labelPos === "below" ? "bottom" : "top";
+  // FIX 4 — fallback to generic dataLabels.position when waterfall-specific is not set
+  const effectiveWfPos = String(style.waterfall.labelPos ?? style.dataLabels.position ?? "above");
+  const labelPos = effectiveWfPos === "inside" || effectiveWfPos === "center" ? "center"
+    : effectiveWfPos === "below" || effectiveWfPos === "bottom" || effectiveWfPos === "inside-base" ? "bottom" : "top";
 
   return (
     <FluidSvg>
@@ -1380,7 +1434,7 @@ function WaterfallChart({
               return (
                 <g key={r.label}>
                   <rect x={x} y={y} width={barW} height={h} fill={fill} rx="2" />
-                  {style.dataLabels.show && <text x={cx} y={labelY} textAnchor="middle" fontSize={dlFs} fill={style.dataLabels.color} fontWeight={style.dataLabels.bold ? 700 : 400}>{valFmt(r.end)}</text>}
+                  {style.dataLabels.show && <text x={cx} y={labelY} textAnchor="middle" fontSize={dlFs} fill={style.dataLabels.color} fontWeight={style.dataLabels.bold ? 700 : 400} fontStyle={style.dataLabels.italic ? "italic" : "normal"}>{valFmt(r.end)}</text>}
                   <text x={cx} y={H - Math.max(12, m.bottom * 0.45)} textAnchor="middle" fontSize={labelFs} fill={style.xAxis.labelColor}>{truncLabel(r.label)}</text>
                 </g>
               );
@@ -1514,6 +1568,16 @@ function BoxPlot({
                 <circle key={i} cx={cx} cy={yPx(o)} r={2.5}
                   fill="none" stroke={style.boxplot.whiskerColor} strokeWidth={1} />
               ))}
+              {/* FIX 7 — data label: median value above whisker top */}
+              {style.dataLabels.show && (
+                <text x={cx} y={yMx - 6} textAnchor="middle"
+                  fontSize={style.dataLabels.size}
+                  fill={style.dataLabels.color}
+                  fontWeight={style.dataLabels.bold ? 700 : 400}
+                  fontStyle={style.dataLabels.italic ? "italic" : "normal"}>
+                  {formatValue(payload.q2, style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals)}
+                </text>
+              )}
             </g>
           );
         }}
