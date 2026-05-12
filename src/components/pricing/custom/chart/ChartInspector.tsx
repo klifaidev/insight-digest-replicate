@@ -714,15 +714,6 @@ export function ChartInspector({
           </Row>
           <ToggleField label="Total acumulado" value={style.waterfall.showRunningTotal}
             onChange={(v) => updPath("waterfall", { showRunningTotal: v })} />
-          <Row label="Pos. rótulo">
-            <SelectField value={style.waterfall.labelPos}
-              onChange={(v) => updPath("waterfall", { labelPos: v as never })}
-              options={[
-                { value: "above", label: "Acima da barra" },
-                { value: "inside", label: "Dentro da barra" },
-                { value: "below", label: "Abaixo da barra" },
-              ]} />
-          </Row>
           <Row label="Espaçamento">
             <NumberStepper value={style.waterfall.gapPct} min={0} max={80}
               onChange={(v) => updPath("waterfall", { gapPct: v })} suffix="%" />
