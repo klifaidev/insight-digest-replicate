@@ -3,6 +3,10 @@
 
 import type { CustomBlock, CustomSlideConfig } from "@/lib/customSlide";
 
+// Distributive Omit so each member of the discriminated union keeps its own props.
+type DistributiveOmit<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never;
+export type TemplateBlock = DistributiveOmit<CustomBlock, "id">;
+
 export type TemplateCategory =
   | "todos"
   | "visao-geral"
