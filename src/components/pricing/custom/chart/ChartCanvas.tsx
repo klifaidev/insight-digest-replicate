@@ -1153,6 +1153,16 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
 function TreemapTile({ cfg, dl, fmt, dimmedNames, ...props }: any) {
   const { x, y, width, height, name, value, fill } = props;
   if (width < 2 || height < 2) return null;
+  // FIX 5 — dl.show is master gate; when off, render only the rect
+  if (dl && !dl.show) {
+    const op = dimmedNames && dimmedNames.has(name) ? 0.4 : 1;
+    return (
+      <g opacity={op}>
+        <rect x={x} y={y} width={width} height={height}
+          style={{ fill, stroke: cfg.borderColor, strokeWidth: cfg.borderWidth }} />
+      </g>
+    );
+  }
   const showCat = cfg.showCategoryLabel && width > 40 && height > 20;
   const showVal = cfg.showValueLabel && width > 60 && height > 32;
   const valStr = formatValue(
