@@ -54,6 +54,8 @@ import haraldFooterPng from "@/assets/harald-footer-bar.png";
 import { registerCustomCanvas } from "@/lib/customCanvasRegistry";
 import { saveUserTemplate } from "@/lib/customTemplates";
 import { TemplatePicker } from "./templates/TemplatePicker";
+import { useSlidesFlow } from "@/store/slidesFlow";
+import { newId } from "@/lib/slidesFlow";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -873,6 +875,31 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         open={tplOpen}
         onOpenChange={setTplOpen}
         onApply={(cfg) => { onChange(cfg); toast.success("Modelo aplicado"); }}
+        onApplyDeck={(configs, mode, name) => {
+          const state = useSlidesFlow.getState();
+          const items = [...state.items];
+          const idx = items.findIndex((i) => i.id === slideId);
+          if (idx < 0) return;
+          // Build new SlideItems for each deck slide.
+          const newItems = configs.map((cfg, i) => ({
+            id: newId(),
+            kind: "custom" as const,
+            label: `${name} · ${i + 1}`,
+            config: cfg,
+          }));
+          if (mode === "replace") {
+            // Replace current with first, insert rest after.
+            const first = newItems[0];
+            const rest = newItems.slice(1);
+            items.splice(idx, 1, first, ...rest);
+            useSlidesFlow.setState({ items, selectedId: first.id });
+            onChange(first.config);
+          } else {
+            items.splice(idx + 1, 0, ...newItems);
+            useSlidesFlow.setState({ items, selectedId: newItems[0].id });
+          }
+          toast.success(`Deck aplicado — ${configs.length} slides criados`);
+        }}
       />
 
       {/* Save template dialog */}

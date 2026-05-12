@@ -1,14 +1,18 @@
 // New 3-column template picker modal.
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, X, Trash2 } from "lucide-react";
+import { Search, X, Trash2, Layers } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  TEMPLATE_REGISTRY, CATEGORY_LABELS, templateToSlideConfig,
+  TEMPLATE_REGISTRY, CATEGORY_LABELS, templateToSlideConfig, templateToSlideConfigs,
   type SlideTemplate, type TemplateCategory,
 } from "./templateRegistry";
 import { TemplateThumbnail } from "./Thumbnail";
@@ -20,17 +24,21 @@ import {
 
 const LAST_CAT_KEY = "harald.templatePicker.lastCategory";
 
+export type DeckApplyMode = "replace" | "after";
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onApply: (config: CustomSlideConfig) => void;
+  /** Optional: when provided, deck templates use this instead of falling back to slide 1. */
+  onApplyDeck?: (configs: CustomSlideConfig[], mode: DeckApplyMode, name: string) => void;
 }
 
 type AnyTpl =
   | { kind: "builtin"; tpl: SlideTemplate }
   | { kind: "user"; tpl: CustomTemplate };
 
-export function TemplatePicker({ open, onOpenChange, onApply }: Props) {
+export function TemplatePicker({ open, onOpenChange, onApply, onApplyDeck }: Props) {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [category, setCategory] = useState<TemplateCategory>(() => {
@@ -39,6 +47,7 @@ export function TemplatePicker({ open, onOpenChange, onApply }: Props) {
   });
   const [userTpls, setUserTpls] = useState<CustomTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deckTpl, setDeckTpl] = useState<SlideTemplate | null>(null);
 
   // Load user templates whenever opened
   useEffect(() => {
@@ -104,10 +113,22 @@ export function TemplatePicker({ open, onOpenChange, onApply }: Props) {
   const selected = filtered.find((it) => itemId(it) === selectedId) ?? filtered[0] ?? null;
 
   function handleApply(it: AnyTpl) {
+    if (it.kind === "builtin" && it.tpl.isDeck && onApplyDeck) {
+      setDeckTpl(it.tpl);
+      return;
+    }
     const cfg = it.kind === "builtin"
       ? templateToSlideConfig(it.tpl)
       : applyUserTpl(it.tpl);
     onApply(cfg);
+    onOpenChange(false);
+  }
+
+  function applyDeck(mode: DeckApplyMode) {
+    if (!deckTpl || !onApplyDeck) return;
+    const configs = templateToSlideConfigs(deckTpl);
+    onApplyDeck(configs, mode, deckTpl.name);
+    setDeckTpl(null);
     onOpenChange(false);
   }
 
@@ -217,7 +238,14 @@ export function TemplatePicker({ open, onOpenChange, onApply }: Props) {
                     width={256} height={144}
                   />
                 </div>
-                <div className="text-[15px] font-medium leading-tight">{selected.tpl.name}</div>
+                <div className="flex items-center gap-2 text-[15px] font-medium leading-tight">
+                  {selected.tpl.name}
+                  {selected.kind === "builtin" && selected.tpl.isDeck && (
+                    <Badge variant="default" className="h-5 gap-1 rounded-full px-2 text-[10px] font-normal">
+                      <Layers className="h-3 w-3" /> Deck · {selected.tpl.slides.length} slides
+                    </Badge>
+                  )}
+                </div>
                 <p className="mt-1 text-[12px] leading-snug text-muted-foreground line-clamp-3">
                   {selected.kind === "builtin"
                     ? selected.tpl.description
@@ -267,6 +295,32 @@ export function TemplatePicker({ open, onOpenChange, onApply }: Props) {
           <X className="h-4 w-4" />
         </button>
       </DialogContent>
+
+      {/* Deck confirmation */}
+      <AlertDialog open={!!deckTpl} onOpenChange={(v) => { if (!v) setDeckTpl(null); }}>
+        <AlertDialogContent className="max-w-[420px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Deck com {deckTpl?.slides.length ?? 0} slides
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Este modelo cria {deckTpl?.slides.length ?? 0} slides prontos para
+              edição. Como deseja aplicar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <Button onClick={() => applyDeck("after")}>
+              Adicionar após slide atual
+            </Button>
+            <Button variant="outline" onClick={() => applyDeck("replace")}>
+              Substituir slide atual
+            </Button>
+            <Button variant="ghost" onClick={() => setDeckTpl(null)}>
+              Cancelar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
