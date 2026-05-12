@@ -53,9 +53,9 @@ import { cn } from "@/lib/utils";
 import haraldFooterPng from "@/assets/harald-footer-bar.png";
 import { registerCustomCanvas } from "@/lib/customCanvasRegistry";
 import {
-  BUILTIN_TEMPLATES, applyTemplate, loadUserTemplates,
-  saveUserTemplate, deleteUserTemplate, type CustomTemplate,
+  loadUserTemplates, saveUserTemplate, type CustomTemplate,
 } from "@/lib/customTemplates";
+import { TemplatePicker } from "./templates/TemplatePicker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
