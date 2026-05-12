@@ -295,6 +295,32 @@ export function TemplatePicker({ open, onOpenChange, onApply, onApplyDeck }: Pro
           <X className="h-4 w-4" />
         </button>
       </DialogContent>
+
+      {/* Deck confirmation */}
+      <AlertDialog open={!!deckTpl} onOpenChange={(v) => { if (!v) setDeckTpl(null); }}>
+        <AlertDialogContent className="max-w-[420px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Deck com {deckTpl?.slides.length ?? 0} slides
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Este modelo cria {deckTpl?.slides.length ?? 0} slides prontos para
+              edição. Como deseja aplicar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <Button onClick={() => applyDeck("after")}>
+              Adicionar após slide atual
+            </Button>
+            <Button variant="outline" onClick={() => applyDeck("replace")}>
+              Substituir slide atual
+            </Button>
+            <Button variant="ghost" onClick={() => setDeckTpl(null)}>
+              Cancelar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
