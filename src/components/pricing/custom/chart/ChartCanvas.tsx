@@ -626,7 +626,12 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             <Line key={`__line_${s.name}`} isAnimationActive={false}
               dataKey={`__line_${s.name}`} name={`${s.name} (linha)`}
               type="monotone" stroke={color} strokeWidth={2.5}
-              yAxisId="right" dot={{ r: 3, fill: color }} />
+              yAxisId="right" dot={{ r: 3, fill: color }}>
+              {style.dataLabels.show && (
+                <LabelList dataKey={`__line_${s.name}`} position={mapPos("line", dlPos) as never}
+                  content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
+              )}
+            </Line>
           );
         })}
       </Comp>
