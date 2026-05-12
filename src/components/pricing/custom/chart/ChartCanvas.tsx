@@ -985,15 +985,20 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const dotRenderer = dl.show ? (props: any) => {
             const { cx, cy, value } = props;
             if (cx == null || cy == null) return <g />;
-            const off = dl.position === "below" ? 12 : -8;
+            const pos = dl.position;
+            let dx = 0, dy = -8;
+            let anchor: "middle" | "start" | "end" = "middle";
+            if (pos === "below") { dx = 0; dy = 12; anchor = "middle"; }
+            else if (pos === "left") { dx = -8; dy = 4; anchor = "end"; }
+            else if (pos === "right") { dx = 8; dy = 4; anchor = "start"; }
             const fmt = dl.format === "auto" ? measureFmt : dl.format;
             return (
               <g>
                 <circle cx={cx} cy={cy} r={2.5} fill={color} />
-                <text x={cx} y={cy + off} fontSize={dl.size} fill={dl.color}
+                <text x={cx + dx} y={cy + dy} fontSize={dl.size} fill={dl.color}
                   fontWeight={dl.bold ? 700 : 400}
                   fontStyle={dl.italic ? "italic" : "normal"}
-                  textAnchor="middle">
+                  textAnchor={anchor}>
                   {formatValue(Number(value) || 0, fmt, "rol", dl.decimals)}
                 </text>
               </g>
