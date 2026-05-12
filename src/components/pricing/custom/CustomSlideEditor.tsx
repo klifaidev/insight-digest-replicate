@@ -330,8 +330,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const [tplOpen, setTplOpen] = useState(false);
   const [saveTplOpen, setSaveTplOpen] = useState(false);
   const [tplName, setTplName] = useState("");
-  const [userTpls, setUserTpls] = useState<CustomTemplate[]>(() => loadUserTemplates());
-  const refreshUserTpls = () => setUserTpls(loadUserTemplates());
+  const refreshUserTpls = () => { /* picker reloads internally */ };
 
   return (
     <SlideFilterProvider slideKey={slideId}>
