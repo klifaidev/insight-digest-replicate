@@ -768,16 +768,6 @@ export function ChartInspector({
                 { value: "percent", label: "Percentual" },
               ]} />
           </Row>
-          <Row label="Pos. rótulo">
-            <SelectField value={style.funnel.labelPos ?? "right"}
-              onChange={(v) => updPath("funnel", { labelPos: v as never })}
-              options={[
-                { value: "left", label: "Esquerda" },
-                { value: "right", label: "Direita" },
-                { value: "center", label: "Centro" },
-                { value: "inside", label: "Dentro" },
-              ]} />
-          </Row>
           {detectedRanking.length > 0 && (
             <div className="space-y-1.5">
               <div className="text-[12px] font-medium text-muted-foreground">Estágios</div>
