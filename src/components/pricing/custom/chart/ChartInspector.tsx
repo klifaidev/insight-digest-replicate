@@ -80,6 +80,14 @@ function positionOptions(ct: ChartBlock["chartType"]) {
       { value: "below", label: "Abaixo da barra" },
     ];
   }
+  if (ct === "funnel") {
+    return [
+      { value: "left", label: "Esquerda" },
+      { value: "right", label: "Direita" },
+      { value: "center", label: "Centro" },
+      { value: "inside", label: "Dentro" },
+    ];
+  }
   // bar/column/combo
   return [
     { value: "above", label: "Acima" },
@@ -503,29 +511,35 @@ export function ChartInspector({
           onChange={(v) => updPath("dataLabels", { bold: v })} />
         <ToggleField label="Itálico" value={style.dataLabels.italic}
           onChange={(v) => updPath("dataLabels", { italic: v })} />
-        {/* Cleanup: histogram has fixed "above" position; pie/donut handled below */}
-        {ct !== "histogram" && (
+        {/* Cleanup: histogram has fixed "above" position; boxplot always above */}
+        {ct !== "histogram" && ct !== "boxplot" && (
           <Row label="Posição">
-            <SelectField value={style.dataLabels.position}
-              onChange={(v) => updPath("dataLabels", { position: v as never })}
+            <SelectField value={ct === "funnel" ? (style.funnel.labelPos ?? "right") : style.dataLabels.position}
+              onChange={(v) => ct === "funnel"
+                ? updPath("funnel", { labelPos: v as never })
+                : updPath("dataLabels", { position: v as never })}
               options={positionOptions(ct) as never} />
           </Row>
         )}
-        <Row label="Formato">
-          <SelectField value={style.dataLabels.format}
-            onChange={(v) => updPath("dataLabels", { format: v as never })}
-            options={[
-              { value: "auto", label: "Automático" },
-              { value: "currency", label: "Moeda" },
-              { value: "percent", label: "Percentual" },
-              { value: "number", label: "Número" },
-              { value: "tons", label: "Toneladas" },
-            ]} />
-        </Row>
-        <Row label="Decimais">
-          <NumberStepper value={style.dataLabels.decimals} min={0} max={4}
-            onChange={(v) => updPath("dataLabels", { decimals: v })} />
-        </Row>
+        {ct !== "histogram" && (
+          <Row label="Formato">
+            <SelectField value={style.dataLabels.format}
+              onChange={(v) => updPath("dataLabels", { format: v as never })}
+              options={[
+                { value: "auto", label: "Automático" },
+                { value: "currency", label: "Moeda" },
+                { value: "percent", label: "Percentual" },
+                { value: "number", label: "Número" },
+                { value: "tons", label: "Toneladas" },
+              ]} />
+          </Row>
+        )}
+        {ct !== "histogram" && (
+          <Row label="Decimais">
+            <NumberStepper value={style.dataLabels.decimals} min={0} max={4}
+              onChange={(v) => updPath("dataLabels", { decimals: v })} />
+          </Row>
+        )}
         <ToggleField label="Auto-contraste" value={style.dataLabels.autoContrast}
           onChange={(v) => updPath("dataLabels", { autoContrast: v })} />
         {ct !== "pie" && ct !== "donut" && (
@@ -700,15 +714,6 @@ export function ChartInspector({
           </Row>
           <ToggleField label="Total acumulado" value={style.waterfall.showRunningTotal}
             onChange={(v) => updPath("waterfall", { showRunningTotal: v })} />
-          <Row label="Pos. rótulo">
-            <SelectField value={style.waterfall.labelPos}
-              onChange={(v) => updPath("waterfall", { labelPos: v as never })}
-              options={[
-                { value: "above", label: "Acima da barra" },
-                { value: "inside", label: "Dentro da barra" },
-                { value: "below", label: "Abaixo da barra" },
-              ]} />
-          </Row>
           <Row label="Espaçamento">
             <NumberStepper value={style.waterfall.gapPct} min={0} max={80}
               onChange={(v) => updPath("waterfall", { gapPct: v })} suffix="%" />
@@ -761,16 +766,6 @@ export function ChartInspector({
                 { value: "name", label: "Nome" },
                 { value: "value", label: "Valor" },
                 { value: "percent", label: "Percentual" },
-              ]} />
-          </Row>
-          <Row label="Pos. rótulo">
-            <SelectField value={style.funnel.labelPos ?? "right"}
-              onChange={(v) => updPath("funnel", { labelPos: v as never })}
-              options={[
-                { value: "left", label: "Esquerda" },
-                { value: "right", label: "Direita" },
-                { value: "center", label: "Centro" },
-                { value: "inside", label: "Dentro" },
               ]} />
           </Row>
           {detectedRanking.length > 0 && (
