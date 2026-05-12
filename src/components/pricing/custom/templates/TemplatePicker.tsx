@@ -38,7 +38,7 @@ type AnyTpl =
   | { kind: "builtin"; tpl: SlideTemplate }
   | { kind: "user"; tpl: CustomTemplate };
 
-export function TemplatePicker({ open, onOpenChange, onApply }: Props) {
+export function TemplatePicker({ open, onOpenChange, onApply, onApplyDeck }: Props) {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [category, setCategory] = useState<TemplateCategory>(() => {
@@ -47,6 +47,7 @@ export function TemplatePicker({ open, onOpenChange, onApply }: Props) {
   });
   const [userTpls, setUserTpls] = useState<CustomTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deckTpl, setDeckTpl] = useState<SlideTemplate | null>(null);
 
   // Load user templates whenever opened
   useEffect(() => {
