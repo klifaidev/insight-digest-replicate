@@ -1,14 +1,18 @@
 // New 3-column template picker modal.
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, X, Trash2 } from "lucide-react";
+import { Search, X, Trash2, Layers } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  TEMPLATE_REGISTRY, CATEGORY_LABELS, templateToSlideConfig,
+  TEMPLATE_REGISTRY, CATEGORY_LABELS, templateToSlideConfig, templateToSlideConfigs,
   type SlideTemplate, type TemplateCategory,
 } from "./templateRegistry";
 import { TemplateThumbnail } from "./Thumbnail";
@@ -20,10 +24,14 @@ import {
 
 const LAST_CAT_KEY = "harald.templatePicker.lastCategory";
 
+export type DeckApplyMode = "replace" | "after";
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onApply: (config: CustomSlideConfig) => void;
+  /** Optional: when provided, deck templates use this instead of falling back to slide 1. */
+  onApplyDeck?: (configs: CustomSlideConfig[], mode: DeckApplyMode, name: string) => void;
 }
 
 type AnyTpl =
