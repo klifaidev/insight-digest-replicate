@@ -54,7 +54,7 @@ const TITLE = (text: string, z = 1): TemplateBlock => ({
 });
 
 const KPI = (
-  label: string, measure: TemplateBlock extends infer _ ? string : never,
+  label: string, measure: string,
   x: number, y: number, w: number, h: number, z: number, color = "1C2430",
 ): TemplateBlock => ({
   kind: "kpi", z, x, y, w, h,
