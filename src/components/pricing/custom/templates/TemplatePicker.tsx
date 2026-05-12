@@ -113,10 +113,22 @@ export function TemplatePicker({ open, onOpenChange, onApply, onApplyDeck }: Pro
   const selected = filtered.find((it) => itemId(it) === selectedId) ?? filtered[0] ?? null;
 
   function handleApply(it: AnyTpl) {
+    if (it.kind === "builtin" && it.tpl.isDeck && onApplyDeck) {
+      setDeckTpl(it.tpl);
+      return;
+    }
     const cfg = it.kind === "builtin"
       ? templateToSlideConfig(it.tpl)
       : applyUserTpl(it.tpl);
     onApply(cfg);
+    onOpenChange(false);
+  }
+
+  function applyDeck(mode: DeckApplyMode) {
+    if (!deckTpl || !onApplyDeck) return;
+    const configs = templateToSlideConfigs(deckTpl);
+    onApplyDeck(configs, mode, deckTpl.name);
+    setDeckTpl(null);
     onOpenChange(false);
   }
 
