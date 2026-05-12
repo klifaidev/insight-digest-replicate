@@ -1082,7 +1082,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       });
     }
     chart = (
-      <ComposedChart data={buckets} barCategoryGap="2%">
+      <ComposedChart data={buckets} barCategoryGap="2%" margin={{ top: 24, right: 24, left: 8, bottom: 8 }}>
         {renderGrid}
         <XAxis dataKey="bin" tick={{ fontSize: xAx.labelSize, fill: xAx.labelColor }} />
         <YAxis yAxisId="left" tick={{ fontSize: yAx.labelSize, fill: yAx.labelColor }} />
