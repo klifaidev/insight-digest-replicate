@@ -495,6 +495,16 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     fontStyle: style.dataLabels.italic ? "italic" : "normal" };
   const dlPos = style.dataLabels.position;
 
+  // Reserve extra padding around the plot area so the first/last data labels
+  // (and rotated axis ticks) never get clipped at the chart edges. Scales
+  // gently with the data-label font size when labels are visible.
+  const dlOn = !!style.dataLabels.show;
+  const dlSize = Math.max(10, style.dataLabels.size || 12);
+  const sideRoom = dlOn ? Math.round(dlSize * 2.4) : 12;
+  const topRoom = dlOn ? Math.round(dlSize * 1.6) : 12;
+  const chartMargin = { top: topRoom, right: sideRoom, left: sideRoom, bottom: 8 };
+  const hbarMargin = { top: 12, right: dlOn ? Math.round(dlSize * 3) : 24, left: 8, bottom: 8 };
+
   // ---- renderers per chart type ----
   let chart: React.ReactNode = null;
   const forceStack = ct === "stackedColumn" || ct === "stackedBar" || ct === "stackedArea";
