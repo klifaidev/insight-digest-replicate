@@ -1541,7 +1541,7 @@ function BoxPlot({
   const yMax = style.yAxis.max ?? (all.length ? Math.max(...all) : 1);
 
   return (
-    <ComposedChart data={stats}>
+    <ComposedChart data={stats} margin={{ top: 24, right: 24, left: 8, bottom: 8 }}>
       <CartesianGrid stroke={style.grid.color}
         strokeDasharray={style.grid.style === "dashed" ? "3 3" : "0"} />
       <XAxis dataKey="name" tick={{ fontSize: style.xAxis.labelSize, fill: style.xAxis.labelColor }} />
