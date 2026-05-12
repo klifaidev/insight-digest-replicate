@@ -1361,10 +1361,10 @@ function WaterfallChart({
     : t === "negative" ? style.waterfall.negativeColor
     : style.waterfall.totalColor;
 
-  // FIX 4 — fallback to generic dataLabels.position when waterfall-specific is not set/default
-  const effectiveWfPos = style.waterfall.labelPos ?? style.dataLabels.position ?? "above";
+  // FIX 4 — fallback to generic dataLabels.position when waterfall-specific is not set
+  const effectiveWfPos = String(style.waterfall.labelPos ?? style.dataLabels.position ?? "above");
   const labelPos = effectiveWfPos === "inside" || effectiveWfPos === "center" ? "center"
-    : effectiveWfPos === "below" || effectiveWfPos === "bottom" ? "bottom" : "top";
+    : effectiveWfPos === "below" || effectiveWfPos === "bottom" || effectiveWfPos === "inside-base" ? "bottom" : "top";
 
   return (
     <FluidSvg>
