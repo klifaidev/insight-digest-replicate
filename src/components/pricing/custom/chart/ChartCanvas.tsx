@@ -664,7 +664,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
                   content={makeLabelContent({
                     style, measureFmt, seriesName: s.name, categories: cats,
-                    customFmt: isStack100 ? stack100Fmt : undefined,
+                    customFmt: isStack100 ? stack100Fmt : undefined, seriesColor: color,
                   }) as never} />
               )}
             </Bar>
@@ -709,7 +709,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                 <LabelList dataKey={s.name} position={mapPos("bar-horizontal", dlPos) as never}
                   content={makeLabelContent({
                     style, measureFmt, seriesName: s.name, categories: cats,
-                    customFmt: isStack100 ? stack100Fmt : undefined, anchor: "start",
+                    customFmt: isStack100 ? stack100Fmt : undefined, anchor: "start", seriesColor: color,
                   }) as never} />
               )}
             </Bar>
