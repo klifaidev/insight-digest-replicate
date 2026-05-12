@@ -511,29 +511,35 @@ export function ChartInspector({
           onChange={(v) => updPath("dataLabels", { bold: v })} />
         <ToggleField label="Itálico" value={style.dataLabels.italic}
           onChange={(v) => updPath("dataLabels", { italic: v })} />
-        {/* Cleanup: histogram has fixed "above" position; pie/donut handled below */}
-        {ct !== "histogram" && (
+        {/* Cleanup: histogram has fixed "above" position; boxplot always above */}
+        {ct !== "histogram" && ct !== "boxplot" && (
           <Row label="Posição">
-            <SelectField value={style.dataLabels.position}
-              onChange={(v) => updPath("dataLabels", { position: v as never })}
+            <SelectField value={ct === "funnel" ? (style.funnel.labelPos ?? "right") : style.dataLabels.position}
+              onChange={(v) => ct === "funnel"
+                ? updPath("funnel", { labelPos: v as never })
+                : updPath("dataLabels", { position: v as never })}
               options={positionOptions(ct) as never} />
           </Row>
         )}
-        <Row label="Formato">
-          <SelectField value={style.dataLabels.format}
-            onChange={(v) => updPath("dataLabels", { format: v as never })}
-            options={[
-              { value: "auto", label: "Automático" },
-              { value: "currency", label: "Moeda" },
-              { value: "percent", label: "Percentual" },
-              { value: "number", label: "Número" },
-              { value: "tons", label: "Toneladas" },
-            ]} />
-        </Row>
-        <Row label="Decimais">
-          <NumberStepper value={style.dataLabels.decimals} min={0} max={4}
-            onChange={(v) => updPath("dataLabels", { decimals: v })} />
-        </Row>
+        {ct !== "histogram" && (
+          <Row label="Formato">
+            <SelectField value={style.dataLabels.format}
+              onChange={(v) => updPath("dataLabels", { format: v as never })}
+              options={[
+                { value: "auto", label: "Automático" },
+                { value: "currency", label: "Moeda" },
+                { value: "percent", label: "Percentual" },
+                { value: "number", label: "Número" },
+                { value: "tons", label: "Toneladas" },
+              ]} />
+          </Row>
+        )}
+        {ct !== "histogram" && (
+          <Row label="Decimais">
+            <NumberStepper value={style.dataLabels.decimals} min={0} max={4}
+              onChange={(v) => updPath("dataLabels", { decimals: v })} />
+          </Row>
+        )}
         <ToggleField label="Auto-contraste" value={style.dataLabels.autoContrast}
           onChange={(v) => updPath("dataLabels", { autoContrast: v })} />
         {ct !== "pie" && ct !== "donut" && (
