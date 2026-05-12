@@ -387,11 +387,14 @@ export function FunnelSVG({
             style={{ cursor: onSliceClick ? "pointer" : undefined }}
             onClick={(e) => onSliceClick?.(d.name, e)}>
             <path d={path} fill={d.color} />
-            <text x={lx} y={ly + dl.size / 3} fontSize={dl.size} fill={dl.color}
-              fontWeight={dl.bold ? 700 : 400}
-              fontStyle={dl.italic ? "italic" : "normal"}
-              textAnchor={anchor}>{labelText}</text>
-            {conv && dl.showCategory && i > 0 && (
+            {/* FIX 2 — gate label rendering on dl.show */}
+            {dl.show && (
+              <text x={lx} y={ly + dl.size / 3} fontSize={dl.size} fill={dl.color}
+                fontWeight={dl.bold ? 700 : 400}
+                fontStyle={dl.italic ? "italic" : "normal"}
+                textAnchor={anchor}>{labelText}</text>
+            )}
+            {dl.show && conv && dl.showCategory && i > 0 && (
               <text x={cx} y={y0 - 2} fontSize={dl.size - 1} fill="#64748B"
                 textAnchor="middle">{conv}</text>
             )}
