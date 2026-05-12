@@ -1568,6 +1568,16 @@ function BoxPlot({
                 <circle key={i} cx={cx} cy={yPx(o)} r={2.5}
                   fill="none" stroke={style.boxplot.whiskerColor} strokeWidth={1} />
               ))}
+              {/* FIX 7 — data label: median value above whisker top */}
+              {style.dataLabels.show && (
+                <text x={cx} y={yMx - 6} textAnchor="middle"
+                  fontSize={style.dataLabels.size}
+                  fill={style.dataLabels.color}
+                  fontWeight={style.dataLabels.bold ? 700 : 400}
+                  fontStyle={style.dataLabels.italic ? "italic" : "normal"}>
+                  {formatValue(payload.q2, style.dataLabels.format === "auto" ? measureFmt : style.dataLabels.format, "rol", style.dataLabels.decimals)}
+                </text>
+              )}
             </g>
           );
         }}
