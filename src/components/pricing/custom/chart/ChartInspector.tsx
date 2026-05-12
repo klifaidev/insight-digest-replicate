@@ -80,6 +80,14 @@ function positionOptions(ct: ChartBlock["chartType"]) {
       { value: "below", label: "Abaixo da barra" },
     ];
   }
+  if (ct === "funnel") {
+    return [
+      { value: "left", label: "Esquerda" },
+      { value: "right", label: "Direita" },
+      { value: "center", label: "Centro" },
+      { value: "inside", label: "Dentro" },
+    ];
+  }
   // bar/column/combo
   return [
     { value: "above", label: "Acima" },
