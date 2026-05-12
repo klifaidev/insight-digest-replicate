@@ -5,7 +5,7 @@ import type { CustomBlock, CustomSlideConfig } from "@/lib/customSlide";
 
 // Distributive Omit so each member of the discriminated union keeps its own props.
 type DistributiveOmit<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never;
-export type TemplateBlock = DistributiveOmit<CustomBlock, "id">;
+export type TemplateBlock = DistributiveTemplateBlock;
 
 export type TemplateCategory =
   | "todos"
@@ -21,7 +21,7 @@ export interface TemplateSlide {
   title: string;
   background?: string;
   showHaraldFooter?: boolean;
-  blocks: Omit<CustomBlock, "id">[];
+  blocks: TemplateBlock[];
 }
 
 export interface SlideTemplate {
@@ -48,15 +48,15 @@ export const CATEGORY_LABELS: Record<TemplateCategory, string> = {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const TITLE = (text: string, z = 1): Omit<CustomBlock, "id"> => ({
+const TITLE = (text: string, z = 1): TemplateBlock => ({
   kind: "title", z, x: 40, y: 30, w: 1240, h: 60,
   text, size: 32, bold: true, color: "C8102E", align: "left",
 });
 
 const KPI = (
-  label: string, measure: Omit<CustomBlock, "id"> extends infer _ ? string : never,
+  label: string, measure: TemplateBlock extends infer _ ? string : never,
   x: number, y: number, w: number, h: number, z: number, color = "1C2430",
-): Omit<CustomBlock, "id"> => ({
+): TemplateBlock => ({
   kind: "kpi", z, x, y, w, h,
   label, valueSize: 28, color,
   source: "dynamic", measure: measure as never,
