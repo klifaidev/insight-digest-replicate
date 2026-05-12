@@ -895,7 +895,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const xFmt = style.measureX ? inferFormat(style.measureX) : measureFmt;
     const yFmt = style.measureY ? inferFormat(style.measureY) : measureFmt;
     chart = (
-      <ScatterChart onClick={chartOnClick}>
+      <ScatterChart onClick={chartOnClick} margin={chartMargin}>
         {renderGrid}
         <XAxis type="number" dataKey="x" name={xLabel}
           domain={xDomain}
