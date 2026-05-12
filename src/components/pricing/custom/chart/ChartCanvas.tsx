@@ -66,16 +66,22 @@ function makeLabelContent(opts: {
   measureFmt: ReturnType<typeof inferFormat>;
   seriesName?: string;
   categories?: string[];
-  customFmt?: (v: number) => string;
+  customFmt?: (v: number | string) => string;
   anchor?: "middle" | "start" | "end";
+  seriesColor?: string;
 }) {
-  const { style: cs, measureFmt, seriesName, categories, customFmt, anchor = "middle" } = opts;
+  const { style: cs, measureFmt, seriesName, categories, customFmt, anchor = "middle", seriesColor } = opts;
   const dl = cs.dataLabels;
   return (props: { x?: number; y?: number; value?: number | string; index?: number }) => {
     if (props.x == null || props.y == null || props.value == null) return null;
-    const num = typeof props.value === "number" ? props.value : Number(props.value);
-    if (!isFinite(num)) return null;
-    let text = customFmt ? customFmt(num) : fmtVal(num, cs, measureFmt);
+    let text: string;
+    if (customFmt) {
+      text = customFmt(props.value as number | string);
+    } else {
+      const num = typeof props.value === "number" ? props.value : Number(props.value);
+      if (!isFinite(num)) return null;
+      text = fmtVal(num, cs, measureFmt);
+    }
     const prefix: string[] = [];
     if (dl.showSeries && seriesName) prefix.push(seriesName);
     if (dl.showCategory && categories && props.index != null) {
@@ -84,8 +90,15 @@ function makeLabelContent(opts: {
     }
     if (prefix.length) text = `${prefix.join(" · ")}: ${text}`;
     let color = dl.color;
-    if (dl.autoContrast && dl.bgOpacity > 0) {
-      color = luminance(dl.bgColor) > 0.55 ? "#000000" : "#FFFFFF";
+    // FIX 11 — auto-contrast works even without explicit bg
+    if (dl.autoContrast) {
+      const insidePos = ["inside-end", "inside-base", "center", "inside"].includes(dl.position);
+      const ref = dl.bgOpacity > 0
+        ? dl.bgColor
+        : insidePos && seriesColor
+          ? seriesColor
+          : (cs.general?.background ?? "#FFFFFF");
+      color = luminance(ref) > 0.55 ? "#000000" : "#FFFFFF";
     }
     const fs = dl.size;
     const padX = 3, padY = 2;
