@@ -1397,6 +1397,9 @@ function KpiInspector({ block, onChange }: {
         <Field label="Cor (hex)" value={block.color}
           onChange={(v) => onChange({ color: v.replace("#", "") } as never)} />
       </div>
+      <BgField label="Fundo do card"
+        value={block.cardBg ?? "F8FAFC"}
+        onChange={(v) => onChange({ cardBg: v } as never)} />
     </div>
   );
 }
