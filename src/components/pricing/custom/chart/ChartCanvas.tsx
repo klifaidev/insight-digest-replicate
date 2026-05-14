@@ -471,15 +471,28 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const legendLayout = (style.general.legendPos === "left" || style.general.legendPos === "right")
     ? "vertical" : "horizontal";
 
+  // Build a name→color map from the actual series we render so the legend
+  // can fall back to a guaranteed-contrast palette color when Recharts'
+  // payload reports a missing/transparent/near-white swatch (which can
+  // happen when colorDim switches and series defs are partially stale).
+  const seriesColorMap = useMemo(() => {
+    const m = new Map<string, string>();
+    data.series.forEach((s, i) => {
+      m.set(s.name, colorForSeries(style, s.name, i));
+    });
+    return m;
+  }, [data.series, style]);
+
   const renderLegend = style.general.legendShow ? (
     <Legend verticalAlign={legendVerticalAlign} align={legendAlign} layout={legendLayout}
-      wrapperStyle={{ fontSize: 11 }}
+      wrapperStyle={{ fontSize: 11, color: "#1C2430" }}
       content={legendDim ? (
         <CustomLegend
           ownFilter={ownFilter}
           legendDim={legendDim}
           onLegendClick={handleLegendEmit}
           emits={emits}
+          colorMap={seriesColorMap}
         />
       ) : undefined} />
   ) : null;
