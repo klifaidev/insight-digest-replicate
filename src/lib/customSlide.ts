@@ -99,6 +99,8 @@ export interface KpiBlock extends BaseBlock {
   format?: KpiFormat;
   /** Fonte de dados — default "ke30" para retro-compatibilidade. */
   dataSource?: BlockDataSource;
+  /** Cor de fundo do card. Hex sem '#', "transparent", ou undefined (default F8FAFC). */
+  cardBg?: string;
 }
 
 export interface ImageBlock extends BaseBlock {
