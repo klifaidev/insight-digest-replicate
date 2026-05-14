@@ -1396,7 +1396,7 @@ function CrossingSegments({ formattedGraphicalItems = [], activePeriods, thickne
       const pt = points[i];
       const period = String(pt?.payload?.__period ?? "");
       if (!activePeriods.has(period)) continue;
-      if (pt.y == null || isNaN(pt.y)) continue;
+      if (!pt || pt.y == null || isNaN(pt.y)) continue;
 
       if (i > 0) {
         const prev = points[i - 1];
