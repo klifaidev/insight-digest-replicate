@@ -44,8 +44,10 @@ import {
   newBlock, newChartBlock, BLOCK_LABELS, KPI_MEASURES,
   BUDGET_UNAVAILABLE_MEASURES, BUDGET_UNAVAILABLE_HINT,
   type CustomBlock, type CustomBlockKind, type CustomChartType, type CustomSlideConfig,
-  type KpiBlock, type ChartBlock, type TopSkuBlock,
+  type KpiBlock, type ChartBlock, type TopSkuBlock, type ShapeBlock,
+  isLineFamily,
 } from "@/lib/customSlide";
+import { ShapeHandleOverlay } from "./ShapeHandleOverlay";
 import { BlockRenderer, CUSTOM_TABLE_MEASURES, CUSTOM_TABLE_DIMS } from "./BlockRenderer";
 import { SlideFilterProvider, useSlideFilters, dimensionLabel } from "./SlideFilterContext";
 import { useMonthsInfo, useFyList } from "@/store/selectors";
@@ -489,6 +491,26 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
 
               {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => {
                 const isSelected = selectedIds.includes(blk.id);
+                // Shape-specific Rnd config — contextual handles override.
+                let shapeResize: boolean | Record<string, boolean> = !blk.locked;
+                let shapeDisableDrag = !!blk.locked;
+                let shapeLockAspect = false;
+                if (blk.kind === "shape" && !blk.locked) {
+                  const sb = blk as ShapeBlock;
+                  if (isLineFamily(sb.shape)) {
+                    shapeResize = false;
+                    shapeDisableDrag = true; // overlay owns move
+                  } else if (sb.shape === "circle") {
+                    shapeLockAspect = true;
+                    shapeResize = { top: true, bottom: true, left: true, right: true,
+                      topLeft: false, topRight: false, bottomLeft: false, bottomRight: false };
+                  } else if (sb.shape === "ellipse") {
+                    shapeResize = { top: true, bottom: true, left: true, right: true,
+                      topLeft: false, topRight: false, bottomLeft: false, bottomRight: false };
+                  } else if (sb.shape === "triangle" || sb.shape === "right-triangle") {
+                    shapeResize = false; // overlay vertex handles only
+                  }
+                }
                 return (
                 <ContextMenu key={blk.id}>
                   <ContextMenuTrigger asChild>
@@ -497,8 +519,9 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                       position={{ x: blk.x, y: blk.y }}
                       bounds="parent"
                       scale={scale}
-                      disableDragging={!!blk.locked}
-                      enableResizing={!blk.locked}
+                      lockAspectRatio={shapeLockAspect}
+                      disableDragging={shapeDisableDrag}
+                      enableResizing={shapeResize}
                       onDragStart={(_e, _d) => {
                         // If shift wasn't held and this block isn't already
                         // selected, select it before drag begins.
@@ -663,6 +686,15 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 </ContextMenu>
                 );
               })}
+
+              {/* Contextual handles for selected shape blocks. */}
+              {config.blocks
+                .filter((b): b is ShapeBlock =>
+                  b.kind === "shape" && selectedIds.includes(b.id) && !b.locked)
+                .map((sb) => (
+                  <ShapeHandleOverlay key={`sh-${sb.id}`} block={sb}
+                    scale={scale} canvasEl={canvasRef.current} />
+                ))}
 
               {/* Group outlines + resize handles. */}
               {(config.groups ?? []).map((g) => {

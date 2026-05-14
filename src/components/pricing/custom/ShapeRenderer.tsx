@@ -30,14 +30,6 @@ function dashArray(style: "solid" | "dashed" | "dotted", w: number): string | un
   return `${Math.max(1, w)} ${Math.max(2, w * 2)}`;
 }
 
-function lineCoords(dir: string, w: number, h: number) {
-  switch (dir) {
-    case "vertical":      return { x1: w / 2, y1: 0, x2: w / 2, y2: h };
-    case "diagonal-down": return { x1: 0, y1: 0, x2: w, y2: h };
-    case "diagonal-up":   return { x1: 0, y1: h, x2: w, y2: 0 };
-    default:              return { x1: 0, y1: h / 2, x2: w, y2: h / 2 };
-  }
-}
 
 export function ShapeRenderer({ block }: { block: ShapeBlock }) {
   const b = ensureShapeBlock(block);
@@ -64,9 +56,11 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
   let shapeEl: React.ReactNode = null;
 
   if (isLine) {
-    const lc = lineCoords(b.lineDirection, w, h);
+    // Use p1/p2 in slide-space, converted to local SVG coordinates.
+    const x1 = b.p1.x - b.x, y1 = b.p1.y - b.y;
+    const x2 = b.p2.x - b.x, y2 = b.p2.y - b.y;
     shapeEl = (
-      <line {...lc}
+      <line x1={x1} y1={y1} x2={x2} y2={y2}
         stroke={lineColor} strokeWidth={b.lineThickness}
         strokeDasharray={lineDash} strokeLinecap="round"
         markerStart={arrowMarkerStart}
@@ -98,11 +92,16 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
         shapeEl = <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2} {...common} />;
         break;
       case "triangle":
-        shapeEl = <polygon points={`${cx},0 ${w},${h} 0,${h}`} {...common} />;
+      case "right-triangle": {
+        const verts = b.vertices && b.vertices.length === 3
+          ? b.vertices
+          : (b.shape === "triangle"
+              ? [{ x: 0.5, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
+              : [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]);
+        const pts = verts.map((v) => `${v.x * w},${v.y * h}`).join(" ");
+        shapeEl = <polygon points={pts} {...common} />;
         break;
-      case "right-triangle":
-        shapeEl = <polygon points={`0,0 ${w},${h} 0,${h}`} {...common} />;
-        break;
+      }
       case "diamond":
         shapeEl = <polygon points={`${cx},0 ${w},${cy} ${cx},${h} 0,${cy}`} {...common} />;
         break;
@@ -136,9 +135,13 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
           </svg>
         );
       }
-      case "chevron":
-        shapeEl = <polygon points={`0,0 ${w * 0.78},0 ${w},${cy} ${w * 0.78},${h} 0,${h} ${w * 0.22},${cy}`} {...common} />;
+      case "chevron": {
+        const nd = Math.max(0, Math.min(0.5, b.notchDepth));
+        const tip = w * (1 - nd);
+        const notch = w * nd;
+        shapeEl = <polygon points={`0,0 ${tip},0 ${w},${cy} ${tip},${h} 0,${h} ${notch},${cy}`} {...common} />;
         break;
+      }
       case "ribbon": {
         const tail = Math.min(h * 0.4, w * 0.08);
         const bodyL = tail, bodyR = w - tail;

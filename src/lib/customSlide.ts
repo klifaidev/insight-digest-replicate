@@ -145,6 +145,14 @@ export interface ShapeBlock extends BaseBlock {
   shadowBlur?: number;
   shadowX?: number;
   shadowY?: number;
+  // ---- Custom-handle geometry (added with contextual handles) ----
+  /** Line family endpoints in slide coordinates. Bbox derives from these. */
+  p1?: { x: number; y: number };
+  p2?: { x: number; y: number };
+  /** Chevron notch depth as a fraction 0..0.5 of width. Default 0.22. */
+  notchDepth?: number;
+  /** Triangle vertices (relative 0..1 within bbox). 3 entries when set. */
+  vertices?: { x: number; y: number }[];
 }
 
 export const LINE_FAMILY_SHAPES: ReadonlyArray<ShapeType> = [
@@ -157,6 +165,25 @@ export function isLineFamily(s: ShapeType): boolean {
 
 /** Garante todos os campos novos com defaults — backward compat. */
 export function ensureShapeBlock(b: ShapeBlock): Required<Omit<ShapeBlock, "groupId" | "locked">> & ShapeBlock {
+  const isLine = isLineFamily(b.shape);
+  // Migrate line-family blocks without p1/p2 to the new endpoint model.
+  let p1 = b.p1;
+  let p2 = b.p2;
+  if (isLine && (!p1 || !p2)) {
+    const dir = b.lineDirection ?? "horizontal";
+    const x = b.x, y = b.y, w = b.w, h = b.h;
+    if (dir === "vertical")            { p1 = { x: x + w / 2, y };       p2 = { x: x + w / 2, y: y + h }; }
+    else if (dir === "diagonal-down")  { p1 = { x, y };                  p2 = { x: x + w, y: y + h }; }
+    else if (dir === "diagonal-up")    { p1 = { x, y: y + h };           p2 = { x: x + w, y }; }
+    else                               { p1 = { x, y: y + h / 2 };       p2 = { x: x + w, y: y + h / 2 }; }
+  }
+  // Default vertices for triangle / right-triangle.
+  let vertices = b.vertices;
+  if (!vertices) {
+    if (b.shape === "triangle")            vertices = [{ x: 0.5, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+    else if (b.shape === "right-triangle") vertices = [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+    else                                    vertices = [];
+  }
   return {
     ...b,
     fillOpacity: b.fillOpacity ?? 100,
@@ -174,6 +201,10 @@ export function ensureShapeBlock(b: ShapeBlock): Required<Omit<ShapeBlock, "grou
     shadowBlur: b.shadowBlur ?? 8,
     shadowX: b.shadowX ?? 2,
     shadowY: b.shadowY ?? 2,
+    p1: p1 ?? { x: b.x, y: b.y + b.h / 2 },
+    p2: p2 ?? { x: b.x + b.w, y: b.y + b.h / 2 },
+    notchDepth: b.notchDepth ?? 0.22,
+    vertices,
   } as never;
 }
 
