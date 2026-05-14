@@ -543,28 +543,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const xAxis = xAx.show ? (
     <XAxis
       dataKey="__period"
-      tick={({ x, y, payload }: any) => {
-        const text = payload?.value ?? "";
-        const isActive = activePeriods.has(text);
-        if (!isActive) {
-          return (
-            <text x={x} y={y} dy={16} textAnchor="middle" fill={xAx.labelColor} fontSize={xAx.labelSize}>
-              {text}
-            </text>
-          );
-        }
-        const approxW = Math.max(28, text.length * 6.5 + 14);
-        const h = 18;
-        const rx = h / 2;
-        return (
-          <g>
-            <rect x={x - approxW / 2} y={y + 4} width={approxW} height={h} rx={rx} fill="#C8102E" />
-            <text x={x} y={y + 16} textAnchor="middle" fill="#FFFFFF" fontSize={xAx.labelSize} fontWeight={600}>
-              {text}
-            </text>
-          </g>
-        );
-      }}
+      tick={(props: any) => (
+        <ActivePeriodTick
+          {...props}
+          activePeriods={activePeriods}
+          labelColor={xAx.labelColor}
+          labelSize={xAx.labelSize}
+        />
+      )}
       stroke={xAx.lineColor} tickLine={xAx.ticks}
       strokeWidth={xAx.lineWidth}
       label={xAx.titleText ? { value: xAx.titleText, position: "insideBottom",
