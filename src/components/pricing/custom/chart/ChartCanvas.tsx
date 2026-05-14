@@ -1,7 +1,7 @@
 // ChartCanvas — single Recharts-based renderer for every ChartBlock variant.
 // Reads the unified ChartStyle so the inspector can drive every visual knob.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer, ComposedChart, LineChart, BarChart, AreaChart,
   PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, Sector,
