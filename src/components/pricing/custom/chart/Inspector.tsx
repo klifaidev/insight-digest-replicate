@@ -91,34 +91,64 @@ export function NumberStepper({
   );
 }
 
+// Checkerboard pattern indicating transparency.
+export const CHECKER_BG: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(45deg, rgba(0,0,0,0.08) 25%, transparent 25%)," +
+    "linear-gradient(-45deg, rgba(0,0,0,0.08) 25%, transparent 25%)," +
+    "linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.08) 75%)," +
+    "linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.08) 75%)",
+  backgroundSize: "8px 8px",
+  backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0",
+  backgroundColor: "#FFFFFF",
+};
+
 // Popover color picker — replaces the old inline color+hex+swatches row.
-export function ColorField({ value, onChange }:
-  { value: string; onChange: (hex: string) => void }) {
-  const v = (value || "#000000").startsWith("#") ? (value || "#000000") : `#${value}`;
+// When `allowTransparent` is true, renders a "Sem fundo" toggle row above
+// the swatch button. Transparent state is encoded as the literal string
+// "transparent" passed to onChange.
+export function ColorField({ value, onChange, allowTransparent = false }:
+  { value: string; onChange: (hex: string) => void; allowTransparent?: boolean }) {
+  const isTransparent = value === "transparent";
+  const v = isTransparent ? "#FFFFFF"
+    : (value || "#000000").startsWith("#") ? (value || "#000000") : `#${value}`;
   const [open, setOpen] = useState(false);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button type="button"
-          className="h-8 w-8 rounded-md border border-input shadow-sm transition-shadow hover:shadow"
-          style={{ background: v.slice(0, 7) }}
-          aria-label="Escolher cor" />
-      </PopoverTrigger>
-      <PopoverContent side="left" align="start" className="w-[220px] p-3">
-        <HexColorPicker color={v.slice(0, 7)} onChange={onChange} style={{ width: "100%" }} />
-        <div className="mt-2 flex items-center gap-2">
-          <Input value={v} onChange={(e) => onChange(e.target.value)}
-            className="h-8 px-2 text-[12px]" />
-        </div>
-        <div className="mt-2 grid grid-cols-8 gap-1">
-          {BRAND_COLORS.map((c) => (
-            <button key={c} title={c} onClick={() => onChange(c)}
-              className="h-5 w-5 rounded border border-border/60"
-              style={{ background: c }} />
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <div className="flex flex-col items-end gap-1">
+      {allowTransparent && (
+        <label className="flex cursor-pointer items-center gap-1.5 text-[10px] text-muted-foreground">
+          <Switch checked={isTransparent}
+            onCheckedChange={(c) => onChange(c ? "transparent" : "#FFFFFF")}
+            className="scale-75" />
+          Sem fundo
+        </label>
+      )}
+      <Popover open={open} onOpenChange={(o) => !isTransparent && setOpen(o)}>
+        <PopoverTrigger asChild>
+          <button type="button" disabled={isTransparent}
+            className={cn(
+              "h-8 w-8 rounded-md border border-input shadow-sm transition-shadow hover:shadow",
+              isTransparent && "cursor-not-allowed opacity-90",
+            )}
+            style={isTransparent ? CHECKER_BG : { background: v.slice(0, 7) }}
+            aria-label="Escolher cor" />
+        </PopoverTrigger>
+        <PopoverContent side="left" align="start" className="w-[220px] p-3">
+          <HexColorPicker color={v.slice(0, 7)} onChange={onChange} style={{ width: "100%" }} />
+          <div className="mt-2 flex items-center gap-2">
+            <Input value={v} onChange={(e) => onChange(e.target.value)}
+              className="h-8 px-2 text-[12px]" />
+          </div>
+          <div className="mt-2 grid grid-cols-8 gap-1">
+            {BRAND_COLORS.map((c) => (
+              <button key={c} title={c} onClick={() => onChange(c)}
+                className="h-5 w-5 rounded border border-border/60"
+                style={{ background: c }} />
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 
