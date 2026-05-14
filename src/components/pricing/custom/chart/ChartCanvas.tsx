@@ -255,6 +255,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // Determine the dimension this block emits
   const emitDim: string = (xDim && xDim !== "period" ? xDim
     : block.breakdown ?? "period");
+  // Legend-click filter dimension (series dimension, not axis)
+  const legendDim: string | null = block.fieldWells?.colorDim ?? block.breakdown ?? null;
 
   // Click handler — emits/toggles a filter on this block's emit dimension
   const handleEmit = (rawValue: unknown, opts?: { shift?: boolean }) => {
@@ -267,6 +269,22 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       // single click: if same single value already selected, clear; else replace
       if (ownFilter && ownFilter.values.length === 1 && ownFilter.values[0] === v
           && ownFilter.dimension === emitDim) {
+        cf.clearFilter(block.id);
+      } else {
+        cf.setFilter(filter);
+      }
+    }
+  };
+
+  // Legend click — emits filter on the series dimension (not the X-axis dim)
+  const handleLegendEmit = (value: string, shift: boolean) => {
+    if (!emits || !legendDim) return;
+    const filter = { sourceBlockId: block.id, dimension: legendDim, values: [value] };
+    if (shift) {
+      cf.toggleFilter(filter);
+    } else {
+      if (ownFilter && ownFilter.dimension === legendDim
+          && ownFilter.values.length === 1 && ownFilter.values[0] === value) {
         cf.clearFilter(block.id);
       } else {
         cf.setFilter(filter);
