@@ -1293,6 +1293,7 @@ function Wrapper({ children, style, hasIncoming }: {
   return (
     <div
       data-chart-canvas=""
+      onMouseDown={(e) => e.stopPropagation()}
       style={{
       width: "100%", height: "100%", display: "flex", flexDirection: "column",
       background: style.general.background === "transparent" ? "transparent" : style.general.background,
@@ -1411,15 +1412,20 @@ class SegmentOverlay extends React.Component<SegmentOverlayProps> {
   render() {
     const { activePeriods, formattedGraphicalItems = [],
             highlightColor = "#C8102E" } = this.props;
+    // TEMPORÁRIO — remover após confirmar
+    console.log("[SegmentOverlay] items:", this.props.formattedGraphicalItems?.length, "periods:", this.props.activePeriods.size);
     if (!activePeriods || activePeriods.size === 0) return null;
     const segW = 4;
     const lines: JSX.Element[] = [];
     for (const item of formattedGraphicalItems) {
-      const displayName: string = item?.item?.type?.displayName
-        ?? item?.type?.displayName ?? "";
-      if (displayName !== "Line" && displayName !== "Area") continue;
+      // Identifica Line/Area: tem points com x/y numéricos e prop stroke
       const points: Array<{ x: number; y: number; payload: any }> =
         item?.props?.points ?? [];
+      if (points.length === 0) continue;
+      const firstValid = points.find(p => p?.x != null && p?.y != null && !isNaN(p.y));
+      if (!firstValid) continue;
+      const hasStroke = item?.props?.stroke != null;
+      if (!hasStroke) continue;
       const dataKey = item?.props?.dataKey ?? "k";
       for (let i = 0; i < points.length; i++) {
         const pt = points[i];

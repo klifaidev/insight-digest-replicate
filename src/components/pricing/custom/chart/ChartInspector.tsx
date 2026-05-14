@@ -29,6 +29,7 @@ import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
 import { Trash2, Plus, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSlideFilters } from "../SlideFilterContext";
 
 type Patch = Partial<ChartBlock>;
 
