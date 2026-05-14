@@ -662,9 +662,6 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     }
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
-    // Reset collected active dots before this render's dots fire.
-    activePointsRef.current = [];
-
     chart = (
       <Comp data={chartRows} onClick={chartOnClick} margin={chartMargin}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
@@ -679,7 +676,6 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stroke="#3b82f6" strokeOpacity={0.35} strokeDasharray="3 3"
               ifOverflow="extendDomain" />
           ))}
-        {/* CrossingSegments removido — segmentos agora são desenhados dentro do CrossingDot */}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
@@ -709,9 +705,6 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                     dotFill={dotFill}
                     dotStroke={dotStroke}
                     strokeOpacity={sStrokeOp}
-                    thickness={cfg?.thickness ?? 2.5}
-                    seriesColor={color}
-                    onActiveDot={(pt: any) => { activePointsRef.current.push(pt); }}
                   />
                 )
               : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
