@@ -97,11 +97,13 @@ function makeLabelContent(opts: {
     // FIX 11 — auto-contrast works even without explicit bg
     if (dl.autoContrast) {
       const insidePos = ["inside-end", "inside-base", "center", "inside"].includes(dl.position);
+      const bgRef = (cs.general?.background && cs.general.background !== "transparent")
+        ? cs.general.background : "#FFFFFF";
       const ref = dl.bgOpacity > 0
         ? dl.bgColor
         : insidePos && seriesColor
           ? seriesColor
-          : (cs.general?.background ?? "#FFFFFF");
+          : bgRef;
       color = luminance(ref) > 0.55 ? "#000000" : "#FFFFFF";
     }
     const fs = dl.size;
