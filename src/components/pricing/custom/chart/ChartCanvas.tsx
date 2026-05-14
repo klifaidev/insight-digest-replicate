@@ -1230,18 +1230,75 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   );
 }
 
-function Wrapper({ children, style }: { children: React.ReactNode; style: ChartStyle }) {
+function Wrapper({ children, style, hasIncoming }: {
+  children: React.ReactNode; style: ChartStyle; hasIncoming?: boolean;
+}) {
+  const userBorder = style.general.borderWidth > 0
+    ? `${style.general.borderWidth}px solid ${style.general.borderColor}`
+    : undefined;
+  // Subtle blue border when this chart is receiving filters from another block.
+  // Honors any user-defined border first.
+  const incomingBorder = hasIncoming ? "1.5px solid rgba(59,130,246,0.4)" : undefined;
   return (
     <div style={{
       width: "100%", height: "100%", display: "flex", flexDirection: "column",
       background: style.general.background === "transparent" ? "transparent" : style.general.background,
-      border: style.general.borderWidth > 0
-        ? `${style.general.borderWidth}px solid ${style.general.borderColor}` : undefined,
+      border: userBorder ?? incomingBorder ?? "1.5px solid transparent",
       padding: style.general.padding,
       fontFamily: "Calibri, sans-serif", overflow: "hidden",
       position: "relative",
+      transition: "border-color 0.2s",
     }}>
       {children}
+    </div>
+  );
+}
+
+// -- Custom legend with click-to-filter on series dimension ----------------
+interface CustomLegendProps {
+  payload?: Array<{ value: string; color: string }>;
+  ownFilter: ActiveFilter | null;
+  legendDim: string;
+  onLegendClick: (value: string, shift: boolean) => void;
+  emits: boolean;
+}
+function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits }: CustomLegendProps) {
+  if (!payload?.length) return null;
+  const isFilterDim = ownFilter?.dimension === legendDim;
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: 6,
+      justifyContent: "center", padding: "4px 0 0",
+    }}>
+      {payload.map((entry) => {
+        const isActive = !isFilterDim || ownFilter!.values.includes(entry.value);
+        return (
+          <button
+            key={entry.value}
+            type="button"
+            onClick={(e) => { if (emits) onLegendClick(entry.value, e.shiftKey); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "2px 8px", borderRadius: 20,
+              border: isFilterDim && isActive
+                ? `1.5px solid ${entry.color}`
+                : "1.5px solid transparent",
+              background: isFilterDim && isActive ? `${entry.color}18` : "transparent",
+              opacity: isActive ? 1 : 0.3,
+              cursor: emits ? "pointer" : "default",
+              transition: "opacity 0.15s, border-color 0.15s, background 0.15s",
+              fontSize: 11, fontFamily: "Calibri, sans-serif",
+              color: "currentColor",
+            }}
+          >
+            <span style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: entry.color, flexShrink: 0,
+            }} />
+            {entry.value}
+          </button>
+        );
+      })}
     </div>
   );
 }
