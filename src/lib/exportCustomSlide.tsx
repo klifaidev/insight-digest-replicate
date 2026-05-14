@@ -12,7 +12,7 @@ import { toPng } from "html-to-image";
 import {
   CANVAS_W, CANVAS_H, type CustomSlideConfig, type CustomBlock,
   type TitleBlock, type TextBlock, type KpiBlock, type ImageBlock,
-  type ShapeBlock, KPI_MEASURES,
+  type ShapeBlock, type ShapeType, KPI_MEASURES, ensureShapeBlock, isLineFamily,
 } from "./customSlide";
 import haraldFooterPng from "@/assets/harald-footer-bar.png";
 import { usePricing } from "@/store/pricing";
