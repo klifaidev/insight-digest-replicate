@@ -342,20 +342,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const [activePointsSnap, setActivePointsSnap] = useState<typeof activePointsRef.current>([]);
 
   // Sync collected active dots into state so the overlay re-renders.
-  // No deps: runs after every render; setter is no-op when unchanged.
+  // No deps, no comparison: always replace so stale segments clear immediately.
   useLayoutEffect(() => {
-    const next = activePointsRef.current;
-    setActivePointsSnap((prev) => {
-      if (prev.length !== next.length) return next.slice();
-      for (let i = 0; i < prev.length; i++) {
-        const a = prev[i], b = next[i];
-        if (a.cx !== b.cx || a.cy !== b.cy
-          || a.prevX !== b.prevX || a.prevY !== b.prevY
-          || a.nextX !== b.nextX || a.nextY !== b.nextY
-          || a.seriesColor !== b.seriesColor) return next.slice();
-      }
-      return prev;
-    });
+    setActivePointsSnap(activePointsRef.current.slice());
   });
 
 
@@ -687,7 +676,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
     // Reset collected active dots before this render's dots fire.
-    if (hasPeriodFilter) activePointsRef.current = [];
+    activePointsRef.current = [];
 
     chart = (
       <Comp data={chartRows} onClick={chartOnClick} margin={chartMargin}>
@@ -1353,7 +1342,9 @@ function Wrapper({ children, style, hasIncoming }: {
   // Honors any user-defined border first.
   const incomingBorder = hasIncoming ? "1.5px solid rgba(59,130,246,0.4)" : undefined;
   return (
-    <div style={{
+    <div
+      data-chart-canvas=""
+      style={{
       width: "100%", height: "100%", display: "flex", flexDirection: "column",
       background: style.general.background === "transparent" ? "transparent" : style.general.background,
       border: userBorder ?? incomingBorder ?? "1.5px solid transparent",
