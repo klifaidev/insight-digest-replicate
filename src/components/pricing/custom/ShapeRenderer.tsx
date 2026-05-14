@@ -64,9 +64,11 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
   let shapeEl: React.ReactNode = null;
 
   if (isLine) {
-    const lc = lineCoords(b.lineDirection, w, h);
+    // Use p1/p2 in slide-space, converted to local SVG coordinates.
+    const x1 = b.p1.x - b.x, y1 = b.p1.y - b.y;
+    const x2 = b.p2.x - b.x, y2 = b.p2.y - b.y;
     shapeEl = (
-      <line {...lc}
+      <line x1={x1} y1={y1} x2={x2} y2={y2}
         stroke={lineColor} strokeWidth={b.lineThickness}
         strokeDasharray={lineDash} strokeLinecap="round"
         markerStart={arrowMarkerStart}
