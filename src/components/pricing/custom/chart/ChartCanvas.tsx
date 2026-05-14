@@ -412,11 +412,29 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     && (style.waterfall.mode ?? "pvm") === "pvm";
 
   if (!isPvmBridge && ((isRankingChart && rankingEmpty) || (!isRankingChart && seriesEmpty))) {
+    // Distinguish "no data because of incoming filter" vs "no data at all"
+    const filteredOut = incoming.length > 0 && rawDsRows.length > 0 && dsRows.length === 0;
     return (
-      <Wrapper style={style}>
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          Sem dados para os filtros escolhidos
-        </div>
+      <Wrapper style={style} hasIncoming={incoming.length > 0}>
+        {filteredOut ? (
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", height: "100%", gap: 6, opacity: 0.45,
+            color: "#1d4ed8",
+          }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+              <path d="M11 8v3m0 3h.01" strokeLinecap="round" />
+            </svg>
+            <span style={{ fontSize: 12, fontFamily: "Calibri,sans-serif" }}>
+              Sem dados para o filtro ativo
+            </span>
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            Sem dados para os filtros escolhidos
+          </div>
+        )}
       </Wrapper>
     );
   }
