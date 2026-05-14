@@ -221,11 +221,12 @@ function NumStepper({ label, value, min, max, onChange }: {
     </div>
   );
 }
-function SliderField({ label, value, min, max, step, onChange }: {
-  label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void;
+function SliderField({ label, value, min, max, step, onChange, disabled = false }: {
+  label: string; value: number; min: number; max: number; step: number;
+  onChange: (v: number) => void; disabled?: boolean;
 }) {
   return (
-    <div>
+    <div className={disabled ? "opacity-50 pointer-events-none" : ""}>
       <Label className="text-[10px] uppercase text-muted-foreground">{label}</Label>
       <Slider value={[value]} min={min} max={max} step={step}
         onValueChange={(v) => onChange(v[0])} className="mt-2" />
