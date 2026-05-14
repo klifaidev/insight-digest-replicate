@@ -18,6 +18,7 @@ import {
 import { KPI_MEASURES } from "@/lib/customSlide";
 import { resolveTableFit, resolveTopSkuFit } from "@/lib/customCapacity";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
+import { ShapeRenderer } from "./ShapeRenderer";
 
 export const CUSTOM_TABLE_MEASURES: PivotMeasure[] = [
   { id: "rol_real",  label: "ROL",            field: "rol_real",         agg: "sum", format: "currency", tone: "real" },
