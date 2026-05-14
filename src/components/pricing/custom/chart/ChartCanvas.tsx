@@ -1123,7 +1123,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <Treemap data={tdata} isAnimationActive={false} dataKey="size" nameKey="name"
         stroke={style.treemap.borderColor}
         aspectRatio={4 / 3}
-        onClick={(node: any) => handleEmit(node?.name)}
+        onClick={(node: any, _idx: any, e: any) => { e?.stopPropagation?.(); handleEmit(node?.name); }}
         content={<TreemapTile cfg={style.treemap} dl={style.dataLabels} fmt={measureFmt} dimmedNames={ownFilter && ownFilter.dimension === emitDim ? new Set(ranking.map(r => r.name).filter(n => !ownFilter.values.includes(n))) : null} />} />
     );
   } else if (ct === "radar") {
