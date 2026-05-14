@@ -107,12 +107,96 @@ export interface ImageBlock extends BaseBlock {
   fit: "contain" | "cover";
 }
 
+export type ShapeType =
+  | "rect" | "roundRect" | "circle" | "ellipse"
+  | "triangle" | "right-triangle" | "diamond"
+  | "pentagon" | "hexagon"
+  | "star-4" | "star-5" | "star-6"
+  | "line" | "dashed-line" | "arrow" | "double-arrow"
+  | "callout-rect" | "callout-rounded"
+  | "chevron" | "ribbon"
+  | "brace-left" | "brace-right" | "bracket-left" | "bracket-right";
+
+export type ShapeStrokeStyle = "solid" | "dashed" | "dotted";
+export type ShapeLineDirection = "horizontal" | "vertical" | "diagonal-down" | "diagonal-up";
+
 export interface ShapeBlock extends BaseBlock {
   kind: "shape";
-  shape: "rect" | "line";
+  shape: ShapeType;
+  // Fill
   fill: string;
+  fillOpacity?: number;
+  // Stroke
+  strokeColor?: string;
+  strokeWidth?: number;
+  strokeStyle?: ShapeStrokeStyle;
+  // Geometry
   radius: number;
+  rotation?: number;
+  // Line-specific
+  lineThickness?: number;
+  lineDirection?: ShapeLineDirection;
+  arrowStart?: boolean;
+  arrowEnd?: boolean;
+  // Shadow
+  shadowEnabled?: boolean;
+  shadowColor?: string;
+  shadowOpacity?: number;
+  shadowBlur?: number;
+  shadowX?: number;
+  shadowY?: number;
 }
+
+export const LINE_FAMILY_SHAPES: ReadonlyArray<ShapeType> = [
+  "line", "dashed-line", "arrow", "double-arrow",
+];
+
+export function isLineFamily(s: ShapeType): boolean {
+  return LINE_FAMILY_SHAPES.includes(s);
+}
+
+/** Garante todos os campos novos com defaults — backward compat. */
+export function ensureShapeBlock(b: ShapeBlock): Required<Omit<ShapeBlock, "groupId" | "locked">> & ShapeBlock {
+  return {
+    ...b,
+    fillOpacity: b.fillOpacity ?? 100,
+    strokeColor: b.strokeColor ?? "CBD5E1",
+    strokeWidth: b.strokeWidth ?? 0,
+    strokeStyle: b.strokeStyle ?? "solid",
+    rotation: b.rotation ?? 0,
+    lineThickness: b.lineThickness ?? 2,
+    lineDirection: b.lineDirection ?? "horizontal",
+    arrowStart: b.arrowStart ?? false,
+    arrowEnd: b.arrowEnd ?? (b.shape === "arrow" || b.shape === "double-arrow"),
+    shadowEnabled: b.shadowEnabled ?? false,
+    shadowColor: b.shadowColor ?? "000000",
+    shadowOpacity: b.shadowOpacity ?? 30,
+    shadowBlur: b.shadowBlur ?? 8,
+    shadowX: b.shadowX ?? 2,
+    shadowY: b.shadowY ?? 2,
+  } as never;
+}
+
+export const SHAPE_LABELS: Record<ShapeType, string> = {
+  rect: "Retângulo", roundRect: "Retângulo arred.", circle: "Círculo", ellipse: "Elipse",
+  triangle: "Triângulo", "right-triangle": "Triângulo retângulo", diamond: "Losango",
+  pentagon: "Pentágono", hexagon: "Hexágono",
+  "star-4": "Estrela 4", "star-5": "Estrela 5", "star-6": "Estrela 6",
+  line: "Linha", "dashed-line": "Linha tracejada", arrow: "Seta", "double-arrow": "Seta dupla",
+  "callout-rect": "Balão retangular", "callout-rounded": "Balão arredondado",
+  chevron: "Chevron", ribbon: "Faixa",
+  "brace-left": "Chave esq.", "brace-right": "Chave dir.",
+  "bracket-left": "Colchete esq.", "bracket-right": "Colchete dir.",
+};
+
+export const SHAPE_GROUPS: { label: string; shapes: ShapeType[] }[] = [
+  { label: "Básicas", shapes: ["rect","roundRect","circle","ellipse","triangle","right-triangle","diamond","pentagon","hexagon"] },
+  { label: "Estrelas", shapes: ["star-4","star-5","star-6"] },
+  { label: "Linhas", shapes: ["line","dashed-line","arrow","double-arrow"] },
+  { label: "Balões", shapes: ["callout-rect","callout-rounded"] },
+  { label: "Setas e Faixas", shapes: ["chevron","ribbon"] },
+  { label: "Colchetes", shapes: ["brace-left","brace-right","bracket-left","bracket-right"] },
+];
 
 export interface BridgeBlock extends BaseBlock {
   kind: "bridge";
