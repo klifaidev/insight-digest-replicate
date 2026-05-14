@@ -88,10 +88,29 @@ function TextRender({ block: b }: { block: TextBlock }) {
 function KpiRender({ block: b }: { block: KpiBlock }) {
   const pricing = usePricing((s) => s.rows);
   const budget = useBudget((s) => s.rows);
-  const rows = useMemo(
+  const { filters } = useSlideFilters();
+  const participates = b.participatesInCrossFilter !== false;
+
+  const baseRows = useMemo(
     () => (b.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing),
     [b.dataSource, pricing, budget],
   );
+
+  const rows = useMemo(() => {
+    if (!participates) return baseRows;
+    const incoming = filters.filter((f) => f.sourceBlockId !== b.id);
+    if (incoming.length === 0) return baseRows;
+    return baseRows.filter((r) => {
+      for (const f of incoming) {
+        // KPIs ignore period filters — they have their own period selector
+        if (f.dimension === "period" || f.dimension === "periodo") continue;
+        const v = resolveFieldValue(r as Record<string, unknown>, f.dimension);
+        if (!f.values.includes(v)) return false;
+      }
+      return true;
+    });
+  }, [baseRows, filters, participates, b.id]);
+
   const value = useMemo(() => computeKpiBlock(rows, b), [rows, b]);
   const measureLabel = b.source === "dynamic"
     ? KPI_MEASURES.find((m) => m.id === b.measure)?.label
