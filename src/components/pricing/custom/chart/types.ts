@@ -343,7 +343,7 @@ export function defaultChartStyle(): ChartStyle {
       connectors: true, connectorColor: "#94A3B8", connectorStyle: "dashed",
       showRunningTotal: false, labelPos: "above", gapPct: 30, classify: {},
       mode: "pvm",
-      pvm: { base: null, comp: null, periodMode: "month", decomposition: "effects", topN: 6 },
+      pvm: { base: null, comp: null, periodMode: "month", decomposition: "effects", topN: 6, comparisonMode: "prev-month" },
     },
     funnel: { direction: "ttb", gapPct: 4, labelMode: "name-percent", labelPos: "right", slices: {} },
     treemap: {
