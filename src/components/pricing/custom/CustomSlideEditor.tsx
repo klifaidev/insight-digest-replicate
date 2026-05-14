@@ -380,7 +380,12 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
           </PaletteGroup>
 
           <Separator className="my-2" />
-          <div className="flex items-center justify-between px-2 text-[11px]">
+          <div className="px-2">
+            <Label className="text-[10px] uppercase text-muted-foreground">Fundo do slide</Label>
+            <BgField label="" value={config.background}
+              onChange={(v) => setBackgroundAction(v)} />
+          </div>
+          <div className="mt-2 flex items-center justify-between px-2 text-[11px]">
             <span className="text-muted-foreground">Faixa Harald</span>
             <Switch
               checked={config.showHaraldFooter}
