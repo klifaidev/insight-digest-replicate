@@ -1468,10 +1468,14 @@ function WaterfallChart({
               const h = Math.max(2, Math.abs(y1 - y0));
               const fill = evalCondColor(r.signed, style.conditionalRules, colorOf(r.type));
               const labelY = labelPos === "center" ? y + h / 2 : labelPos === "bottom" ? Math.max(y0, y1) + dlFs + 2 : y - 6;
+              // Start/Total/Subtotal show absolute end value; intermediate bars show signed delta (variance).
+              const isAnchorBar = r.type === "start" || r.type === "total" || r.type === "subtotal";
+              const labelVal = isAnchorBar ? r.end : r.signed;
+              const labelTxt = isAnchorBar ? valFmt(labelVal) : (labelVal >= 0 ? `+${valFmt(labelVal)}` : valFmt(labelVal));
               return (
                 <g key={r.label}>
                   <rect x={x} y={y} width={barW} height={h} fill={fill} rx="2" />
-                  {style.dataLabels.show && <text x={cx} y={labelY} textAnchor="middle" fontSize={dlFs} fill={style.dataLabels.color} fontWeight={style.dataLabels.bold ? 700 : 400} fontStyle={style.dataLabels.italic ? "italic" : "normal"}>{valFmt(r.end)}</text>}
+                  {style.dataLabels.show && <text x={cx} y={labelY} textAnchor="middle" fontSize={dlFs} fill={style.dataLabels.color} fontWeight={style.dataLabels.bold ? 700 : 400} fontStyle={style.dataLabels.italic ? "italic" : "normal"}>{labelTxt}</text>}
                   <text x={cx} y={H - Math.max(12, m.bottom * 0.45)} textAnchor="middle" fontSize={labelFs} fill={style.xAxis.labelColor}>{truncLabel(r.label)}</text>
                 </g>
               );
