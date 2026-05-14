@@ -734,6 +734,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                     dotStroke={dotStroke}
                     strokeOpacity={sStrokeOp}
                     thickness={cfg?.thickness ?? 2.5}
+                    seriesColor={color}
+                    onActiveDot={(pt: any) => { activePointsRef.current.push(pt); }}
                   />
                 )
               : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
