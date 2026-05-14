@@ -82,6 +82,7 @@ import {
   patchBlockAction, bringForwardAction, sendBackAction, bringToFrontAction,
   sendToBackAction, toggleLockAction, undo as undoAction, redo as redoAction,
   setShowHaraldFooter as setShowHaraldFooterAction,
+  setBackground as setBackgroundAction,
   useSelection, selectBlock, setSelection, clearSelection,
   selectAllOnSlide, enterGroupEdit, exitGroupEdit,
   deleteBlocksAction, duplicateBlocksAction,
