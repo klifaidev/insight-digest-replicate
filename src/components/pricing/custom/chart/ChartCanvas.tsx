@@ -1099,7 +1099,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     }));
     chart = (
       <FunnelSVG data={fdata} style={style} measureFmt={measureFmt}
-        onSliceClick={(name, e) => handleEmit(name, { shift: !!e.shiftKey })}
+        onSliceClick={(name, e) => { e?.stopPropagation?.(); handleEmit(name, { shift: !!e.shiftKey }); }}
         dimmedNames={ownFilter && ownFilter.dimension === emitDim
           ? new Set(fdata.map(d => d.name).filter(n => !ownFilter.values.includes(n))) : null} />
     ) as React.ReactElement;
