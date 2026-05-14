@@ -686,6 +686,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     }
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
+    // Reset collected active dots before this render's dots fire.
+    if (hasPeriodFilter) activePointsRef.current = [];
+
     chart = (
       <Comp data={chartRows} onClick={chartOnClick} margin={chartMargin}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
