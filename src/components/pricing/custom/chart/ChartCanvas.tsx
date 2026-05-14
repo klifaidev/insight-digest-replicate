@@ -1274,8 +1274,19 @@ interface CustomLegendProps {
   legendDim: string;
   onLegendClick: (value: string, shift: boolean) => void;
   emits: boolean;
+  colorMap?: Map<string, string>;
 }
-function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits }: CustomLegendProps) {
+// Treat near-white / transparent / missing as invalid — fall back to palette.
+function isUsableSwatch(c?: string): boolean {
+  if (!c) return false;
+  const v = c.trim().toLowerCase();
+  if (!v || v === "transparent" || v === "none" || v === "currentcolor") return false;
+  if (v === "#fff" || v === "#ffffff" || v === "white" || v === "#fefefe") return false;
+  // rgb/rgba white-ish
+  if (/^rgba?\(\s*255\s*,\s*255\s*,\s*255/.test(v)) return false;
+  return true;
+}
+function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits, colorMap }: CustomLegendProps) {
   if (!payload?.length) return null;
   const isFilterDim = ownFilter?.dimension === legendDim;
   return (
@@ -1283,8 +1294,10 @@ function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits }: C
       display: "flex", flexWrap: "wrap", gap: 6,
       justifyContent: "center", padding: "4px 0 0",
     }}>
-      {payload.map((entry) => {
+      {payload.map((entry, i) => {
         const isActive = !isFilterDim || ownFilter!.values.includes(entry.value);
+        const fallback = colorMap?.get(entry.value) ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+        const swatchColor = isUsableSwatch(entry.color) ? entry.color : fallback;
         return (
           <button
             key={entry.value}
@@ -1294,19 +1307,20 @@ function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits }: C
               display: "flex", alignItems: "center", gap: 5,
               padding: "2px 8px", borderRadius: 20,
               border: isFilterDim && isActive
-                ? `1.5px solid ${entry.color}`
+                ? `1.5px solid ${swatchColor}`
                 : "1.5px solid transparent",
-              background: isFilterDim && isActive ? `${entry.color}18` : "transparent",
+              background: isFilterDim && isActive ? `${swatchColor}18` : "transparent",
               opacity: isActive ? 1 : 0.3,
               cursor: emits ? "pointer" : "default",
               transition: "opacity 0.15s, border-color 0.15s, background 0.15s",
               fontSize: 11, fontFamily: "Calibri, sans-serif",
-              color: "currentColor",
+              color: "#1C2430",
             }}
           >
             <span style={{
-              width: 8, height: 8, borderRadius: "50%",
-              background: entry.color, flexShrink: 0,
+              width: 10, height: 10, borderRadius: "50%",
+              background: swatchColor, flexShrink: 0,
+              border: "1px solid rgba(0,0,0,0.15)",
             }} />
             {entry.value}
           </button>
