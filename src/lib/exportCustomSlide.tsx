@@ -58,10 +58,13 @@ function renderKpi(slide: PptxGenJS.Slide, b: KpiBlock,
   const value = computeKpiBlock(pricing, b);
   const measureLabel = b.source === "dynamic"
     ? KPI_MEASURES.find((m) => m.id === b.measure)?.label ?? "" : "";
-  slide.addShape("roundRect", {
-    ...box, fill: { color: "F8FAFC" },
-    line: { color: "E2E8F0", width: 0.75 }, rectRadius: 0.08,
-  });
+  const cardBg = b.cardBg ?? "F8FAFC";
+  if (cardBg !== "transparent") {
+    slide.addShape("roundRect", {
+      ...box, fill: { color: cardBg },
+      line: { color: "E2E8F0", width: 0.75 }, rectRadius: 0.08,
+    });
+  }
   slide.addText(b.label || measureLabel || "KPI", {
     x: box.x + 0.1, y: box.y + 0.08, w: box.w - 0.2, h: 0.25,
     fontFace: "Calibri", fontSize: 9, color: "64748B", margin: 0, charSpacing: 1,
