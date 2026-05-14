@@ -1380,25 +1380,12 @@ interface CrossingDotProps {
 }
 
 function CrossingDot(props: any) {
-  const { cx, cy, index, points = [], activePeriods,
-    baseR, dotFill, dotStroke, strokeOpacity,
-    seriesColor, onActiveDot } = props;
+  const { cx, cy, index, activePeriods, baseR,
+    dotFill, dotStroke, strokeOpacity } = props;
   if (cx == null || cy == null || index == null) return null;
   const period = String(props.payload?.__period ?? "");
   const isCross = activePeriods.has(period);
   const HIGHLIGHT = "#C8102E";
-
-  if (isCross && onActiveDot) {
-    const prev = points[index - 1];
-    const next = points[index + 1];
-    onActiveDot({
-      cx, cy,
-      prevX: prev?.x, prevY: prev?.y,
-      nextX: next?.x, nextY: next?.y,
-      seriesColor: seriesColor ?? HIGHLIGHT,
-    });
-  }
-
   const r = isCross ? Math.max(baseR + 3, 6) : baseR;
   return (
     <circle cx={cx} cy={cy} r={r}
@@ -1406,8 +1393,67 @@ function CrossingDot(props: any) {
       stroke={isCross ? HIGHLIGHT : dotStroke}
       strokeWidth={isCross ? 2 : 1}
       fillOpacity={isCross ? 1 : strokeOpacity}
-      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
+      style={isCross
+        ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" }
+        : undefined} />
   );
+}
+
+// Recharts v2 only injects formattedGraphicalItems into class components
+// passed via <Customized component={...} />. This draws the highlighted
+// segments (prev→active and active→next) on top of every Line/Area series.
+interface SegmentOverlayProps {
+  activePeriods: Set<string>;
+  highlightColor?: string;
+  formattedGraphicalItems?: any[];
+}
+class SegmentOverlay extends React.Component<SegmentOverlayProps> {
+  render() {
+    const { activePeriods, formattedGraphicalItems = [],
+            highlightColor = "#C8102E" } = this.props;
+    if (!activePeriods || activePeriods.size === 0) return null;
+    const segW = 4;
+    const lines: JSX.Element[] = [];
+    for (const item of formattedGraphicalItems) {
+      const displayName: string = item?.item?.type?.displayName
+        ?? item?.type?.displayName ?? "";
+      if (displayName !== "Line" && displayName !== "Area") continue;
+      const points: Array<{ x: number; y: number; payload: any }> =
+        item?.props?.points ?? [];
+      const dataKey = item?.props?.dataKey ?? "k";
+      for (let i = 0; i < points.length; i++) {
+        const pt = points[i];
+        if (!pt || pt.x == null || pt.y == null || isNaN(pt.y)) continue;
+        const period = String(pt.payload?.__period ?? "");
+        if (!activePeriods.has(period)) continue;
+        if (i > 0) {
+          const prev = points[i - 1];
+          if (prev && prev.x != null && prev.y != null && !isNaN(prev.y)) {
+            lines.push(
+              <line key={`${dataKey}-L${i}`}
+                x1={prev.x} y1={prev.y} x2={pt.x} y2={pt.y}
+                stroke={highlightColor} strokeWidth={segW}
+                strokeOpacity={0.9} strokeLinecap="round"
+                style={{ filter: `drop-shadow(0 0 4px ${highlightColor}88)` }} />
+            );
+          }
+        }
+        if (i < points.length - 1) {
+          const next = points[i + 1];
+          if (next && next.x != null && next.y != null && !isNaN(next.y)) {
+            lines.push(
+              <line key={`${dataKey}-R${i}`}
+                x1={pt.x} y1={pt.y} x2={next.x} y2={next.y}
+                stroke={highlightColor} strokeWidth={segW}
+                strokeOpacity={0.9} strokeLinecap="round"
+                style={{ filter: `drop-shadow(0 0 4px ${highlightColor}88)` }} />
+            );
+          }
+        }
+      }
+    }
+    return <g className="segment-overlay" style={{ pointerEvents: "none" }}>{lines}</g>;
+  }
 }
 
 function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits, colorMap }: CustomLegendProps) {
