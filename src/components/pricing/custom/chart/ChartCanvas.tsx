@@ -690,19 +690,19 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const dotStroke = cfg?.marker?.border ?? color;
           const dotProp: any = markerOn
             ? (showCrossing
-              ? (dp: any) => {
-                  const period = String(dp?.payload?.__period ?? "");
-                  const isCross = activePeriods.has(period);
-                  const r = isCross ? Math.max(baseR + 3, 6) : baseR;
-                  return (
-                    <circle key={dp.key} cx={dp.cx} cy={dp.cy} r={r}
-                      fill={isCross ? "#C8102E" : dotFill}
-                      stroke={isCross ? "#C8102E" : dotStroke}
-                      strokeWidth={isCross ? 2 : 1}
-                      fillOpacity={isCross ? 1 : sStrokeOp}
-                      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
-                  );
-                }
+              ? (dp: any) => (
+                  <CrossingDot
+                    key={dp.key}
+                    {...dp}
+                    activePeriods={activePeriods}
+                    baseR={baseR}
+                    color={color}
+                    dotFill={dotFill}
+                    dotStroke={dotStroke}
+                    strokeOpacity={sStrokeOp}
+                    thickness={cfg?.thickness ?? 2.5}
+                  />
+                )
               : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
             : false;
           return (
@@ -1356,6 +1356,76 @@ function ActivePeriodTick(props: any) {
       >
         {text}
       </text>
+    </g>
+  );
+}
+
+interface CrossingDotProps {
+  cx?: number; cy?: number; index?: number;
+  payload?: any; points?: Array<{ x: number; y: number; payload: any }>;
+  activePeriods: Set<string>;
+  baseR: number; color: string; dotFill: string; dotStroke: string;
+  strokeOpacity: number; thickness: number;
+}
+
+function CrossingDot(props: CrossingDotProps) {
+  const { cx, cy, index, points = [], activePeriods,
+    baseR, dotFill, dotStroke, strokeOpacity, thickness } = props;
+  if (cx == null || cy == null || index == null) return null;
+
+  const period = String(props.payload?.__period ?? "");
+  const isCross = activePeriods.has(period);
+
+  const segments: JSX.Element[] = [];
+  const prev = points[index - 1];
+  const next = points[index + 1];
+  const HIGHLIGHT = "#C8102E";
+  const segW = Math.max(thickness + 1.5, 3);
+
+  if (isCross && prev && prev.y != null) {
+    const prevPeriod = String(prev.payload?.__period ?? "");
+    if (!activePeriods.has(prevPeriod)) {
+      segments.push(
+        <line key="seg-prev"
+          x1={prev.x} y1={prev.y} x2={cx} y2={cy}
+          stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
+          strokeLinecap="round"
+          style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }} />
+      );
+    }
+  }
+  if (isCross && next && next.y != null) {
+    const nextPeriod = String(next.payload?.__period ?? "");
+    if (!activePeriods.has(nextPeriod)) {
+      segments.push(
+        <line key="seg-next"
+          x1={cx} y1={cy} x2={next.x} y2={next.y}
+          stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
+          strokeLinecap="round"
+          style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }} />
+      );
+    }
+  }
+  if (isCross && prev && activePeriods.has(String(prev.payload?.__period ?? "")) && prev.y != null) {
+    segments.push(
+      <line key="seg-between"
+        x1={prev.x} y1={prev.y} x2={cx} y2={cy}
+        stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
+        strokeLinecap="round"
+        style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }} />
+    );
+  }
+
+  const r = isCross ? Math.max(baseR + 3, 6) : baseR;
+  return (
+    <g>
+      {segments}
+      <circle cx={cx} cy={cy} r={r}
+        fill={isCross ? HIGHLIGHT : dotFill}
+        stroke={isCross ? HIGHLIGHT : dotStroke}
+        strokeWidth={isCross ? 2 : 1}
+        fillOpacity={isCross ? 1 : strokeOpacity}
+        style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
     </g>
   );
 }
