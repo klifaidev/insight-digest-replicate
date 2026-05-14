@@ -101,6 +101,8 @@ export interface KpiBlock extends BaseBlock {
   dataSource?: BlockDataSource;
   /** Cor de fundo do card. Hex sem '#', "transparent", ou undefined (default F8FAFC). */
   cardBg?: string;
+  /** Cross-filter participation — recebe filtros emitidos por outros blocos. Default true. */
+  participatesInCrossFilter?: boolean;
 }
 
 export interface ImageBlock extends BaseBlock {
