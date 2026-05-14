@@ -331,32 +331,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const hasPeriodFilter = activePeriods.size > 0;
   const hasLegendFilter = activeLegendValues.size > 0;
 
-  // Cross-filter highlighted segments — collected per-render from CrossingDot
-  // and rendered as an absolute SVG overlay (escapes Recharts' per-series clipPath).
-  const activePointsRef = useRef<Array<{
-    cx: number; cy: number;
-    prevX?: number; prevY?: number;
-    nextX?: number; nextY?: number;
-    seriesColor: string;
-  }>>([]);
-  const [activePointsSnap, setActivePointsSnap] = useState<typeof activePointsRef.current>([]);
-
-  // Sync collected active dots into state so the overlay re-renders.
-  // Compare to avoid infinite render loops; replace only when changed.
-  useLayoutEffect(() => {
-    const next = activePointsRef.current;
-    setActivePointsSnap((prev) => {
-      if (prev.length !== next.length) return next.slice();
-      for (let i = 0; i < prev.length; i++) {
-        const a = prev[i], b = next[i];
-        if (a.cx !== b.cx || a.cy !== b.cy
-          || a.prevX !== b.prevX || a.prevY !== b.prevY
-          || a.nextX !== b.nextX || a.nextY !== b.nextY
-          || a.seriesColor !== b.seriesColor) return next.slice();
-      }
-      return prev;
-    });
-  });
+  // (Cross-filter highlighted segments are now drawn by <SegmentOverlay>
+  // via Recharts <Customized>, no ref/state plumbing needed.)
 
 
   // Should a value be dimmed (own filter active and value not selected)?
