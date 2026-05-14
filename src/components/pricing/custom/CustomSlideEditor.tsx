@@ -54,6 +54,7 @@ import haraldFooterPng from "@/assets/harald-footer-bar.png";
 import { registerCustomCanvas } from "@/lib/customCanvasRegistry";
 import { saveUserTemplate } from "@/lib/customTemplates";
 import { TemplatePicker } from "./templates/TemplatePicker";
+import { ShapeInspector } from "./ShapeInspector";
 import { useSlidesFlow } from "@/store/slidesFlow";
 import { newId } from "@/lib/slidesFlow";
 import { Alert, AlertDescription } from "@/components/ui/alert";
