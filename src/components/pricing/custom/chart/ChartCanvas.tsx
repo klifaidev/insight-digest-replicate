@@ -1342,6 +1342,7 @@ function ActivePeriodTick(props: any) {
         width={approxW}
         height={h}
         rx={rx}
+        ry={rx}
         fill="#C8102E"
       />
       <text
