@@ -409,6 +409,14 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             // Marquee selection — only if mousedown is on the wrapper itself
             // (i.e. canvas background, not a block / Rnd handle / inspector).
             if (e.target !== e.currentTarget && !(e.target as HTMLElement).dataset?.canvasBg) return;
+            const isChartElement = (el: Element | null): boolean => {
+              while (el && el !== e.currentTarget) {
+                if ((el as HTMLElement).dataset?.chartCanvas !== undefined) return true;
+                el = el.parentElement;
+              }
+              return false;
+            };
+            if (isChartElement(e.target as Element)) return;
             // Begin marquee in canvas-space coords.
             const startCanvas = clientToCanvas(canvasRef.current, e.clientX, e.clientY, scaleRef.current);
             if (!startCanvas) return;
