@@ -436,6 +436,15 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             const up = (ev: MouseEvent) => {
               window.removeEventListener("mousemove", move);
               window.removeEventListener("mouseup", up);
+              // If mouseup landed inside a chart, do not clear selection.
+              let el = ev.target as Element | null;
+              while (el) {
+                if ((el as HTMLElement).dataset?.chartCanvas !== undefined) {
+                  setMarquee(null);
+                  return;
+                }
+                el = el.parentElement;
+              }
               const end = clientToCanvas(canvasRef.current, ev.clientX, ev.clientY, scaleRef.current);
               setMarquee(null);
               if (!end) { clearSelection(); return; }

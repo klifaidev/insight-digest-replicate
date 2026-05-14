@@ -1,12 +1,12 @@
 // ChartCanvas — single Recharts-based renderer for every ChartBlock variant.
 // Reads the unified ChartStyle so the inspector can drive every visual knob.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer, ComposedChart, LineChart, BarChart, AreaChart,
   PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, Sector,
   Line, Bar, Area, XAxis, YAxis, CartesianGrid, Legend, Tooltip, LabelList,
-  Treemap,
+  Treemap, Customized,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ReferenceLine, ReferenceArea,
 } from "recharts";
@@ -331,32 +331,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const hasPeriodFilter = activePeriods.size > 0;
   const hasLegendFilter = activeLegendValues.size > 0;
 
-  // Cross-filter highlighted segments — collected per-render from CrossingDot
-  // and rendered as an absolute SVG overlay (escapes Recharts' per-series clipPath).
-  const activePointsRef = useRef<Array<{
-    cx: number; cy: number;
-    prevX?: number; prevY?: number;
-    nextX?: number; nextY?: number;
-    seriesColor: string;
-  }>>([]);
-  const [activePointsSnap, setActivePointsSnap] = useState<typeof activePointsRef.current>([]);
-
-  // Sync collected active dots into state so the overlay re-renders.
-  // Compare to avoid infinite render loops; replace only when changed.
-  useLayoutEffect(() => {
-    const next = activePointsRef.current;
-    setActivePointsSnap((prev) => {
-      if (prev.length !== next.length) return next.slice();
-      for (let i = 0; i < prev.length; i++) {
-        const a = prev[i], b = next[i];
-        if (a.cx !== b.cx || a.cy !== b.cy
-          || a.prevX !== b.prevX || a.prevY !== b.prevY
-          || a.nextX !== b.nextX || a.nextY !== b.nextY
-          || a.seriesColor !== b.seriesColor) return next.slice();
-      }
-      return prev;
-    });
-  });
+  // (Cross-filter highlighted segments are now drawn by <SegmentOverlay>
+  // via Recharts <Customized>, no ref/state plumbing needed.)
 
 
   // Should a value be dimmed (own filter active and value not selected)?
@@ -686,9 +662,6 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     }
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
-    // Reset collected active dots before this render's dots fire.
-    activePointsRef.current = [];
-
     chart = (
       <Comp data={chartRows} onClick={chartOnClick} margin={chartMargin}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
@@ -703,7 +676,6 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stroke="#3b82f6" strokeOpacity={0.35} strokeDasharray="3 3"
               ifOverflow="extendDomain" />
           ))}
-        {/* CrossingSegments removido — segmentos agora são desenhados dentro do CrossingDot */}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
@@ -733,9 +705,6 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                     dotFill={dotFill}
                     dotStroke={dotStroke}
                     strokeOpacity={sStrokeOp}
-                    thickness={cfg?.thickness ?? 2.5}
-                    seriesColor={color}
-                    onActiveDot={(pt: any) => { activePointsRef.current.push(pt); }}
                   />
                 )
               : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
@@ -795,6 +764,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             </Line>
           );
         })}
+        {hasPeriodFilter && (
+          <Customized component={SegmentOverlay as any} activePeriods={activePeriods as any} />
+        )}
       </Comp>
     );
   } else if (ct === "bar" || ct === "column" || ct === "stackedColumn") {
@@ -1304,40 +1276,6 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             {chart as React.ReactElement}
           </ResponsiveContainer>
         )}
-        {activePointsSnap.length > 0 && (
-          <svg
-            style={{
-              position: "absolute", top: 0, left: 0,
-              width: "100%", height: "100%",
-              pointerEvents: "none", overflow: "visible",
-            }}
-          >
-            {activePointsSnap.map((pt, i) => {
-              const HIGHLIGHT = "#C8102E";
-              const segW = 4;
-              return (
-                <g key={i}>
-                  {pt.prevX != null && pt.prevY != null && (
-                    <line
-                      x1={pt.prevX} y1={pt.prevY} x2={pt.cx} y2={pt.cy}
-                      stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
-                      strokeLinecap="round"
-                      style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }}
-                    />
-                  )}
-                  {pt.nextX != null && pt.nextY != null && (
-                    <line
-                      x1={pt.cx} y1={pt.cy} x2={pt.nextX} y2={pt.nextY}
-                      stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
-                      strokeLinecap="round"
-                      style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }}
-                    />
-                  )}
-                </g>
-              );
-            })}
-          </svg>
-        )}
       </div>
     </Wrapper>
   );
@@ -1442,25 +1380,12 @@ interface CrossingDotProps {
 }
 
 function CrossingDot(props: any) {
-  const { cx, cy, index, points = [], activePeriods,
-    baseR, dotFill, dotStroke, strokeOpacity,
-    seriesColor, onActiveDot } = props;
+  const { cx, cy, index, activePeriods, baseR,
+    dotFill, dotStroke, strokeOpacity } = props;
   if (cx == null || cy == null || index == null) return null;
   const period = String(props.payload?.__period ?? "");
   const isCross = activePeriods.has(period);
   const HIGHLIGHT = "#C8102E";
-
-  if (isCross && onActiveDot) {
-    const prev = points[index - 1];
-    const next = points[index + 1];
-    onActiveDot({
-      cx, cy,
-      prevX: prev?.x, prevY: prev?.y,
-      nextX: next?.x, nextY: next?.y,
-      seriesColor: seriesColor ?? HIGHLIGHT,
-    });
-  }
-
   const r = isCross ? Math.max(baseR + 3, 6) : baseR;
   return (
     <circle cx={cx} cy={cy} r={r}
@@ -1468,8 +1393,67 @@ function CrossingDot(props: any) {
       stroke={isCross ? HIGHLIGHT : dotStroke}
       strokeWidth={isCross ? 2 : 1}
       fillOpacity={isCross ? 1 : strokeOpacity}
-      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
+      style={isCross
+        ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" }
+        : undefined} />
   );
+}
+
+// Recharts v2 only injects formattedGraphicalItems into class components
+// passed via <Customized component={...} />. This draws the highlighted
+// segments (prev→active and active→next) on top of every Line/Area series.
+interface SegmentOverlayProps {
+  activePeriods: Set<string>;
+  highlightColor?: string;
+  formattedGraphicalItems?: any[];
+}
+class SegmentOverlay extends React.Component<SegmentOverlayProps> {
+  render() {
+    const { activePeriods, formattedGraphicalItems = [],
+            highlightColor = "#C8102E" } = this.props;
+    if (!activePeriods || activePeriods.size === 0) return null;
+    const segW = 4;
+    const lines: JSX.Element[] = [];
+    for (const item of formattedGraphicalItems) {
+      const displayName: string = item?.item?.type?.displayName
+        ?? item?.type?.displayName ?? "";
+      if (displayName !== "Line" && displayName !== "Area") continue;
+      const points: Array<{ x: number; y: number; payload: any }> =
+        item?.props?.points ?? [];
+      const dataKey = item?.props?.dataKey ?? "k";
+      for (let i = 0; i < points.length; i++) {
+        const pt = points[i];
+        if (!pt || pt.x == null || pt.y == null || isNaN(pt.y)) continue;
+        const period = String(pt.payload?.__period ?? "");
+        if (!activePeriods.has(period)) continue;
+        if (i > 0) {
+          const prev = points[i - 1];
+          if (prev && prev.x != null && prev.y != null && !isNaN(prev.y)) {
+            lines.push(
+              <line key={`${dataKey}-L${i}`}
+                x1={prev.x} y1={prev.y} x2={pt.x} y2={pt.y}
+                stroke={highlightColor} strokeWidth={segW}
+                strokeOpacity={0.9} strokeLinecap="round"
+                style={{ filter: `drop-shadow(0 0 4px ${highlightColor}88)` }} />
+            );
+          }
+        }
+        if (i < points.length - 1) {
+          const next = points[i + 1];
+          if (next && next.x != null && next.y != null && !isNaN(next.y)) {
+            lines.push(
+              <line key={`${dataKey}-R${i}`}
+                x1={pt.x} y1={pt.y} x2={next.x} y2={next.y}
+                stroke={highlightColor} strokeWidth={segW}
+                strokeOpacity={0.9} strokeLinecap="round"
+                style={{ filter: `drop-shadow(0 0 4px ${highlightColor}88)` }} />
+            );
+          }
+        }
+      }
+    }
+    return <g className="segment-overlay" style={{ pointerEvents: "none" }}>{lines}</g>;
+  }
 }
 
 function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits, colorMap }: CustomLegendProps) {
