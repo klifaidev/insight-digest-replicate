@@ -159,16 +159,29 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 gap-2">{children}</div>;
 }
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  const v = (value || "").replace("#", "");
+function ColorField({ label, value, onChange, allowTransparent = false, onTransparentChange }: {
+  label: string; value: string; onChange: (v: string) => void;
+  allowTransparent?: boolean; onTransparentChange?: (t: boolean) => void;
+}) {
+  const isTransparent = value === "transparent";
+  const v = isTransparent ? "" : (value || "").replace("#", "");
   return (
     <div>
       <Label className="text-[10px] uppercase text-muted-foreground">{label}</Label>
+      {allowTransparent && (
+        <label className="mb-1 mt-0.5 flex cursor-pointer items-center justify-between text-[10px] text-muted-foreground">
+          <span>Sem fundo</span>
+          <Switch checked={isTransparent} className="scale-75"
+            onCheckedChange={(c) => onTransparentChange?.(c)} />
+        </label>
+      )}
       <div className="flex items-center gap-1">
         <Popover>
           <PopoverTrigger asChild>
-            <button type="button" className="h-7 w-7 rounded border border-border shrink-0"
-              style={{ background: `#${v || "FFFFFF"}` }} />
+            <button type="button" disabled={isTransparent}
+              className={cn("h-7 w-7 rounded border border-border shrink-0",
+                isTransparent && "cursor-not-allowed opacity-90")}
+              style={isTransparent ? CHECKER_BG_STYLE : { background: `#${v || "FFFFFF"}` }} />
           </PopoverTrigger>
           <PopoverContent className="w-auto p-2">
             <input type="color" value={`#${v || "FFFFFF"}`}
@@ -176,12 +189,23 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
               className="h-32 w-32 cursor-pointer border-0 bg-transparent" />
           </PopoverContent>
         </Popover>
-        <Input className="h-7 text-xs font-mono" value={v}
+        <Input className="h-7 text-xs font-mono" value={v} disabled={isTransparent}
           onChange={(e) => onChange(e.target.value.replace("#", ""))} />
       </div>
     </div>
   );
 }
+
+const CHECKER_BG_STYLE: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(45deg, rgba(0,0,0,0.08) 25%, transparent 25%)," +
+    "linear-gradient(-45deg, rgba(0,0,0,0.08) 25%, transparent 25%)," +
+    "linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.08) 75%)," +
+    "linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.08) 75%)",
+  backgroundSize: "8px 8px",
+  backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0",
+  backgroundColor: "#FFFFFF",
+};
 function NumStepper({ label, value, min, max, onChange }: {
   label: string; value: number; min: number; max: number; onChange: (v: number) => void;
 }) {
