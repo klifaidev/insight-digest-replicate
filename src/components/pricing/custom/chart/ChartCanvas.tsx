@@ -543,14 +543,15 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const xAxis = xAx.show ? (
     <XAxis
       dataKey="__period"
-      tick={(props: any) => (
+      interval={0}
+      height={Math.max(30, (xAx.labelSize ?? 11) + 22)}
+      tick={
         <ActivePeriodTick
-          {...props}
           activePeriods={activePeriods}
           labelColor={xAx.labelColor}
           labelSize={xAx.labelSize}
         />
-      )}
+      }
       stroke={xAx.lineColor} tickLine={xAx.ticks}
       strokeWidth={xAx.lineWidth}
       label={xAx.titleText ? { value: xAx.titleText, position: "insideBottom",
