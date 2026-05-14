@@ -80,7 +80,7 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
       stroke: sw > 0 ? stroke : "none",
       strokeWidth: sw,
       strokeDasharray: dash,
-    } as React.SVGProps<SVGElement>;
+    };
 
     switch (b.shape) {
       case "rect":
