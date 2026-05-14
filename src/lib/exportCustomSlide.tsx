@@ -140,9 +140,12 @@ function renderShape(slide: PptxGenJS.Slide, raw: ShapeBlock) {
     return;
   }
 
+  const isTransparentFill = b.fill === "transparent";
   const opts: Record<string, unknown> = {
     ...box,
-    fill: { color: b.fill, transparency: 100 - b.fillOpacity },
+    fill: isTransparentFill
+      ? { type: "none" }
+      : { color: b.fill, transparency: 100 - b.fillOpacity },
     line: b.strokeWidth > 0 ? {
       color: b.strokeColor,
       width: b.strokeWidth * 0.75,
