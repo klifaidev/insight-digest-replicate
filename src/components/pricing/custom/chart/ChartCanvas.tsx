@@ -244,7 +244,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const lbl = monthLabel((r as any).mes, (r as any).ano);
           if (!f.values.includes(lbl) && !f.values.includes(String((r as any).periodo))) return false;
         } else {
-          const v = String((r as unknown as Record<string, unknown>)[f.dimension] ?? "");
+          const v = resolveFieldValue(r as unknown as Record<string, unknown>, f.dimension);
           if (!f.values.includes(v)) return false;
         }
       }
