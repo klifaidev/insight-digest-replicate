@@ -809,7 +809,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       const anchor: "start" | "end" | "middle" = inside ? "middle" : (x > cx ? "start" : "end");
       let color = dl.color;
       if (dl.autoContrast) {
-        const ref = dl.bgOpacity > 0 ? dl.bgColor : (inside ? (props.fill ?? "#FFFFFF") : (style.general?.background ?? "#FFFFFF"));
+        const sb = (style.general?.background && style.general.background !== "transparent") ? style.general.background : "#FFFFFF";
+        const ref = dl.bgOpacity > 0 ? dl.bgColor : (inside ? (props.fill ?? "#FFFFFF") : sb);
         color = luminance(ref) > 0.55 ? "#000000" : "#FFFFFF";
       }
       const padX = 3, padY = 2;
