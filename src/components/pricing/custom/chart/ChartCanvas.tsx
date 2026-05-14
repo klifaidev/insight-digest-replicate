@@ -707,11 +707,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                     {...dp}
                     activePeriods={activePeriods}
                     baseR={baseR}
-                    color={color}
                     dotFill={dotFill}
                     dotStroke={dotStroke}
                     strokeOpacity={sStrokeOp}
-                    thickness={cfg?.thickness ?? 2.5}
                   />
                 )
               : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
