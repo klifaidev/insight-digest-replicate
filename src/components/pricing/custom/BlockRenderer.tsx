@@ -104,7 +104,7 @@ function KpiRender({ block: b }: { block: KpiBlock }) {
       for (const f of incoming) {
         // KPIs ignore period filters — they have their own period selector
         if (f.dimension === "period" || f.dimension === "periodo") continue;
-        const v = resolveFieldValue(r as Record<string, unknown>, f.dimension);
+        const v = resolveFieldValue(r as unknown as Record<string, unknown>, f.dimension);
         if (!f.values.includes(v)) return false;
       }
       return true;
