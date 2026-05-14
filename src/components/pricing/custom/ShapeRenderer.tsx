@@ -100,11 +100,16 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
         shapeEl = <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2} {...common} />;
         break;
       case "triangle":
-        shapeEl = <polygon points={`${cx},0 ${w},${h} 0,${h}`} {...common} />;
+      case "right-triangle": {
+        const verts = b.vertices && b.vertices.length === 3
+          ? b.vertices
+          : (b.shape === "triangle"
+              ? [{ x: 0.5, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
+              : [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]);
+        const pts = verts.map((v) => `${v.x * w},${v.y * h}`).join(" ");
+        shapeEl = <polygon points={pts} {...common} />;
         break;
-      case "right-triangle":
-        shapeEl = <polygon points={`0,0 ${w},${h} 0,${h}`} {...common} />;
-        break;
+      }
       case "diamond":
         shapeEl = <polygon points={`${cx},0 ${w},${cy} ${cx},${h} 0,${cy}`} {...common} />;
         break;
