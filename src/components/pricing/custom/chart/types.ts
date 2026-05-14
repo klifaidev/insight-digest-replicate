@@ -161,6 +161,8 @@ export interface WaterfallStyleCfg {
     decomposition?: string;
     /** Top N itens quando decomposition é uma dimensão (resto vira "Outros"). */
     topN?: number;
+    /** Período de comparação automático. "manual" usa base/comp manualmente. Default "prev-month". */
+    comparisonMode?: "prev-month" | "prev-year-month" | "bench" | "manual";
   };
 }
 
