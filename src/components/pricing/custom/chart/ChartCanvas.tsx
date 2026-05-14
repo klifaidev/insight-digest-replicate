@@ -8,7 +8,7 @@ import {
   Line, Bar, Area, XAxis, YAxis, CartesianGrid, Legend, Tooltip, LabelList,
   Treemap,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ReferenceLine,
+  ReferenceLine, ReferenceArea,
 } from "recharts";
 import type { ChartBlock } from "@/lib/customSlide";
 import { KPI_MEASURES } from "@/lib/customSlide";
@@ -258,47 +258,73 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // Legend-click filter dimension (series dimension, not axis)
   const legendDim: string | null = block.fieldWells?.colorDim ?? block.breakdown ?? null;
 
-  // Click handler — emits/toggles a filter on this block's emit dimension
-  const handleEmit = (rawValue: unknown, opts?: { shift?: boolean }) => {
+  // Core emit — takes an explicit dimension so callers can disambiguate
+  // between the X-axis click (period on a temporal line chart) and the
+  // legend/series click (colorDim/breakdown).
+  const handleEmitOn = (dimension: string, rawValue: unknown, opts?: { shift?: boolean }) => {
     if (!emits) return;
     const v = String(rawValue ?? "");
     if (!v) return;
-    const filter = { sourceBlockId: block.id, dimension: emitDim, values: [v] };
+    const filter = { sourceBlockId: block.id, dimension, values: [v] };
     if (opts?.shift) cf.toggleFilter(filter);
     else {
-      // single click: if same single value already selected, clear; else replace
-      if (ownFilter && ownFilter.values.length === 1 && ownFilter.values[0] === v
-          && ownFilter.dimension === emitDim) {
+      if (ownFilter && ownFilter.dimension === dimension
+          && ownFilter.values.length === 1 && ownFilter.values[0] === v) {
         cf.clearFilter(block.id);
       } else {
         cf.setFilter(filter);
       }
     }
+  };
+
+  // Click handler — emits/toggles a filter on this block's emit dimension
+  const handleEmit = (rawValue: unknown, opts?: { shift?: boolean }) => {
+    handleEmitOn(emitDim, rawValue, opts);
   };
 
   // Legend click — emits filter on the series dimension (not the X-axis dim)
   const handleLegendEmit = (value: string, shift: boolean) => {
-    if (!emits || !legendDim) return;
-    const filter = { sourceBlockId: block.id, dimension: legendDim, values: [value] };
-    if (shift) {
-      cf.toggleFilter(filter);
-    } else {
-      if (ownFilter && ownFilter.dimension === legendDim
-          && ownFilter.values.length === 1 && ownFilter.values[0] === value) {
-        cf.clearFilter(block.id);
-      } else {
-        cf.setFilter(filter);
-      }
-    }
+    if (!legendDim) return;
+    handleEmitOn(legendDim, value, { shift });
   };
 
-  // Helper for Recharts top-level onClick (point/bar payload)
+  // Helper for Recharts top-level onClick (point/bar payload).
+  // When the chart has an X-axis dimension (e.g. "period" on a temporal
+  // line chart) we emit on that dim so the click semantics match what the
+  // user actually clicked, even when the chart is broken down by another
+  // dimension (colorDim/breakdown).
   const chartOnClick = (e: any) => {
     if (!emits) return;
     const label = e?.activeLabel ?? e?.activePayload?.[0]?.payload?.__period
       ?? e?.activePayload?.[0]?.payload?.name;
-    if (label != null) handleEmit(label, { shift: !!e?.shiftKey });
+    if (label == null) return;
+    const dim = xDim ?? emitDim;
+    handleEmitOn(dim, label, { shift: !!e?.shiftKey });
   };
+
+  // Active period values from any source (own or incoming) — used by the
+  // line/area branch to render vertical highlight bands.
+  const activePeriods = useMemo(() => {
+    const s = new Set<string>();
+    for (const f of cf.filters) {
+      if (f.dimension === "period" || f.dimension === "periodo") {
+        f.values.forEach((v) => s.add(v));
+      }
+    }
+    return s;
+  }, [cf.filters]);
+  // Active values on this chart's legend/series dimension (own or incoming).
+  const activeLegendValues = useMemo(() => {
+    if (!legendDim) return new Set<string>();
+    const s = new Set<string>();
+    for (const f of cf.filters) {
+      if (f.dimension === legendDim) f.values.forEach((v) => s.add(v));
+    }
+    return s;
+  }, [cf.filters, legendDim]);
+  const hasPeriodFilter = activePeriods.size > 0;
+  const hasLegendFilter = activeLegendValues.size > 0;
+
 
   // Should a value be dimmed (own filter active and value not selected)?
   const isDimmed = (value: string) => {
@@ -624,14 +650,29 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
+        {/* Cross-filter: vertical highlight bands for active period selections */}
+        {hasPeriodFilter && Array.from(activePeriods)
+          .filter((p) => chartRows.some((r) => String(r.__period) === p))
+          .map((p) => (
+            <ReferenceArea key={`__pf_${p}`} x1={p} x2={p} yAxisId="left"
+              fill="#3b82f6" fillOpacity={0.10}
+              stroke="#3b82f6" strokeOpacity={0.35} strokeDasharray="3 3"
+              ifOverflow="extendDomain" />
+          ))}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
           const color = cfg?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const dash = dashArr(cfg?.lineStyle);
-          const sDim = seriesDimmed(s.name);
-          const sStrokeOp = sDim ? 0.2 : 1;
+          // Series-level dim: own-emitted legend filter OR cross-block legend filter.
+          const seriesNotMatched = hasLegendFilter && !activeLegendValues.has(s.name);
+          const sDim = seriesDimmed(s.name) || seriesNotMatched;
+          const sStrokeOp = sDim ? (hasLegendFilter && hasPeriodFilter ? 0.1 : 0.2) : 1;
           const sFillOp = sDim ? 0.1 : undefined;
+          // Crossing-dot highlight: only when BOTH period and legend filters
+          // are active, draw an enlarged dot on the matched series at the
+          // intersecting periods.
+          const showCrossing = hasPeriodFilter && hasLegendFilter && !seriesNotMatched;
           if (ct === "area" || ct === "stackedArea") {
             const stacked = forceStack || style.area.stacked;
             return (
@@ -671,6 +712,26 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               </Bar>
             );
           }
+          const markerOn = cfg?.marker?.show !== false;
+          const baseR = cfg?.marker?.size ?? 3;
+          const dotFill = cfg?.marker?.fill ?? color;
+          const dotStroke = cfg?.marker?.border ?? color;
+          const dotProp: any = markerOn
+            ? (showCrossing
+              ? (dp: any) => {
+                  const period = String(dp?.payload?.__period ?? "");
+                  const isCross = activePeriods.has(period);
+                  const r = isCross ? Math.max(baseR + 3, 6) : baseR;
+                  return (
+                    <circle key={dp.key} cx={dp.cx} cy={dp.cy} r={r}
+                      fill={dotFill} stroke={isCross ? "#1d4ed8" : dotStroke}
+                      strokeWidth={isCross ? 2 : 1}
+                      fillOpacity={isCross ? 1 : sStrokeOp}
+                      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(59,130,246,0.75))" } : undefined} />
+                  );
+                }
+              : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
+            : false;
           return (
             <Line key={s.name} isAnimationActive={false} dataKey={s.name}
               type={cfg?.smooth ? "monotone" : "linear"}
@@ -678,12 +739,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               strokeOpacity={sStrokeOp}
               strokeDasharray={dash}
               yAxisId={ct === "combo" && cfg?.secondaryAxis ? "right" : "left"}
-              dot={cfg?.marker?.show !== false ? {
-                r: cfg?.marker?.size ?? 3,
-                fill: cfg?.marker?.fill ?? color,
-                stroke: cfg?.marker?.border ?? color,
-                fillOpacity: sStrokeOp,
-              } : false}
+              dot={dotProp}
               connectNulls>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("line", dlPos) as never}
