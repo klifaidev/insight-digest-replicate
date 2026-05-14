@@ -1286,6 +1286,43 @@ function NumField({ label, value, onChange }: { label: string; value: number; on
   );
 }
 
+const CHECKER_BG: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(45deg, rgba(0,0,0,0.08) 25%, transparent 25%)," +
+    "linear-gradient(-45deg, rgba(0,0,0,0.08) 25%, transparent 25%)," +
+    "linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.08) 75%)," +
+    "linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.08) 75%)",
+  backgroundSize: "8px 8px",
+  backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0",
+  backgroundColor: "#FFFFFF",
+};
+
+/** Background color picker with "Sem fundo" toggle. value: hex sem '#' OR "transparent". */
+function BgField({ label, value, onChange }: {
+  label: string; value: string; onChange: (v: string) => void;
+}) {
+  const isT = value === "transparent";
+  const v = isT ? "" : (value || "").replace("#", "");
+  return (
+    <div>
+      <Label className="text-[10px] uppercase text-muted-foreground">{label}</Label>
+      <label className="mt-1 mb-1 flex cursor-pointer items-center justify-between text-[10px] text-muted-foreground">
+        <span>Sem fundo</span>
+        <Switch checked={isT} className="scale-75"
+          onCheckedChange={(c) => onChange(c ? "transparent" : "FFFFFF")} />
+      </label>
+      <div className="flex items-center gap-1">
+        <input type="color" disabled={isT} value={`#${v || "FFFFFF"}`}
+          onChange={(e) => onChange(e.target.value.replace("#", ""))}
+          className="h-7 w-7 cursor-pointer rounded border border-border bg-transparent disabled:cursor-not-allowed"
+          style={isT ? CHECKER_BG : undefined} />
+        <Input className="h-7 text-xs font-mono" value={v} disabled={isT}
+          onChange={(e) => onChange(e.target.value.replace("#", ""))} />
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // KPI inspector — Manual ou Dinâmico
 // ---------------------------------------------------------------------------
