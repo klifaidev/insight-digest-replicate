@@ -24,6 +24,7 @@ import { STYLE_PRESETS, buildStylePresetPatch, type StylePresetId } from "./styl
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
+import { applyFilters } from "@/lib/analytics";
 import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
 import { Trash2, Plus, ChevronUp, ChevronDown } from "lucide-react";
