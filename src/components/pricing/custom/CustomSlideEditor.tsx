@@ -471,7 +471,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
               style={{
                 width: CANVAS_W,
                 height: CANVAS_H,
-                background: `#${config.background}`,
+                background: config.background === "transparent" ? "#FFFFFF" : `#${config.background}`,
                 position: "relative",
                 overflow: "hidden",
               }}
