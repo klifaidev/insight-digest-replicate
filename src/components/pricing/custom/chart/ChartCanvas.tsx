@@ -700,6 +700,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                     dotFill={dotFill}
                     dotStroke={dotStroke}
                     strokeOpacity={sStrokeOp}
+                    thickness={cfg?.thickness ?? 2.5}
                   />
                 )
               : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
