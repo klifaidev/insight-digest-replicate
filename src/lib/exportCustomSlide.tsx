@@ -298,7 +298,9 @@ export async function addCustomSlide(
   opts?: { slideId?: string },
 ) {
   const slide = pptx.addSlide();
-  slide.background = { color: config.background };
+  if (config.background && config.background !== "transparent") {
+    slide.background = { color: config.background };
+  }
   const pricing = usePricing.getState().rows;
 
   const sorted = [...config.blocks].sort((a, b) => a.z - b.z);
