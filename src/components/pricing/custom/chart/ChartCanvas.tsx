@@ -1263,9 +1263,10 @@ function WaterfallChart({
     ?? (block.dataSource === "budget" ? budgetRowsAsPricing(budget) : pricing);
 
   const wfMode = style.waterfall.mode ?? "pvm";
-  const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, decomposition: "effects", topN: 6 };
+  const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, decomposition: "effects", topN: 6, comparisonMode: "prev-month" as const };
   const decomposition = pvmCfg.decomposition ?? "effects";
   const topN = pvmCfg.topN ?? 6;
+  const comparisonMode = pvmCfg.comparisonMode ?? "prev-month";
 
   // PVM mode — decomposição igual à aba Bridge (com auto-default de base/comp)
   const pvmItems = useMemo(() => {
@@ -1273,9 +1274,42 @@ function WaterfallChart({
     const filtered = applyFilters(dsRows, block.filters, null);
     if (filtered.length === 0) return [];
 
-    // Auto-default base/comp: primeiro e último período disponíveis no recorte atual
     let baseKey = pvmCfg.base;
     let compKey = pvmCfg.comp;
+
+    // FIX 2 — Período de comparação automático
+    if (comparisonMode !== "manual" && pvmCfg.periodMode === "month") {
+      const periods = Array.from(
+        new Map(filtered.map((r) => [r.periodo, { mes: r.mes, ano: r.ano }])).entries(),
+      ).sort((a, b) => a[1].ano - b[1].ano || a[1].mes - b[1].mes);
+      if (periods.length === 0) return [];
+      const latest = periods[periods.length - 1];
+      compKey = latest[0];
+      if (comparisonMode === "prev-month") {
+        baseKey = periods.length >= 2 ? periods[periods.length - 2][0] : null;
+      } else if (comparisonMode === "prev-year-month") {
+        const targetMes = latest[1].mes;
+        const targetAno = latest[1].ano - 1;
+        const found = periods.find(([, v]) => v.mes === targetMes && v.ano === targetAno);
+        baseKey = found ? found[0] : null;
+      } else if (comparisonMode === "bench") {
+        // Best CM month in the last 24 periods (excluding the comp/latest period itself)
+        const last24 = periods.slice(-25, -1);
+        const cmByPeriod = new Map<string, number>();
+        for (const r of filtered) {
+          const m = metric === "cm" ? r.contribMarginal : r.margemBruta;
+          cmByPeriod.set(r.periodo, (cmByPeriod.get(r.periodo) ?? 0) + m);
+        }
+        let best: { p: string; v: number } | null = null;
+        for (const [p] of last24) {
+          const v = cmByPeriod.get(p) ?? 0;
+          if (!best || Math.abs(v) > Math.abs(best.v)) best = { p, v };
+        }
+        baseKey = best?.p ?? null;
+      }
+    }
+
+    // Auto-default base/comp: primeiro e último período disponíveis (manual sem seleção)
     if (!baseKey || !compKey || baseKey === compKey) {
       if (pvmCfg.periodMode === "fy") {
         const fys = Array.from(new Set(filtered.map((r) => r.fy))).sort();
