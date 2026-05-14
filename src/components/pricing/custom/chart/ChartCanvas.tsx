@@ -293,13 +293,16 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // line chart) we emit on that dim so the click semantics match what the
   // user actually clicked, even when the chart is broken down by another
   // dimension (colorDim/breakdown).
-  const chartOnClick = (e: any) => {
+  const chartOnClick = (e: any, nativeEvent?: any) => {
     if (!emits) return;
     const label = e?.activeLabel ?? e?.activePayload?.[0]?.payload?.__period
       ?? e?.activePayload?.[0]?.payload?.name;
     if (label == null) return;
     const dim = xDim ?? emitDim;
-    handleEmitOn(dim, label, { shift: !!e?.shiftKey });
+    // Recharts passes (state, event) — shiftKey lives on the native event.
+    // Fall back to e.shiftKey for callers (Pie/Scatter) that pass a synthetic event directly.
+    const shift = !!(nativeEvent?.shiftKey ?? e?.shiftKey);
+    handleEmitOn(dim, label, { shift });
   };
 
   // Active period values from any source (own or incoming) — used by the
