@@ -455,7 +455,15 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   const renderLegend = style.general.legendShow ? (
     <Legend verticalAlign={legendVerticalAlign} align={legendAlign} layout={legendLayout}
-      wrapperStyle={{ fontSize: 11 }} />
+      wrapperStyle={{ fontSize: 11 }}
+      content={legendDim ? (
+        <CustomLegend
+          ownFilter={ownFilter}
+          legendDim={legendDim}
+          onLegendClick={handleLegendEmit}
+          emits={emits}
+        />
+      ) : undefined} />
   ) : null;
 
   const renderGrid = style.grid.show && !["pie", "donut", "radar"].includes(ct) ? (
