@@ -650,14 +650,29 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
         <Tooltip content={(p: any) => <ChartTooltip {...p} style={style} measureFmt={measureFmt} prevPeriodMap={tooltipMaps.prev} yoyMap={tooltipMaps.yoy} additionalRow={tooltipExtra ?? undefined} />} />
         {renderRefLines(style)}
+        {/* Cross-filter: vertical highlight bands for active period selections */}
+        {hasPeriodFilter && Array.from(activePeriods)
+          .filter((p) => chartRows.some((r) => String(r.__period) === p))
+          .map((p) => (
+            <ReferenceArea key={`__pf_${p}`} x1={p} x2={p} yAxisId="left"
+              fill="#3b82f6" fillOpacity={0.10}
+              stroke="#3b82f6" strokeOpacity={0.35} strokeDasharray="3 3"
+              ifOverflow="extendDomain" />
+          ))}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
           const color = cfg?.color ?? DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
           const dash = dashArr(cfg?.lineStyle);
-          const sDim = seriesDimmed(s.name);
-          const sStrokeOp = sDim ? 0.2 : 1;
+          // Series-level dim: own-emitted legend filter OR cross-block legend filter.
+          const seriesNotMatched = hasLegendFilter && !activeLegendValues.has(s.name);
+          const sDim = seriesDimmed(s.name) || seriesNotMatched;
+          const sStrokeOp = sDim ? (hasLegendFilter && hasPeriodFilter ? 0.1 : 0.2) : 1;
           const sFillOp = sDim ? 0.1 : undefined;
+          // Crossing-dot highlight: only when BOTH period and legend filters
+          // are active, draw an enlarged dot on the matched series at the
+          // intersecting periods.
+          const showCrossing = hasPeriodFilter && hasLegendFilter && !seriesNotMatched;
           if (ct === "area" || ct === "stackedArea") {
             const stacked = forceStack || style.area.stacked;
             return (
@@ -697,6 +712,26 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               </Bar>
             );
           }
+          const markerOn = cfg?.marker?.show !== false;
+          const baseR = cfg?.marker?.size ?? 3;
+          const dotFill = cfg?.marker?.fill ?? color;
+          const dotStroke = cfg?.marker?.border ?? color;
+          const dotProp: any = markerOn
+            ? (showCrossing
+              ? (dp: any) => {
+                  const period = String(dp?.payload?.__period ?? "");
+                  const isCross = activePeriods.has(period);
+                  const r = isCross ? Math.max(baseR + 3, 6) : baseR;
+                  return (
+                    <circle key={dp.key} cx={dp.cx} cy={dp.cy} r={r}
+                      fill={dotFill} stroke={isCross ? "#1d4ed8" : dotStroke}
+                      strokeWidth={isCross ? 2 : 1}
+                      fillOpacity={isCross ? 1 : sStrokeOp}
+                      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(59,130,246,0.75))" } : undefined} />
+                  );
+                }
+              : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
+            : false;
           return (
             <Line key={s.name} isAnimationActive={false} dataKey={s.name}
               type={cfg?.smooth ? "monotone" : "linear"}
@@ -704,12 +739,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               strokeOpacity={sStrokeOp}
               strokeDasharray={dash}
               yAxisId={ct === "combo" && cfg?.secondaryAxis ? "right" : "left"}
-              dot={cfg?.marker?.show !== false ? {
-                r: cfg?.marker?.size ?? 3,
-                fill: cfg?.marker?.fill ?? color,
-                stroke: cfg?.marker?.border ?? color,
-                fillOpacity: sStrokeOp,
-              } : false}
+              dot={dotProp}
               connectNulls>
               {style.dataLabels.show && (
                 <LabelList dataKey={s.name} position={mapPos("line", dlPos) as never}
