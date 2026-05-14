@@ -1381,7 +1381,7 @@ function WaterfallChart({
         { label: r.currentLabel, value: r.current,    type: "total" as const },
       ];
     } catch { return []; }
-  }, [wfMode, pvmCfg.base, pvmCfg.comp, pvmCfg.periodMode, decomposition, topN, dsRows, block.filters, metric]);
+  }, [wfMode, pvmCfg.base, pvmCfg.comp, pvmCfg.periodMode, comparisonMode, decomposition, topN, dsRows, block.filters, metric]);
 
   // Smart column / fallback (modo manual)
   const cols = style.waterfall.columns;
