@@ -23,7 +23,8 @@ import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking, formatValue, inferFormat } from "@/lib/customKpi";
 import { resolveChartFit } from "@/lib/customCapacity";
-import { useSlideFilters, dimensionLabel } from "../SlideFilterContext";
+import { useSlideFilters, dimensionLabel, type ActiveFilter } from "../SlideFilterContext";
+import { resolveFieldValue } from "./filterHelpers";
 import { monthLabel } from "@/lib/format";
 import {
   ensureChartStyle, colorForSeries, DEFAULT_PALETTE, type ChartStyle,
@@ -243,7 +244,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const lbl = monthLabel((r as any).mes, (r as any).ano);
           if (!f.values.includes(lbl) && !f.values.includes(String((r as any).periodo))) return false;
         } else {
-          const v = String((r as unknown as Record<string, unknown>)[f.dimension] ?? "");
+          const v = resolveFieldValue(r as unknown as Record<string, unknown>, f.dimension);
           if (!f.values.includes(v)) return false;
         }
       }
@@ -254,6 +255,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // Determine the dimension this block emits
   const emitDim: string = (xDim && xDim !== "period" ? xDim
     : block.breakdown ?? "period");
+  // Legend-click filter dimension (series dimension, not axis)
+  const legendDim: string | null = block.fieldWells?.colorDim ?? block.breakdown ?? null;
 
   // Click handler — emits/toggles a filter on this block's emit dimension
   const handleEmit = (rawValue: unknown, opts?: { shift?: boolean }) => {
@@ -266,6 +269,22 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       // single click: if same single value already selected, clear; else replace
       if (ownFilter && ownFilter.values.length === 1 && ownFilter.values[0] === v
           && ownFilter.dimension === emitDim) {
+        cf.clearFilter(block.id);
+      } else {
+        cf.setFilter(filter);
+      }
+    }
+  };
+
+  // Legend click — emits filter on the series dimension (not the X-axis dim)
+  const handleLegendEmit = (value: string, shift: boolean) => {
+    if (!emits || !legendDim) return;
+    const filter = { sourceBlockId: block.id, dimension: legendDim, values: [value] };
+    if (shift) {
+      cf.toggleFilter(filter);
+    } else {
+      if (ownFilter && ownFilter.dimension === legendDim
+          && ownFilter.values.length === 1 && ownFilter.values[0] === value) {
         cf.clearFilter(block.id);
       } else {
         cf.setFilter(filter);
@@ -393,11 +412,29 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     && (style.waterfall.mode ?? "pvm") === "pvm";
 
   if (!isPvmBridge && ((isRankingChart && rankingEmpty) || (!isRankingChart && seriesEmpty))) {
+    // Distinguish "no data because of incoming filter" vs "no data at all"
+    const filteredOut = incoming.length > 0 && rawDsRows.length > 0 && dsRows.length === 0;
     return (
-      <Wrapper style={style}>
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          Sem dados para os filtros escolhidos
-        </div>
+      <Wrapper style={style} hasIncoming={incoming.length > 0}>
+        {filteredOut ? (
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", height: "100%", gap: 6, opacity: 0.45,
+            color: "#1d4ed8",
+          }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+              <path d="M11 8v3m0 3h.01" strokeLinecap="round" />
+            </svg>
+            <span style={{ fontSize: 12, fontFamily: "Calibri,sans-serif" }}>
+              Sem dados para o filtro ativo
+            </span>
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            Sem dados para os filtros escolhidos
+          </div>
+        )}
       </Wrapper>
     );
   }
@@ -436,7 +473,15 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
 
   const renderLegend = style.general.legendShow ? (
     <Legend verticalAlign={legendVerticalAlign} align={legendAlign} layout={legendLayout}
-      wrapperStyle={{ fontSize: 11 }} />
+      wrapperStyle={{ fontSize: 11 }}
+      content={legendDim ? (
+        <CustomLegend
+          ownFilter={ownFilter}
+          legendDim={legendDim}
+          onLegendClick={handleLegendEmit}
+          emits={emits}
+        />
+      ) : undefined} />
   ) : null;
 
   const renderGrid = style.grid.show && !["pie", "donut", "radar"].includes(ct) ? (
@@ -1128,13 +1173,13 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   }
 
   return (
-    <Wrapper style={style}>
-      {/* Cross-filter badges */}
+    <Wrapper style={style} hasIncoming={incoming.length > 0}>
+      {/* Incoming filter badges (top-left, informational) */}
       <div style={{ position: "absolute", top: 4, left: 4, zIndex: 5,
         display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
         {incoming.map((f) => (
           <span key={f.sourceBlockId + f.dimension} style={{
-            background: "#1E3A8A", color: "#fff", fontSize: 10,
+            background: "rgba(30,58,138,0.85)", color: "#fff", fontSize: 10,
             padding: "2px 6px", borderRadius: 9999, fontWeight: 600,
           }}>
             {dimensionLabel(f.dimension)}: {f.values.join(", ")}
@@ -1145,13 +1190,25 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             padding: "1px 5px", borderRadius: 4 }}>🔒 sem filtro</span>
         )}
       </div>
-      {ownFilter && (
-        <div style={{ position: "absolute", top: 4, right: 4, zIndex: 5,
-          background: "#C8102E", color: "#fff", fontSize: 10, padding: "2px 6px",
-          borderRadius: 9999, fontWeight: 600, pointerEvents: "auto", cursor: "pointer" }}
+      {/* Active emitted filter pill (top-right, click to clear) */}
+      {ownFilter && emits && (
+        <div
+          style={{
+            position: "absolute", top: 4, right: 4, zIndex: 10,
+            display: "flex", alignItems: "center", gap: 4,
+            background: "rgba(59,130,246,0.12)",
+            border: "1px solid rgba(59,130,246,0.35)",
+            borderRadius: 20, padding: "2px 8px",
+            fontSize: 10, fontFamily: "Calibri,sans-serif",
+            color: "#1d4ed8", cursor: "pointer",
+            backdropFilter: "blur(2px)",
+          }}
           onClick={(e) => { e.stopPropagation(); cf.clearFilter(block.id); }}
-          title="Limpar filtro deste gráfico">
-          🔍 {ownFilter.values.join(", ")}
+          title="Clique para limpar o filtro"
+        >
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3b82f6" }} />
+          {ownFilter.values.length === 1 ? ownFilter.values[0] : `${ownFilter.values.length} selecionados`}
+          <span style={{ marginLeft: 2, opacity: 0.7 }}>×</span>
         </div>
       )}
       {style.general.titleShow && block.title && (
@@ -1173,18 +1230,75 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   );
 }
 
-function Wrapper({ children, style }: { children: React.ReactNode; style: ChartStyle }) {
+function Wrapper({ children, style, hasIncoming }: {
+  children: React.ReactNode; style: ChartStyle; hasIncoming?: boolean;
+}) {
+  const userBorder = style.general.borderWidth > 0
+    ? `${style.general.borderWidth}px solid ${style.general.borderColor}`
+    : undefined;
+  // Subtle blue border when this chart is receiving filters from another block.
+  // Honors any user-defined border first.
+  const incomingBorder = hasIncoming ? "1.5px solid rgba(59,130,246,0.4)" : undefined;
   return (
     <div style={{
       width: "100%", height: "100%", display: "flex", flexDirection: "column",
       background: style.general.background === "transparent" ? "transparent" : style.general.background,
-      border: style.general.borderWidth > 0
-        ? `${style.general.borderWidth}px solid ${style.general.borderColor}` : undefined,
+      border: userBorder ?? incomingBorder ?? "1.5px solid transparent",
       padding: style.general.padding,
       fontFamily: "Calibri, sans-serif", overflow: "hidden",
       position: "relative",
+      transition: "border-color 0.2s",
     }}>
       {children}
+    </div>
+  );
+}
+
+// -- Custom legend with click-to-filter on series dimension ----------------
+interface CustomLegendProps {
+  payload?: Array<{ value: string; color: string }>;
+  ownFilter: ActiveFilter | null;
+  legendDim: string;
+  onLegendClick: (value: string, shift: boolean) => void;
+  emits: boolean;
+}
+function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits }: CustomLegendProps) {
+  if (!payload?.length) return null;
+  const isFilterDim = ownFilter?.dimension === legendDim;
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: 6,
+      justifyContent: "center", padding: "4px 0 0",
+    }}>
+      {payload.map((entry) => {
+        const isActive = !isFilterDim || ownFilter!.values.includes(entry.value);
+        return (
+          <button
+            key={entry.value}
+            type="button"
+            onClick={(e) => { if (emits) onLegendClick(entry.value, e.shiftKey); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              padding: "2px 8px", borderRadius: 20,
+              border: isFilterDim && isActive
+                ? `1.5px solid ${entry.color}`
+                : "1.5px solid transparent",
+              background: isFilterDim && isActive ? `${entry.color}18` : "transparent",
+              opacity: isActive ? 1 : 0.3,
+              cursor: emits ? "pointer" : "default",
+              transition: "opacity 0.15s, border-color 0.15s, background 0.15s",
+              fontSize: 11, fontFamily: "Calibri, sans-serif",
+              color: "currentColor",
+            }}
+          >
+            <span style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: entry.color, flexShrink: 0,
+            }} />
+            {entry.value}
+          </button>
+        );
+      })}
     </div>
   );
 }

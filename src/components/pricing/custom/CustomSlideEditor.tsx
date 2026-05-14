@@ -1443,6 +1443,16 @@ function KpiInspector({ block, onChange }: {
       <BgField label="Fundo do card"
         value={block.cardBg ?? "F8FAFC"}
         onChange={(v) => onChange({ cardBg: v } as never)} />
+      <Separator />
+      <div className="flex items-center justify-between">
+        <Label className="text-[10px] uppercase text-muted-foreground">
+          Reagir a filtros do slide
+        </Label>
+        <Switch
+          checked={block.participatesInCrossFilter !== false}
+          onCheckedChange={(v) => onChange({ participatesInCrossFilter: v } as never)}
+        />
+      </div>
     </div>
   );
 }
