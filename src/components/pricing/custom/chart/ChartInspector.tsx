@@ -29,6 +29,7 @@ import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
 import { Trash2, Plus, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSlideFilters } from "../SlideFilterContext";
 
 type Patch = Partial<ChartBlock>;
 
@@ -156,6 +157,7 @@ export function ChartInspector({
 
   const ct = block.chartType;
   const S = sectionsFor(ct);
+  const { clearFilter } = useSlideFilters();
 
   // Detect actual series/categories present on canvas to drive per-item editors
   const pricing = usePricing((s) => s.rows);
@@ -276,7 +278,10 @@ export function ChartInspector({
         )}
         <Row label="Quebrar por">
           <SelectField value={block.breakdown ?? "__none__"}
-            onChange={(v) => onChange({ breakdown: v === "__none__" ? null : v })}
+            onChange={(v) => {
+              clearFilter(block.id);
+              onChange({ breakdown: v === "__none__" ? null : v });
+            }}
             options={[
               { value: "__none__", label: "— Série única —" },
               { value: "marca", label: "Marca" },
@@ -312,9 +317,12 @@ export function ChartInspector({
           <>
             <Row label="Cor / Legenda">
               <SelectField value={block.fieldWells?.colorDim ?? "__none__"}
-                onChange={(v) => onChange({
-                  fieldWells: { ...(block.fieldWells ?? {}), colorDim: v === "__none__" ? null : v },
-                })}
+                onChange={(v) => {
+                  clearFilter(block.id);
+                  onChange({
+                    fieldWells: { ...(block.fieldWells ?? {}), colorDim: v === "__none__" ? null : v },
+                  });
+                }}
                 options={[
                   { value: "__none__", label: "— Nenhum —" },
                   { value: "marca", label: "Marca" },
