@@ -1475,7 +1475,9 @@ function PvmBridgePicker({
   updPath: <K extends keyof ChartStyle>(key: K, patch: Partial<ChartStyle[K]>) => void;
 }) {
   const mode = style.waterfall.mode ?? "pvm";
-  const pvm = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const };
+  const pvm = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, comparisonMode: "prev-month" as const };
+  const comparisonMode = pvm.comparisonMode ?? "prev-month";
+  const metric = usePricing((s) => s.metric);
 
   const months = useMemo(() => {
     const map = new Map<string, { mes: number; ano: number }>();
@@ -1491,6 +1493,25 @@ function PvmBridgePicker({
   }, [dsRows]);
   const opts = pvm.periodMode === "fy" ? fys : months;
 
+  // Bench preview — best CM month in last 24 (excluding latest)
+  const benchInfo = useMemo(() => {
+    if (comparisonMode !== "bench" || months.length < 2) return null;
+    const last24 = months.slice(-25, -1);
+    if (last24.length === 0) return null;
+    const filtered = applyFilters(dsRows, block.filters, null);
+    const cmByPeriod = new Map<string, number>();
+    for (const r of filtered) {
+      const m = metric === "cm" ? r.contribMarginal : r.margemBruta;
+      cmByPeriod.set(r.periodo, (cmByPeriod.get(r.periodo) ?? 0) + m);
+    }
+    let best: { p: string; v: number; label: string } | null = null;
+    for (const m of last24) {
+      const v = cmByPeriod.get(m.value) ?? 0;
+      if (!best || Math.abs(v) > Math.abs(best.v)) best = { p: m.value, v, label: m.label };
+    }
+    return best;
+  }, [comparisonMode, months, dsRows, block.filters, metric]);
+
   return (
     <>
       <Row label="Modo Bridge">
@@ -1503,26 +1524,49 @@ function PvmBridgePicker({
       </Row>
       {mode === "pvm" && (
         <>
-          <Row label="Período">
-            <Segmented value={pvm.periodMode}
+          <Row label="Comparação">
+            <Segmented value={comparisonMode}
               onChange={(v) => updPath("waterfall", {
-                pvm: { ...pvm, periodMode: v as never, base: null, comp: null },
+                pvm: { ...pvm, comparisonMode: v as never, periodMode: v === "manual" ? pvm.periodMode : "month" },
               })}
               options={[
-                { value: "month", label: "Mês" },
-                { value: "fy", label: "Ano fiscal" },
+                { value: "prev-month", label: "Mês ant." },
+                { value: "prev-year-month", label: "Mês AA" },
+                { value: "bench", label: "Bench" },
+                { value: "manual", label: "Manual" },
               ]} />
           </Row>
-          <Row label="Base">
-            <SelectField value={pvm.base ?? ""}
-              onChange={(v) => updPath("waterfall", { pvm: { ...pvm, base: v || null } })}
-              options={opts} />
-          </Row>
-          <Row label="Comparação">
-            <SelectField value={pvm.comp ?? ""}
-              onChange={(v) => updPath("waterfall", { pvm: { ...pvm, comp: v || null } })}
-              options={opts} />
-          </Row>
+          {comparisonMode === "bench" && (
+            <div className="rounded-md border border-border/40 bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground">
+              {benchInfo
+                ? <>Bench: <span className="font-medium text-foreground">{benchInfo.label}</span> (R$ {Math.round(benchInfo.v).toLocaleString("pt-BR")})</>
+                : "Bench: sem dados suficientes"}
+            </div>
+          )}
+          {comparisonMode === "manual" && (
+            <>
+              <Row label="Período">
+                <Segmented value={pvm.periodMode}
+                  onChange={(v) => updPath("waterfall", {
+                    pvm: { ...pvm, periodMode: v as never, base: null, comp: null },
+                  })}
+                  options={[
+                    { value: "month", label: "Mês" },
+                    { value: "fy", label: "Ano fiscal" },
+                  ]} />
+              </Row>
+              <Row label="Base">
+                <SelectField value={pvm.base ?? ""}
+                  onChange={(v) => updPath("waterfall", { pvm: { ...pvm, base: v || null } })}
+                  options={opts} />
+              </Row>
+              <Row label="Comparação">
+                <SelectField value={pvm.comp ?? ""}
+                  onChange={(v) => updPath("waterfall", { pvm: { ...pvm, comp: v || null } })}
+                  options={opts} />
+              </Row>
+            </>
+          )}
           <Row label="Decomposição">
             <SelectField value={pvm.decomposition ?? "effects"}
               onChange={(v) => updPath("waterfall", { pvm: { ...pvm, decomposition: v } })}
