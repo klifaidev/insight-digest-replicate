@@ -23,7 +23,8 @@ import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
 import { computeChartSeries, computeTopRanking, formatValue, inferFormat } from "@/lib/customKpi";
 import { resolveChartFit } from "@/lib/customCapacity";
-import { useSlideFilters, dimensionLabel } from "../SlideFilterContext";
+import { useSlideFilters, dimensionLabel, type ActiveFilter } from "../SlideFilterContext";
+import { resolveFieldValue } from "./filterHelpers";
 import { monthLabel } from "@/lib/format";
 import {
   ensureChartStyle, colorForSeries, DEFAULT_PALETTE, type ChartStyle,
