@@ -38,12 +38,13 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
   const h = Math.max(1, b.h);
   const cx = w / 2, cy = h / 2;
 
-  const fill = `#${b.fill}`;
-  const fillOpacity = b.fillOpacity / 100;
+  const isTransparentFill = b.fill === "transparent";
+  const fill = isTransparentFill ? "none" : `#${b.fill}`;
+  const fillOpacity = isTransparentFill ? 0 : b.fillOpacity / 100;
   const stroke = `#${b.strokeColor}`;
   const sw = b.strokeWidth;
   const dash = dashArray(b.strokeStyle, Math.max(1, sw));
-  const lineColor = `#${b.fill}`;
+  const lineColor = isTransparentFill ? "#000000" : `#${b.fill}`;
   const lineDash = dashArray(b.shape === "dashed-line" ? "dashed" : b.strokeStyle, b.lineThickness);
 
   const filterAttr = b.shadowEnabled ? `url(#shadow-${uid})` : undefined;
@@ -69,7 +70,12 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
       />
     );
   } else {
-    const common = {
+    const common = isTransparentFill ? {
+      fill: "none" as const,
+      stroke: sw > 0 ? stroke : "none",
+      strokeWidth: sw,
+      strokeDasharray: dash,
+    } : {
       fill, fillOpacity,
       stroke: sw > 0 ? stroke : "none",
       strokeWidth: sw,
