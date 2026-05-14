@@ -44,8 +44,10 @@ import {
   newBlock, newChartBlock, BLOCK_LABELS, KPI_MEASURES,
   BUDGET_UNAVAILABLE_MEASURES, BUDGET_UNAVAILABLE_HINT,
   type CustomBlock, type CustomBlockKind, type CustomChartType, type CustomSlideConfig,
-  type KpiBlock, type ChartBlock, type TopSkuBlock,
+  type KpiBlock, type ChartBlock, type TopSkuBlock, type ShapeBlock,
+  isLineFamily,
 } from "@/lib/customSlide";
+import { ShapeHandleOverlay } from "./ShapeHandleOverlay";
 import { BlockRenderer, CUSTOM_TABLE_MEASURES, CUSTOM_TABLE_DIMS } from "./BlockRenderer";
 import { SlideFilterProvider, useSlideFilters, dimensionLabel } from "./SlideFilterContext";
 import { useMonthsInfo, useFyList } from "@/store/selectors";
