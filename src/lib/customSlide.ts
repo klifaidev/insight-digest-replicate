@@ -145,6 +145,14 @@ export interface ShapeBlock extends BaseBlock {
   shadowBlur?: number;
   shadowX?: number;
   shadowY?: number;
+  // ---- Custom-handle geometry (added with contextual handles) ----
+  /** Line family endpoints in slide coordinates. Bbox derives from these. */
+  p1?: { x: number; y: number };
+  p2?: { x: number; y: number };
+  /** Chevron notch depth as a fraction 0..0.5 of width. Default 0.22. */
+  notchDepth?: number;
+  /** Triangle vertices (relative 0..1 within bbox). 3 entries when set. */
+  vertices?: { x: number; y: number }[];
 }
 
 export const LINE_FAMILY_SHAPES: ReadonlyArray<ShapeType> = [
