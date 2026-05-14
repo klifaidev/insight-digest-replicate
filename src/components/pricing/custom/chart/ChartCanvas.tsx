@@ -543,28 +543,14 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const xAxis = xAx.show ? (
     <XAxis
       dataKey="__period"
-      tick={({ x, y, payload }: any) => {
-        const text = payload?.value ?? "";
-        const isActive = activePeriods.has(text);
-        if (!isActive) {
-          return (
-            <text x={x} y={y} dy={16} textAnchor="middle" fill={xAx.labelColor} fontSize={xAx.labelSize}>
-              {text}
-            </text>
-          );
-        }
-        const approxW = Math.max(28, text.length * 6.5 + 14);
-        const h = 18;
-        const rx = h / 2;
-        return (
-          <g>
-            <rect x={x - approxW / 2} y={y + 4} width={approxW} height={h} rx={rx} fill="#C8102E" />
-            <text x={x} y={y + 16} textAnchor="middle" fill="#FFFFFF" fontSize={xAx.labelSize} fontWeight={600}>
-              {text}
-            </text>
-          </g>
-        );
-      }}
+      tick={(props: any) => (
+        <ActivePeriodTick
+          {...props}
+          activePeriods={activePeriods}
+          labelColor={xAx.labelColor}
+          labelSize={xAx.labelSize}
+        />
+      )}
       stroke={xAx.lineColor} tickLine={xAx.ticks}
       strokeWidth={xAx.lineWidth}
       label={xAx.titleText ? { value: xAx.titleText, position: "insideBottom",
@@ -1366,6 +1352,50 @@ function isUsableSwatch(c?: string): boolean {
   if (/^rgba?\(\s*255\s*,\s*255\s*,\s*255/.test(v)) return false;
   return true;
 }
+
+// Custom X-axis tick that renders a red pill around the value when the period
+// is part of the active cross-filter selection. Stringifies both sides of the
+// comparison so numeric tick payloads still match string filter values.
+function ActivePeriodTick(props: any) {
+  const { x, y, payload, activePeriods, labelColor, labelSize } = props;
+  const text = String(payload?.value ?? "");
+  const isActive = activePeriods instanceof Set && activePeriods.has(text);
+  if (!isActive) {
+    return (
+      <text x={x} y={y} dy={16} textAnchor="middle" fill={labelColor} fontSize={labelSize}>
+        {text}
+      </text>
+    );
+  }
+  const fs = labelSize ?? 11;
+  const approxW = Math.max(28, text.length * (fs * 0.6) + 14);
+  const h = fs + 8;
+  const rx = h / 2;
+  return (
+    <g>
+      <rect
+        x={x - approxW / 2}
+        y={y + 4}
+        width={approxW}
+        height={h}
+        rx={rx}
+        fill="#C8102E"
+      />
+      <text
+        x={x}
+        y={y + 4 + h / 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill="#FFFFFF"
+        fontSize={fs}
+        fontWeight={600}
+      >
+        {text}
+      </text>
+    </g>
+  );
+}
+
 function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits, colorMap }: CustomLegendProps) {
   if (!payload?.length) return null;
   const isFilterDim = ownFilter?.dimension === legendDim;
