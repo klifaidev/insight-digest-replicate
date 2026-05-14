@@ -254,7 +254,7 @@ async function renderBlockOffscreen(block: CustomBlock): Promise<string> {
       await new Promise((r) => setTimeout(r, 120));
       tries++;
     }
-    return await captureNode(host);
+    return await captureNode(host, transparent ? undefined : "#FFFFFF");
   } finally {
     setTimeout(() => { try { root.unmount(); } catch {} host.remove(); }, 0);
   }
