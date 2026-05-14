@@ -182,14 +182,14 @@ async function waitFonts() {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
 }
 
-async function captureNode(node: HTMLElement): Promise<string> {
+async function captureNode(node: HTMLElement, bgColor: string | undefined = "#FFFFFF"): Promise<string> {
   const width = Math.max(1, Math.ceil(node.offsetWidth || node.getBoundingClientRect().width));
   const height = Math.max(1, Math.ceil(node.offsetHeight || node.getBoundingClientRect().height));
   return toPng(node, {
     width,
     height,
     pixelRatio: 2,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: bgColor,
     cacheBust: true,
     style: {
       width: `${width}px`,
@@ -205,12 +205,22 @@ async function captureNode(node: HTMLElement): Promise<string> {
   });
 }
 
+function isBlockTransparent(block: CustomBlock): boolean {
+  if (block.kind === "chart") {
+    const bg = (block.style as { general?: { background?: string } } | undefined)?.general?.background;
+    return bg === "transparent";
+  }
+  return false;
+}
+
 async function renderBlockOffscreen(block: CustomBlock): Promise<string> {
+  const transparent = isBlockTransparent(block);
+  const bgCss = transparent ? "transparent" : "#FFFFFF";
   const host = document.createElement("div");
   host.style.cssText = [
     "position:fixed", "left:0", "top:0",
     `width:${block.w}px`, `height:${block.h}px`,
-    "background:#FFFFFF", "overflow:hidden", "pointer-events:none",
+    `background:${bgCss}`, "overflow:hidden", "pointer-events:none",
     "transform:translateX(-150vw)", "z-index:2147483647",
   ].join(";");
   document.body.appendChild(host);
@@ -218,7 +228,7 @@ async function renderBlockOffscreen(block: CustomBlock): Promise<string> {
   try {
     flushSync(() => {
       root.render(React.createElement("div", {
-        style: { width: block.w, height: block.h, background: "#FFFFFF", overflow: "hidden" },
+        style: { width: block.w, height: block.h, background: bgCss, overflow: "hidden" },
       }, React.createElement(BlockRenderer, { block })));
     });
     // Aguarda render + dados. Recharts usa ResizeObserver (assíncrono) para
