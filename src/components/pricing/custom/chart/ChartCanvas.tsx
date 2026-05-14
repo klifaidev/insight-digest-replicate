@@ -1173,13 +1173,13 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   }
 
   return (
-    <Wrapper style={style}>
-      {/* Cross-filter badges */}
+    <Wrapper style={style} hasIncoming={incoming.length > 0}>
+      {/* Incoming filter badges (top-left, informational) */}
       <div style={{ position: "absolute", top: 4, left: 4, zIndex: 5,
         display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
         {incoming.map((f) => (
           <span key={f.sourceBlockId + f.dimension} style={{
-            background: "#1E3A8A", color: "#fff", fontSize: 10,
+            background: "rgba(30,58,138,0.85)", color: "#fff", fontSize: 10,
             padding: "2px 6px", borderRadius: 9999, fontWeight: 600,
           }}>
             {dimensionLabel(f.dimension)}: {f.values.join(", ")}
@@ -1190,13 +1190,25 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             padding: "1px 5px", borderRadius: 4 }}>🔒 sem filtro</span>
         )}
       </div>
-      {ownFilter && (
-        <div style={{ position: "absolute", top: 4, right: 4, zIndex: 5,
-          background: "#C8102E", color: "#fff", fontSize: 10, padding: "2px 6px",
-          borderRadius: 9999, fontWeight: 600, pointerEvents: "auto", cursor: "pointer" }}
+      {/* Active emitted filter pill (top-right, click to clear) */}
+      {ownFilter && emits && (
+        <div
+          style={{
+            position: "absolute", top: 4, right: 4, zIndex: 10,
+            display: "flex", alignItems: "center", gap: 4,
+            background: "rgba(59,130,246,0.12)",
+            border: "1px solid rgba(59,130,246,0.35)",
+            borderRadius: 20, padding: "2px 8px",
+            fontSize: 10, fontFamily: "Calibri,sans-serif",
+            color: "#1d4ed8", cursor: "pointer",
+            backdropFilter: "blur(2px)",
+          }}
           onClick={(e) => { e.stopPropagation(); cf.clearFilter(block.id); }}
-          title="Limpar filtro deste gráfico">
-          🔍 {ownFilter.values.join(", ")}
+          title="Clique para limpar o filtro"
+        >
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3b82f6" }} />
+          {ownFilter.values.length === 1 ? ownFilter.values[0] : `${ownFilter.values.length} selecionados`}
+          <span style={{ marginLeft: 2, opacity: 0.7 }}>×</span>
         </div>
       )}
       {style.general.titleShow && block.title && (
