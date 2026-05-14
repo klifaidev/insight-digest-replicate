@@ -331,6 +331,16 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const hasPeriodFilter = activePeriods.size > 0;
   const hasLegendFilter = activeLegendValues.size > 0;
 
+  // Cross-filter highlighted segments — collected per-render from CrossingDot
+  // and rendered as an absolute SVG overlay (escapes Recharts' per-series clipPath).
+  const activePointsRef = useRef<Array<{
+    cx: number; cy: number;
+    prevX?: number; prevY?: number;
+    nextX?: number; nextY?: number;
+    seriesColor: string;
+  }>>([]);
+  const [activePointsSnap, setActivePointsSnap] = useState<typeof activePointsRef.current>([]);
+
 
   // Should a value be dimmed (own filter active and value not selected)?
   const isDimmed = (value: string) => {
