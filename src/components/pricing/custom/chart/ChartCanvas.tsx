@@ -1298,11 +1298,45 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           padding: "4px 8px",
         }}>{block.title}</div>
       )}
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
         {ct === "waterfall" ? chart as React.ReactElement : (
           <ResponsiveContainer width="100%" height="100%">
             {chart as React.ReactElement}
           </ResponsiveContainer>
+        )}
+        {activePointsSnap.length > 0 && (
+          <svg
+            style={{
+              position: "absolute", top: 0, left: 0,
+              width: "100%", height: "100%",
+              pointerEvents: "none", overflow: "visible",
+            }}
+          >
+            {activePointsSnap.map((pt, i) => {
+              const HIGHLIGHT = "#C8102E";
+              const segW = 4;
+              return (
+                <g key={i}>
+                  {pt.prevX != null && pt.prevY != null && (
+                    <line
+                      x1={pt.prevX} y1={pt.prevY} x2={pt.cx} y2={pt.cy}
+                      stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
+                      strokeLinecap="round"
+                      style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }}
+                    />
+                  )}
+                  {pt.nextX != null && pt.nextY != null && (
+                    <line
+                      x1={pt.cx} y1={pt.cy} x2={pt.nextX} y2={pt.nextY}
+                      stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
+                      strokeLinecap="round"
+                      style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }}
+                    />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
         )}
       </div>
     </Wrapper>
