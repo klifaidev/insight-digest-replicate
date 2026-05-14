@@ -144,20 +144,7 @@ function ImageRender({ block: b }: { block: ImageBlock }) {
 }
 
 function ShapeRender({ block: b }: { block: ShapeBlock }) {
-  if (b.shape === "line") {
-    return (
-      <div style={{
-        width: "100%", height: 0, borderTop: `${Math.max(2, b.h)}px solid #${b.fill}`,
-        marginTop: b.h / 2,
-      }} />
-    );
-  }
-  return (
-    <div style={{
-      width: "100%", height: "100%",
-      background: `#${b.fill}`, borderRadius: b.radius,
-    }} />
-  );
+  return <ShapeRenderer block={b} />;
 }
 
 function BridgeRender({ block: b }: { block: BridgeBlock }) {
