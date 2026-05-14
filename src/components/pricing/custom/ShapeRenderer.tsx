@@ -30,14 +30,6 @@ function dashArray(style: "solid" | "dashed" | "dotted", w: number): string | un
   return `${Math.max(1, w)} ${Math.max(2, w * 2)}`;
 }
 
-function lineCoords(dir: string, w: number, h: number) {
-  switch (dir) {
-    case "vertical":      return { x1: w / 2, y1: 0, x2: w / 2, y2: h };
-    case "diagonal-down": return { x1: 0, y1: 0, x2: w, y2: h };
-    case "diagonal-up":   return { x1: 0, y1: h, x2: w, y2: 0 };
-    default:              return { x1: 0, y1: h / 2, x2: w, y2: h / 2 };
-  }
-}
 
 export function ShapeRenderer({ block }: { block: ShapeBlock }) {
   const b = ensureShapeBlock(block);
