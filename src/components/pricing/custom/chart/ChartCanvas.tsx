@@ -1342,7 +1342,9 @@ function Wrapper({ children, style, hasIncoming }: {
   // Honors any user-defined border first.
   const incomingBorder = hasIncoming ? "1.5px solid rgba(59,130,246,0.4)" : undefined;
   return (
-    <div style={{
+    <div
+      data-chart-canvas=""
+      style={{
       width: "100%", height: "100%", display: "flex", flexDirection: "column",
       background: style.general.background === "transparent" ? "transparent" : style.general.background,
       border: userBorder ?? incomingBorder ?? "1.5px solid transparent",
