@@ -543,14 +543,15 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   const xAxis = xAx.show ? (
     <XAxis
       dataKey="__period"
-      tick={(props: any) => (
+      interval={0}
+      height={Math.max(30, (xAx.labelSize ?? 11) + 22)}
+      tick={
         <ActivePeriodTick
-          {...props}
           activePeriods={activePeriods}
           labelColor={xAx.labelColor}
           labelSize={xAx.labelSize}
         />
-      )}
+      }
       stroke={xAx.lineColor} tickLine={xAx.ticks}
       strokeWidth={xAx.lineWidth}
       label={xAx.titleText ? { value: xAx.titleText, position: "insideBottom",
@@ -679,49 +680,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           const sDim = seriesDimmed(s.name) || seriesNotMatched;
           const sStrokeOp = sDim ? (hasLegendFilter && hasPeriodFilter ? 0.1 : 0.2) : 1;
           const sFillOp = sDim ? 0.1 : undefined;
-          // Crossing-dot highlight: only when BOTH period and legend filters
-          // are active, draw an enlarged dot on the matched series at the
-          // intersecting periods.
-          const showCrossing = hasPeriodFilter && hasLegendFilter && !seriesNotMatched;
-          if (ct === "area" || ct === "stackedArea") {
-            const stacked = forceStack || style.area.stacked;
-            return (
-              <Area key={s.name} isAnimationActive={false} dataKey={s.name}
-                type={cfg?.smooth ? "monotone" : "linear"}
-                stroke={color} fill={color}
-                strokeOpacity={sStrokeOp}
-                fillOpacity={sDim ? 0.1 : (cfg?.areaOpacity ?? 0.35)}
-                strokeWidth={style.area.lineOnTop ? (cfg?.thickness ?? 2.5) : (cfg?.thickness ?? 1)}
-                strokeDasharray={dash}
-                stackId={stacked ? "stack" : undefined}
-                yAxisId="left">
-                {style.dataLabels.show && (
-                  <LabelList dataKey={s.name} position={mapPos("area", dlPos) as never}
-                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
-                )}
-              </Area>
-            );
-          }
-          if (ct === "combo" && !cfg?.asLine) {
-            return (
-              <Bar key={s.name} isAnimationActive={false} dataKey={s.name} fill={color}
-                fillOpacity={sFillOp}
-                radius={style.bar.cornerRadius} stroke={style.bar.borderColor}
-                strokeWidth={style.bar.borderWidth}
-                yAxisId={cfg?.secondaryAxis ? "right" : "left"}>
-                {((style.conditionalRules?.length ?? 0) > 0 || ownFilterOnRowDim) && chartRows.map((r, ri) => {
-                  const baseFill = (style.conditionalRules?.length ?? 0) > 0
-                    ? evalCondColor(Number(r[s.name]) || 0, style.conditionalRules, style.conditionalDefault || color)
-                    : color;
-                  return <Cell key={`${s.name}-${ri}`} fill={baseFill} fillOpacity={cellFillOpacity(String(r.__period ?? r.name ?? ""))} />;
-                })}
-                {style.dataLabels.show && (
-                  <LabelList dataKey={s.name} position={mapPos("bar-vertical", dlPos) as never}
-                    content={makeLabelContent({ style, measureFmt, seriesName: s.name, categories: cats, seriesColor: color }) as never} />
-                )}
-              </Bar>
-            );
-          }
+          // Crossing-dot highlight: enlarge/colorize dots that fall on
+          // active period filters. When a legend filter is also active, only
+          // the matched series receives the highlight; other series remain dim.
+          const showCrossing = hasPeriodFilter && !seriesNotMatched;
           const markerOn = cfg?.marker?.show !== false;
           const baseR = cfg?.marker?.size ?? 3;
           const dotFill = cfg?.marker?.fill ?? color;
@@ -734,10 +696,11 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                   const r = isCross ? Math.max(baseR + 3, 6) : baseR;
                   return (
                     <circle key={dp.key} cx={dp.cx} cy={dp.cy} r={r}
-                      fill={dotFill} stroke={isCross ? "#1d4ed8" : dotStroke}
+                      fill={isCross ? "#C8102E" : dotFill}
+                      stroke={isCross ? "#C8102E" : dotStroke}
                       strokeWidth={isCross ? 2 : 1}
                       fillOpacity={isCross ? 1 : sStrokeOp}
-                      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(59,130,246,0.75))" } : undefined} />
+                      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
                   );
                 }
               : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
