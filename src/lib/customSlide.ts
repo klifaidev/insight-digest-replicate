@@ -368,7 +368,13 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
       return { id, kind, z, x: 80, y: 220, w: 360, h: 220, src: "", fit: "contain" };
     case "shape":
       return { id, kind, z, x: 80, y: 240, w: 240, h: 140,
-        shape: "rect", fill: "EEF2F6", radius: 8 };
+        shape: "rect", fill: "EEF2F6", fillOpacity: 100,
+        strokeColor: "CBD5E1", strokeWidth: 0, strokeStyle: "solid",
+        radius: 8, rotation: 0,
+        lineThickness: 2, lineDirection: "horizontal",
+        arrowStart: false, arrowEnd: true,
+        shadowEnabled: false, shadowColor: "000000",
+        shadowOpacity: 30, shadowBlur: 8, shadowX: 2, shadowY: 2 };
     case "bridge":
       return { id, kind, z, x: 60, y: 200, w: 1200, h: 380,
         base: null, comp: null, mode: "month", filters: {} };
