@@ -294,6 +294,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // user actually clicked, even when the chart is broken down by another
   // dimension (colorDim/breakdown).
   const chartOnClick = (e: any, nativeEvent?: any) => {
+    e?.nativeEvent?.stopPropagation?.();
+    e?.stopPropagation?.();
+    nativeEvent?.stopPropagation?.();
     if (!emits) return;
     const label = e?.activeLabel ?? e?.activePayload?.[0]?.payload?.__period
       ?? e?.activePayload?.[0]?.payload?.name;
