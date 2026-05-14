@@ -24,6 +24,7 @@ import { STYLE_PRESETS, buildStylePresetPatch, type StylePresetId } from "./styl
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { budgetRowsAsPricing } from "@/lib/budgetAdapter";
+import { applyFilters } from "@/lib/analytics";
 import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 import { useMemo } from "react";
 import { Trash2, Plus, ChevronUp, ChevronDown } from "lucide-react";
@@ -414,157 +415,9 @@ export function ChartInspector({
         </div>
       </div>
 
-      {/* ===== General ===== */}
-      <Section title="Geral" onReset={() => resetPath("general")}>
-        <div>
-          <Label className="text-[12px] font-normal text-muted-foreground">Título</Label>
-          <Input className="mt-1 h-8 text-[13px]" value={block.title ?? ""}
-            onChange={(e) => onChange({ title: e.target.value })} />
-        </div>
-        <ToggleField label="Mostrar título" value={style.general.titleShow}
-          onChange={(v) => updPath("general", { titleShow: v })} />
-        <Row label="Tam. título">
-          <NumberStepper value={style.general.titleSize} min={8} max={64}
-            onChange={(v) => updPath("general", { titleSize: v })} suffix="pt" />
-        </Row>
-        <Row label="Cor título">
-          <ColorField value={style.general.titleColor}
-            onChange={(c) => updPath("general", { titleColor: c })} />
-        </Row>
-        <ToggleField label="Negrito" value={style.general.titleBold}
-          onChange={(v) => updPath("general", { titleBold: v })} />
-        <ToggleField label="Itálico" value={style.general.titleItalic}
-          onChange={(v) => updPath("general", { titleItalic: v })} />
-        <Row label="Fundo">
-          <ColorField value={style.general.background}
-            onChange={(c) => updPath("general", { background: c })} />
-        </Row>
-        <Row label="Borda">
-          <ColorField value={style.general.borderColor}
-            onChange={(c) => updPath("general", { borderColor: c })} />
-        </Row>
-        <Row label="Esp. borda">
-          <NumberStepper value={style.general.borderWidth} min={0} max={8}
-            onChange={(v) => updPath("general", { borderWidth: v })} suffix="px" />
-        </Row>
-        <Row label="Padding">
-          <NumberStepper value={style.general.padding} min={0} max={40}
-            onChange={(v) => updPath("general", { padding: v })} suffix="px" />
-        </Row>
-        <ToggleField label="Mostrar legenda" value={style.general.legendShow}
-          onChange={(v) => updPath("general", { legendShow: v })} />
-        <Row label="Pos. legenda">
-          <SelectField value={style.general.legendPos}
-            onChange={(v) => updPath("general", { legendPos: v as never })}
-            options={[
-              { value: "top", label: "Topo" },
-              { value: "bottom", label: "Rodapé" },
-              { value: "left", label: "Esquerda" },
-              { value: "right", label: "Direita" },
-            ]} />
-        </Row>
-      </Section>
-
-      {/* ===== Grid ===== */}
-      {S.showGrid && (
-        <Section title="Grade" onReset={() => resetPath("grid")}>
-          <ToggleField label="Mostrar grade" value={style.grid.show}
-            onChange={(v) => updPath("grid", { show: v })} />
-          <Row label="Cor"><ColorField value={style.grid.color}
-            onChange={(c) => updPath("grid", { color: c })} /></Row>
-          <Row label="Estilo">
-            <SelectField value={style.grid.style}
-              onChange={(v) => updPath("grid", { style: v as never })}
-              options={[{ value: "solid", label: "Sólido" }, { value: "dashed", label: "Tracejado" }]} />
-          </Row>
-        </Section>
-      )}
-
-      {/* ===== Axes ===== */}
-      {S.showAxes && (
-        <>
-          <AxisSection title="Eixo X" axis={style.xAxis}
-            onChange={(p) => updPath("xAxis", p)}
-            onReset={() => resetPath("xAxis")} />
-          <AxisSection title="Eixo Y" axis={style.yAxis}
-            onChange={(p) => updPath("yAxis", p)}
-            onReset={() => resetPath("yAxis")} />
-          {S.isCombo && (
-            <AxisSection title="Eixo Y secundário" axis={style.yAxis2!}
-              onChange={(p) => updPath("yAxis2", p)}
-              onReset={() => resetPath("yAxis2")} />
-          )}
-        </>
-      )}
-
-      {/* ===== Data labels ===== */}
-      <Section title="Rótulos de dados" onReset={() => resetPath("dataLabels")}>
-        <ToggleField label="Mostrar" value={style.dataLabels.show}
-          onChange={(v) => updPath("dataLabels", { show: v })} />
-        <Row label="Tamanho">
-          <NumberStepper value={style.dataLabels.size} min={6} max={24}
-            onChange={(v) => updPath("dataLabels", { size: v })} suffix="pt" />
-        </Row>
-        <Row label="Cor"><ColorField value={style.dataLabels.color}
-          onChange={(c) => updPath("dataLabels", { color: c })} /></Row>
-        <ToggleField label="Negrito" value={style.dataLabels.bold}
-          onChange={(v) => updPath("dataLabels", { bold: v })} />
-        <ToggleField label="Itálico" value={style.dataLabels.italic}
-          onChange={(v) => updPath("dataLabels", { italic: v })} />
-        {/* Cleanup: histogram has fixed "above" position; boxplot always above */}
-        {ct !== "histogram" && ct !== "boxplot" && (
-          <Row label="Posição">
-            <SelectField value={ct === "funnel" ? (style.funnel.labelPos ?? "right") : style.dataLabels.position}
-              onChange={(v) => ct === "funnel"
-                ? updPath("funnel", { labelPos: v as never })
-                : updPath("dataLabels", { position: v as never })}
-              options={positionOptions(ct) as never} />
-          </Row>
-        )}
-        {ct !== "histogram" && (
-          <Row label="Formato">
-            <SelectField value={style.dataLabels.format}
-              onChange={(v) => updPath("dataLabels", { format: v as never })}
-              options={[
-                { value: "auto", label: "Automático" },
-                { value: "currency", label: "Moeda" },
-                { value: "percent", label: "Percentual" },
-                { value: "number", label: "Número" },
-                { value: "tons", label: "Toneladas" },
-              ]} />
-          </Row>
-        )}
-        {ct !== "histogram" && (
-          <Row label="Decimais">
-            <NumberStepper value={style.dataLabels.decimals} min={0} max={4}
-              onChange={(v) => updPath("dataLabels", { decimals: v })} />
-          </Row>
-        )}
-        <ToggleField label="Auto-contraste" value={style.dataLabels.autoContrast}
-          onChange={(v) => updPath("dataLabels", { autoContrast: v })} />
-        {ct !== "pie" && ct !== "donut" && (
-          <ToggleField label="Mostrar nome série" value={style.dataLabels.showSeries}
-            onChange={(v) => updPath("dataLabels", { showSeries: v })} />
-        )}
-        <ToggleField label="Mostrar categoria" value={style.dataLabels.showCategory}
-          onChange={(v) => updPath("dataLabels", { showCategory: v })} />
-        <Row label="Fundo rótulo">
-          <ColorField value={style.dataLabels.bgColor}
-            onChange={(c) => updPath("dataLabels", { bgColor: c })} />
-        </Row>
-        <Row label="Opac. fundo">
-          <Slider value={Math.round(style.dataLabels.bgOpacity * 100)}
-            onChange={(v) => updPath("dataLabels", { bgOpacity: v / 100 })} />
-        </Row>
-        <Row label="Cor borda">
-          <ColorField value={style.dataLabels.borderColor}
-            onChange={(c) => updPath("dataLabels", { borderColor: c })} />
-        </Row>
-        <Row label="Esp. borda">
-          <NumberStepper value={style.dataLabels.borderWidth} min={0} max={5}
-            onChange={(v) => updPath("dataLabels", { borderWidth: v })} suffix="px" />
-        </Row>
-      </Section>
+      {/* ============================================================ */}
+      {/* FIX 3 — Chart-specific sections appear FIRST (most relevant) */}
+      {/* ============================================================ */}
 
       {/* ===== Type-specific: Bar ===== */}
       {S.showBar && (
@@ -814,7 +667,6 @@ export function ChartInspector({
             onChange={(v) => updPath("treemap", { showCategoryLabel: v })} />
           <ToggleField label="Mostrar valor" value={style.treemap.showValueLabel}
             onChange={(v) => updPath("treemap", { showValueLabel: v })} />
-          {/* Cleanup: tamanho e cor agora controlados pela seção "Rótulos de dados" */}
           <Row label="Cor borda">
             <ColorField value={style.treemap.borderColor}
               onChange={(c) => updPath("treemap", { borderColor: c })} />
@@ -919,7 +771,75 @@ export function ChartInspector({
         </Section>
       )}
 
-      {/* ===== Series (color overrides + per-series style) ===== */}
+      {/* ===== Data labels (moved up — frequently used) ===== */}
+      <Section title="Rótulos de dados" onReset={() => resetPath("dataLabels")}>
+        <ToggleField label="Mostrar" value={style.dataLabels.show}
+          onChange={(v) => updPath("dataLabels", { show: v })} />
+        <Row label="Tamanho">
+          <NumberStepper value={style.dataLabels.size} min={6} max={24}
+            onChange={(v) => updPath("dataLabels", { size: v })} suffix="pt" />
+        </Row>
+        <Row label="Cor"><ColorField value={style.dataLabels.color}
+          onChange={(c) => updPath("dataLabels", { color: c })} /></Row>
+        <ToggleField label="Negrito" value={style.dataLabels.bold}
+          onChange={(v) => updPath("dataLabels", { bold: v })} />
+        <ToggleField label="Itálico" value={style.dataLabels.italic}
+          onChange={(v) => updPath("dataLabels", { italic: v })} />
+        {ct !== "histogram" && ct !== "boxplot" && (
+          <Row label="Posição">
+            <SelectField value={ct === "funnel" ? (style.funnel.labelPos ?? "right") : style.dataLabels.position}
+              onChange={(v) => ct === "funnel"
+                ? updPath("funnel", { labelPos: v as never })
+                : updPath("dataLabels", { position: v as never })}
+              options={positionOptions(ct) as never} />
+          </Row>
+        )}
+        {ct !== "histogram" && (
+          <Row label="Formato">
+            <SelectField value={style.dataLabels.format}
+              onChange={(v) => updPath("dataLabels", { format: v as never })}
+              options={[
+                { value: "auto", label: "Automático" },
+                { value: "currency", label: "Moeda" },
+                { value: "percent", label: "Percentual" },
+                { value: "number", label: "Número" },
+                { value: "tons", label: "Toneladas" },
+              ]} />
+          </Row>
+        )}
+        {ct !== "histogram" && (
+          <Row label="Decimais">
+            <NumberStepper value={style.dataLabels.decimals} min={0} max={4}
+              onChange={(v) => updPath("dataLabels", { decimals: v })} />
+          </Row>
+        )}
+        <ToggleField label="Auto-contraste" value={style.dataLabels.autoContrast}
+          onChange={(v) => updPath("dataLabels", { autoContrast: v })} />
+        {ct !== "pie" && ct !== "donut" && (
+          <ToggleField label="Mostrar nome série" value={style.dataLabels.showSeries}
+            onChange={(v) => updPath("dataLabels", { showSeries: v })} />
+        )}
+        <ToggleField label="Mostrar categoria" value={style.dataLabels.showCategory}
+          onChange={(v) => updPath("dataLabels", { showCategory: v })} />
+        <Row label="Fundo rótulo">
+          <ColorField value={style.dataLabels.bgColor}
+            onChange={(c) => updPath("dataLabels", { bgColor: c })} />
+        </Row>
+        <Row label="Opac. fundo">
+          <Slider value={Math.round(style.dataLabels.bgOpacity * 100)}
+            onChange={(v) => updPath("dataLabels", { bgOpacity: v / 100 })} />
+        </Row>
+        <Row label="Cor borda">
+          <ColorField value={style.dataLabels.borderColor}
+            onChange={(c) => updPath("dataLabels", { borderColor: c })} />
+        </Row>
+        <Row label="Esp. borda">
+          <NumberStepper value={style.dataLabels.borderWidth} min={0} max={5}
+            onChange={(v) => updPath("dataLabels", { borderWidth: v })} suffix="px" />
+        </Row>
+      </Section>
+
+      {/* ===== Series (moved up — frequently used) ===== */}
       {S.showSeries && (
         <Section title="Séries" onReset={() => updStyle({ series: [] })}>
           <p className="text-[12px] text-muted-foreground">
@@ -1008,6 +928,93 @@ export function ChartInspector({
             );
           })}
         </Section>
+      )}
+
+      {/* ============================================================ */}
+      {/* Generic sections (Geral, Grade, Eixos) — moved to the bottom */}
+      {/* ============================================================ */}
+
+      {/* ===== General ===== */}
+      <Section title="Geral" onReset={() => resetPath("general")}>
+        <div>
+          <Label className="text-[12px] font-normal text-muted-foreground">Título</Label>
+          <Input className="mt-1 h-8 text-[13px]" value={block.title ?? ""}
+            onChange={(e) => onChange({ title: e.target.value })} />
+        </div>
+        <ToggleField label="Mostrar título" value={style.general.titleShow}
+          onChange={(v) => updPath("general", { titleShow: v })} />
+        <Row label="Tam. título">
+          <NumberStepper value={style.general.titleSize} min={8} max={64}
+            onChange={(v) => updPath("general", { titleSize: v })} suffix="pt" />
+        </Row>
+        <Row label="Cor título">
+          <ColorField value={style.general.titleColor}
+            onChange={(c) => updPath("general", { titleColor: c })} />
+        </Row>
+        <ToggleField label="Negrito" value={style.general.titleBold}
+          onChange={(v) => updPath("general", { titleBold: v })} />
+        <ToggleField label="Itálico" value={style.general.titleItalic}
+          onChange={(v) => updPath("general", { titleItalic: v })} />
+        <Row label="Fundo">
+          <ColorField value={style.general.background}
+            onChange={(c) => updPath("general", { background: c })} />
+        </Row>
+        <Row label="Borda">
+          <ColorField value={style.general.borderColor}
+            onChange={(c) => updPath("general", { borderColor: c })} />
+        </Row>
+        <Row label="Esp. borda">
+          <NumberStepper value={style.general.borderWidth} min={0} max={8}
+            onChange={(v) => updPath("general", { borderWidth: v })} suffix="px" />
+        </Row>
+        <Row label="Padding">
+          <NumberStepper value={style.general.padding} min={0} max={40}
+            onChange={(v) => updPath("general", { padding: v })} suffix="px" />
+        </Row>
+        <ToggleField label="Mostrar legenda" value={style.general.legendShow}
+          onChange={(v) => updPath("general", { legendShow: v })} />
+        <Row label="Pos. legenda">
+          <SelectField value={style.general.legendPos}
+            onChange={(v) => updPath("general", { legendPos: v as never })}
+            options={[
+              { value: "top", label: "Topo" },
+              { value: "bottom", label: "Rodapé" },
+              { value: "left", label: "Esquerda" },
+              { value: "right", label: "Direita" },
+            ]} />
+        </Row>
+      </Section>
+
+      {/* ===== Grid ===== */}
+      {S.showGrid && (
+        <Section title="Grade" onReset={() => resetPath("grid")}>
+          <ToggleField label="Mostrar grade" value={style.grid.show}
+            onChange={(v) => updPath("grid", { show: v })} />
+          <Row label="Cor"><ColorField value={style.grid.color}
+            onChange={(c) => updPath("grid", { color: c })} /></Row>
+          <Row label="Estilo">
+            <SelectField value={style.grid.style}
+              onChange={(v) => updPath("grid", { style: v as never })}
+              options={[{ value: "solid", label: "Sólido" }, { value: "dashed", label: "Tracejado" }]} />
+          </Row>
+        </Section>
+      )}
+
+      {/* ===== Axes ===== */}
+      {S.showAxes && (
+        <>
+          <AxisSection title="Eixo X" axis={style.xAxis}
+            onChange={(p) => updPath("xAxis", p)}
+            onReset={() => resetPath("xAxis")} />
+          <AxisSection title="Eixo Y" axis={style.yAxis}
+            onChange={(p) => updPath("yAxis", p)}
+            onReset={() => resetPath("yAxis")} />
+          {S.isCombo && (
+            <AxisSection title="Eixo Y secundário" axis={style.yAxis2!}
+              onChange={(p) => updPath("yAxis2", p)}
+              onReset={() => resetPath("yAxis2")} />
+          )}
+        </>
       )}
 
         </TabsContent>
@@ -1475,7 +1482,9 @@ function PvmBridgePicker({
   updPath: <K extends keyof ChartStyle>(key: K, patch: Partial<ChartStyle[K]>) => void;
 }) {
   const mode = style.waterfall.mode ?? "pvm";
-  const pvm = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const };
+  const pvm = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, comparisonMode: "prev-month" as const };
+  const comparisonMode = pvm.comparisonMode ?? "prev-month";
+  const metric = usePricing((s) => s.metric);
 
   const months = useMemo(() => {
     const map = new Map<string, { mes: number; ano: number }>();
@@ -1491,6 +1500,25 @@ function PvmBridgePicker({
   }, [dsRows]);
   const opts = pvm.periodMode === "fy" ? fys : months;
 
+  // Bench preview — best CM month in last 24 (excluding latest)
+  const benchInfo = useMemo(() => {
+    if (comparisonMode !== "bench" || months.length < 2) return null;
+    const last24 = months.slice(-25, -1);
+    if (last24.length === 0) return null;
+    const filtered = applyFilters(dsRows, block.filters, null);
+    const cmByPeriod = new Map<string, number>();
+    for (const r of filtered) {
+      const m = metric === "cm" ? r.contribMarginal : r.margemBruta;
+      cmByPeriod.set(r.periodo, (cmByPeriod.get(r.periodo) ?? 0) + m);
+    }
+    let best: { p: string; v: number; label: string } | null = null;
+    for (const m of last24) {
+      const v = cmByPeriod.get(m.value) ?? 0;
+      if (!best || Math.abs(v) > Math.abs(best.v)) best = { p: m.value, v, label: m.label };
+    }
+    return best;
+  }, [comparisonMode, months, dsRows, block.filters, metric]);
+
   return (
     <>
       <Row label="Modo Bridge">
@@ -1503,26 +1531,49 @@ function PvmBridgePicker({
       </Row>
       {mode === "pvm" && (
         <>
-          <Row label="Período">
-            <Segmented value={pvm.periodMode}
+          <Row label="Comparação">
+            <Segmented value={comparisonMode}
               onChange={(v) => updPath("waterfall", {
-                pvm: { ...pvm, periodMode: v as never, base: null, comp: null },
+                pvm: { ...pvm, comparisonMode: v as never, periodMode: v === "manual" ? pvm.periodMode : "month" },
               })}
               options={[
-                { value: "month", label: "Mês" },
-                { value: "fy", label: "Ano fiscal" },
+                { value: "prev-month", label: "Mês ant." },
+                { value: "prev-year-month", label: "Mês AA" },
+                { value: "bench", label: "Bench" },
+                { value: "manual", label: "Manual" },
               ]} />
           </Row>
-          <Row label="Base">
-            <SelectField value={pvm.base ?? ""}
-              onChange={(v) => updPath("waterfall", { pvm: { ...pvm, base: v || null } })}
-              options={opts} />
-          </Row>
-          <Row label="Comparação">
-            <SelectField value={pvm.comp ?? ""}
-              onChange={(v) => updPath("waterfall", { pvm: { ...pvm, comp: v || null } })}
-              options={opts} />
-          </Row>
+          {comparisonMode === "bench" && (
+            <div className="rounded-md border border-border/40 bg-muted/30 px-2 py-1.5 text-[11px] text-muted-foreground">
+              {benchInfo
+                ? <>Bench: <span className="font-medium text-foreground">{benchInfo.label}</span> (R$ {Math.round(benchInfo.v).toLocaleString("pt-BR")})</>
+                : "Bench: sem dados suficientes"}
+            </div>
+          )}
+          {comparisonMode === "manual" && (
+            <>
+              <Row label="Período">
+                <Segmented value={pvm.periodMode}
+                  onChange={(v) => updPath("waterfall", {
+                    pvm: { ...pvm, periodMode: v as never, base: null, comp: null },
+                  })}
+                  options={[
+                    { value: "month", label: "Mês" },
+                    { value: "fy", label: "Ano fiscal" },
+                  ]} />
+              </Row>
+              <Row label="Base">
+                <SelectField value={pvm.base ?? ""}
+                  onChange={(v) => updPath("waterfall", { pvm: { ...pvm, base: v || null } })}
+                  options={opts} />
+              </Row>
+              <Row label="Comparação">
+                <SelectField value={pvm.comp ?? ""}
+                  onChange={(v) => updPath("waterfall", { pvm: { ...pvm, comp: v || null } })}
+                  options={opts} />
+              </Row>
+            </>
+          )}
           <Row label="Decomposição">
             <SelectField value={pvm.decomposition ?? "effects"}
               onChange={(v) => updPath("waterfall", { pvm: { ...pvm, decomposition: v } })}
