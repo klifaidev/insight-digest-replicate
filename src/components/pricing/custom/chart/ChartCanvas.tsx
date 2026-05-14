@@ -341,6 +341,23 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   }>>([]);
   const [activePointsSnap, setActivePointsSnap] = useState<typeof activePointsRef.current>([]);
 
+  // Sync collected active dots into state so the overlay re-renders.
+  // No deps: runs after every render; setter is no-op when unchanged.
+  useLayoutEffect(() => {
+    const next = activePointsRef.current;
+    setActivePointsSnap((prev) => {
+      if (prev.length !== next.length) return next.slice();
+      for (let i = 0; i < prev.length; i++) {
+        const a = prev[i], b = next[i];
+        if (a.cx !== b.cx || a.cy !== b.cy
+          || a.prevX !== b.prevX || a.prevY !== b.prevY
+          || a.nextX !== b.nextX || a.nextY !== b.nextY
+          || a.seriesColor !== b.seriesColor) return next.slice();
+      }
+      return prev;
+    });
+  });
+
 
   // Should a value be dimmed (own filter active and value not selected)?
   const isDimmed = (value: string) => {
