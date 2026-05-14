@@ -956,7 +956,7 @@ export function ChartInspector({
         <ToggleField label="Itálico" value={style.general.titleItalic}
           onChange={(v) => updPath("general", { titleItalic: v })} />
         <Row label="Fundo">
-          <ColorField value={style.general.background}
+          <ColorField value={style.general.background} allowTransparent
             onChange={(c) => updPath("general", { background: c })} />
         </Row>
         <Row label="Borda">
