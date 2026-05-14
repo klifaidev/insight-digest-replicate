@@ -8,7 +8,7 @@ import {
   Line, Bar, Area, XAxis, YAxis, CartesianGrid, Legend, Tooltip, LabelList,
   Treemap,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ReferenceLine, ReferenceArea, Customized,
+  ReferenceLine, ReferenceArea,
 } from "recharts";
 import type { ChartBlock } from "@/lib/customSlide";
 import { KPI_MEASURES } from "@/lib/customSlide";
