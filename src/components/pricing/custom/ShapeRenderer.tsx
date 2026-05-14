@@ -143,9 +143,13 @@ export function ShapeRenderer({ block }: { block: ShapeBlock }) {
           </svg>
         );
       }
-      case "chevron":
-        shapeEl = <polygon points={`0,0 ${w * 0.78},0 ${w},${cy} ${w * 0.78},${h} 0,${h} ${w * 0.22},${cy}`} {...common} />;
+      case "chevron": {
+        const nd = Math.max(0, Math.min(0.5, b.notchDepth));
+        const tip = w * (1 - nd);
+        const notch = w * nd;
+        shapeEl = <polygon points={`0,0 ${tip},0 ${w},${cy} ${tip},${h} 0,${h} ${notch},${cy}`} {...common} />;
         break;
+      }
       case "ribbon": {
         const tail = Math.min(h * 0.4, w * 0.08);
         const bodyL = tail, bodyR = w - tail;
