@@ -687,6 +687,15 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 );
               })}
 
+              {/* Contextual handles for selected shape blocks. */}
+              {config.blocks
+                .filter((b): b is ShapeBlock =>
+                  b.kind === "shape" && selectedIds.includes(b.id) && !b.locked)
+                .map((sb) => (
+                  <ShapeHandleOverlay key={`sh-${sb.id}`} block={sb}
+                    scale={scale} canvasEl={canvasRef.current} />
+                ))}
+
               {/* Group outlines + resize handles. */}
               {(config.groups ?? []).map((g) => {
                 const members = g.memberIds
