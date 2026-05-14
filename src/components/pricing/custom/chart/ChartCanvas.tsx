@@ -1177,7 +1177,7 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
   return (
     <div style={{
       width: "100%", height: "100%", display: "flex", flexDirection: "column",
-      background: style.general.background,
+      background: style.general.background === "transparent" ? "transparent" : style.general.background,
       border: style.general.borderWidth > 0
         ? `${style.general.borderWidth}px solid ${style.general.borderColor}` : undefined,
       padding: style.general.padding,
