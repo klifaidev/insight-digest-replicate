@@ -44,7 +44,11 @@ export type EditorActionLabel =
   | "Alinhar blocos"
   | "Agrupar blocos"
   | "Desagrupar blocos"
-  | "Colar estilo";
+  | "Colar estilo"
+  | "Redimensionar forma"
+  | "Mover ponto da linha"
+  | "Editar vértice"
+  | "Ajustar geometria";
 
 interface EditorState {
   config: CustomSlideConfig | null;
