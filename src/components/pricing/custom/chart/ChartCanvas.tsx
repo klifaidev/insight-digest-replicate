@@ -1404,50 +1404,33 @@ interface CrossingDotProps {
 }
 
 function CrossingDot(props: any) {
-  const { cx, cy, index, points = [], activePeriods, baseR, dotFill, dotStroke, strokeOpacity, thickness } = props;
+  const { cx, cy, index, points = [], activePeriods,
+    baseR, dotFill, dotStroke, strokeOpacity,
+    seriesColor, onActiveDot } = props;
   if (cx == null || cy == null || index == null) return null;
   const period = String(props.payload?.__period ?? "");
   const isCross = activePeriods.has(period);
-  const r = isCross ? Math.max(baseR + 3, 6) : baseR;
   const HIGHLIGHT = "#C8102E";
-  const segW = Math.max((thickness ?? 2.5) + 1.5, 3);
-  const segments: JSX.Element[] = [];
 
-  if (isCross && points.length > 0) {
+  if (isCross && onActiveDot) {
     const prev = points[index - 1];
     const next = points[index + 1];
-    if (prev && prev.x != null && prev.y != null) {
-      segments.push(
-        <line key="p"
-          x1={prev.x - cx} y1={prev.y - cy}
-          x2={0} y2={0}
-          stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.9}
-          strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 3px ${HIGHLIGHT}99)` }} />
-      );
-    }
-    if (next && next.x != null && next.y != null) {
-      segments.push(
-        <line key="n"
-          x1={0} y1={0}
-          x2={next.x - cx} y2={next.y - cy}
-          stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.9}
-          strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 3px ${HIGHLIGHT}99)` }} />
-      );
-    }
+    onActiveDot({
+      cx, cy,
+      prevX: prev?.x, prevY: prev?.y,
+      nextX: next?.x, nextY: next?.y,
+      seriesColor: seriesColor ?? HIGHLIGHT,
+    });
   }
 
+  const r = isCross ? Math.max(baseR + 3, 6) : baseR;
   return (
-    <g transform={`translate(${cx},${cy})`} overflow="visible" clipPath="none" style={{ overflow: "visible" }}>
-      {segments}
-      <circle cx={0} cy={0} r={r}
-        fill={isCross ? HIGHLIGHT : dotFill}
-        stroke={isCross ? HIGHLIGHT : dotStroke}
-        strokeWidth={isCross ? 2 : 1}
-        fillOpacity={isCross ? 1 : strokeOpacity}
-        style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
-    </g>
+    <circle cx={cx} cy={cy} r={r}
+      fill={isCross ? HIGHLIGHT : dotFill}
+      stroke={isCross ? HIGHLIGHT : dotStroke}
+      strokeWidth={isCross ? 2 : 1}
+      fillOpacity={isCross ? 1 : strokeOpacity}
+      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
   );
 }
 
