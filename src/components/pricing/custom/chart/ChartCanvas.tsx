@@ -971,8 +971,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           activeIndex={ranking.map((_, i) => i)}
           activeShape={renderPieShape as never}
           label={pieLabel as never}
-          onClick={(_d: any, idx: number, e: any) =>
-            handleEmit(ranking[idx]?.name, { shift: !!e?.shiftKey })}
+          onClick={(_d: any, idx: number, e: any) => {
+            e?.stopPropagation?.();
+            handleEmit(ranking[idx]?.name, { shift: !!e?.shiftKey });
+          }}
         >
           {ranking.map((r, i) => {
             const sl = style.pie.slices[r.name];
