@@ -1,7 +1,7 @@
 // ChartCanvas — single Recharts-based renderer for every ChartBlock variant.
 // Reads the unified ChartStyle so the inspector can drive every visual knob.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ResponsiveContainer, ComposedChart, LineChart, BarChart, AreaChart,
   PieChart, Pie, Cell, ScatterChart, Scatter, ZAxis, Sector,
@@ -294,6 +294,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   // user actually clicked, even when the chart is broken down by another
   // dimension (colorDim/breakdown).
   const chartOnClick = (e: any, nativeEvent?: any) => {
+    e?.nativeEvent?.stopPropagation?.();
+    e?.stopPropagation?.();
+    nativeEvent?.stopPropagation?.();
     if (!emits) return;
     const label = e?.activeLabel ?? e?.activePayload?.[0]?.payload?.__period
       ?? e?.activePayload?.[0]?.payload?.name;
@@ -327,6 +330,33 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
   }, [cf.filters, legendDim]);
   const hasPeriodFilter = activePeriods.size > 0;
   const hasLegendFilter = activeLegendValues.size > 0;
+
+  // Cross-filter highlighted segments — collected per-render from CrossingDot
+  // and rendered as an absolute SVG overlay (escapes Recharts' per-series clipPath).
+  const activePointsRef = useRef<Array<{
+    cx: number; cy: number;
+    prevX?: number; prevY?: number;
+    nextX?: number; nextY?: number;
+    seriesColor: string;
+  }>>([]);
+  const [activePointsSnap, setActivePointsSnap] = useState<typeof activePointsRef.current>([]);
+
+  // Sync collected active dots into state so the overlay re-renders.
+  // No deps: runs after every render; setter is no-op when unchanged.
+  useLayoutEffect(() => {
+    const next = activePointsRef.current;
+    setActivePointsSnap((prev) => {
+      if (prev.length !== next.length) return next.slice();
+      for (let i = 0; i < prev.length; i++) {
+        const a = prev[i], b = next[i];
+        if (a.cx !== b.cx || a.cy !== b.cy
+          || a.prevX !== b.prevX || a.prevY !== b.prevY
+          || a.nextX !== b.nextX || a.nextY !== b.nextY
+          || a.seriesColor !== b.seriesColor) return next.slice();
+      }
+      return prev;
+    });
+  });
 
 
   // Should a value be dimmed (own filter active and value not selected)?
@@ -656,6 +686,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     }
     const trendDash = (s?: "solid" | "dashed" | "dotted") => dashArr(s);
 
+    // Reset collected active dots before this render's dots fire.
+    if (hasPeriodFilter) activePointsRef.current = [];
+
     chart = (
       <Comp data={chartRows} onClick={chartOnClick} margin={chartMargin}>
         {renderGrid}{xAxis}{yAxis}{yAxisRight}
@@ -701,6 +734,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
                     dotStroke={dotStroke}
                     strokeOpacity={sStrokeOp}
                     thickness={cfg?.thickness ?? 2.5}
+                    seriesColor={color}
+                    onActiveDot={(pt: any) => { activePointsRef.current.push(pt); }}
                   />
                 )
               : { r: baseR, fill: dotFill, stroke: dotStroke, fillOpacity: sStrokeOp })
@@ -936,8 +971,10 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           activeIndex={ranking.map((_, i) => i)}
           activeShape={renderPieShape as never}
           label={pieLabel as never}
-          onClick={(_d: any, idx: number, e: any) =>
-            handleEmit(ranking[idx]?.name, { shift: !!e?.shiftKey })}
+          onClick={(_d: any, idx: number, e: any) => {
+            e?.stopPropagation?.();
+            handleEmit(ranking[idx]?.name, { shift: !!e?.shiftKey });
+          }}
         >
           {ranking.map((r, i) => {
             const sl = style.pie.slices[r.name];
@@ -1062,7 +1099,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
     }));
     chart = (
       <FunnelSVG data={fdata} style={style} measureFmt={measureFmt}
-        onSliceClick={(name, e) => handleEmit(name, { shift: !!e.shiftKey })}
+        onSliceClick={(name, e) => { e?.stopPropagation?.(); handleEmit(name, { shift: !!e.shiftKey }); }}
         dimmedNames={ownFilter && ownFilter.dimension === emitDim
           ? new Set(fdata.map(d => d.name).filter(n => !ownFilter.values.includes(n))) : null} />
     ) as React.ReactElement;
@@ -1086,7 +1123,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       <Treemap data={tdata} isAnimationActive={false} dataKey="size" nameKey="name"
         stroke={style.treemap.borderColor}
         aspectRatio={4 / 3}
-        onClick={(node: any) => handleEmit(node?.name)}
+        onClick={((node: any, _idx?: any, e?: any) => { e?.stopPropagation?.(); handleEmit(node?.name); }) as never}
         content={<TreemapTile cfg={style.treemap} dl={style.dataLabels} fmt={measureFmt} dimmedNames={ownFilter && ownFilter.dimension === emitDim ? new Set(ranking.map(r => r.name).filter(n => !ownFilter.values.includes(n))) : null} />} />
     );
   } else if (ct === "radar") {
@@ -1261,11 +1298,45 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
           padding: "4px 8px",
         }}>{block.title}</div>
       )}
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
         {ct === "waterfall" ? chart as React.ReactElement : (
           <ResponsiveContainer width="100%" height="100%">
             {chart as React.ReactElement}
           </ResponsiveContainer>
+        )}
+        {activePointsSnap.length > 0 && (
+          <svg
+            style={{
+              position: "absolute", top: 0, left: 0,
+              width: "100%", height: "100%",
+              pointerEvents: "none", overflow: "visible",
+            }}
+          >
+            {activePointsSnap.map((pt, i) => {
+              const HIGHLIGHT = "#C8102E";
+              const segW = 4;
+              return (
+                <g key={i}>
+                  {pt.prevX != null && pt.prevY != null && (
+                    <line
+                      x1={pt.prevX} y1={pt.prevY} x2={pt.cx} y2={pt.cy}
+                      stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
+                      strokeLinecap="round"
+                      style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }}
+                    />
+                  )}
+                  {pt.nextX != null && pt.nextY != null && (
+                    <line
+                      x1={pt.cx} y1={pt.cy} x2={pt.nextX} y2={pt.nextY}
+                      stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.85}
+                      strokeLinecap="round"
+                      style={{ filter: "drop-shadow(0 0 3px rgba(200,16,46,0.5))" }}
+                    />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
         )}
       </div>
     </Wrapper>
@@ -1369,50 +1440,33 @@ interface CrossingDotProps {
 }
 
 function CrossingDot(props: any) {
-  const { cx, cy, index, points = [], activePeriods, baseR, dotFill, dotStroke, strokeOpacity, thickness } = props;
+  const { cx, cy, index, points = [], activePeriods,
+    baseR, dotFill, dotStroke, strokeOpacity,
+    seriesColor, onActiveDot } = props;
   if (cx == null || cy == null || index == null) return null;
   const period = String(props.payload?.__period ?? "");
   const isCross = activePeriods.has(period);
-  const r = isCross ? Math.max(baseR + 3, 6) : baseR;
   const HIGHLIGHT = "#C8102E";
-  const segW = Math.max((thickness ?? 2.5) + 1.5, 3);
-  const segments: JSX.Element[] = [];
 
-  if (isCross && points.length > 0) {
+  if (isCross && onActiveDot) {
     const prev = points[index - 1];
     const next = points[index + 1];
-    if (prev && prev.x != null && prev.y != null) {
-      segments.push(
-        <line key="p"
-          x1={prev.x - cx} y1={prev.y - cy}
-          x2={0} y2={0}
-          stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.9}
-          strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 3px ${HIGHLIGHT}99)` }} />
-      );
-    }
-    if (next && next.x != null && next.y != null) {
-      segments.push(
-        <line key="n"
-          x1={0} y1={0}
-          x2={next.x - cx} y2={next.y - cy}
-          stroke={HIGHLIGHT} strokeWidth={segW} strokeOpacity={0.9}
-          strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 3px ${HIGHLIGHT}99)` }} />
-      );
-    }
+    onActiveDot({
+      cx, cy,
+      prevX: prev?.x, prevY: prev?.y,
+      nextX: next?.x, nextY: next?.y,
+      seriesColor: seriesColor ?? HIGHLIGHT,
+    });
   }
 
+  const r = isCross ? Math.max(baseR + 3, 6) : baseR;
   return (
-    <g transform={`translate(${cx},${cy})`} overflow="visible" clipPath="none" style={{ overflow: "visible" }}>
-      {segments}
-      <circle cx={0} cy={0} r={r}
-        fill={isCross ? HIGHLIGHT : dotFill}
-        stroke={isCross ? HIGHLIGHT : dotStroke}
-        strokeWidth={isCross ? 2 : 1}
-        fillOpacity={isCross ? 1 : strokeOpacity}
-        style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
-    </g>
+    <circle cx={cx} cy={cy} r={r}
+      fill={isCross ? HIGHLIGHT : dotFill}
+      stroke={isCross ? HIGHLIGHT : dotStroke}
+      strokeWidth={isCross ? 2 : 1}
+      fillOpacity={isCross ? 1 : strokeOpacity}
+      style={isCross ? { filter: "drop-shadow(0 0 4px rgba(200,16,46,0.65))" } : undefined} />
   );
 }
 
@@ -1432,7 +1486,7 @@ function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits, col
           <button
             key={entry.value}
             type="button"
-            onClick={(e) => { if (emits) onLegendClick(entry.value, e.shiftKey); }}
+            onClick={(e) => { e.stopPropagation(); if (emits) onLegendClick(entry.value, e.shiftKey); }}
             style={{
               display: "flex", alignItems: "center", gap: 5,
               padding: "2px 8px", borderRadius: 20,
