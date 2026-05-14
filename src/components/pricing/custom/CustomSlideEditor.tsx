@@ -491,6 +491,26 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
 
               {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => {
                 const isSelected = selectedIds.includes(blk.id);
+                // Shape-specific Rnd config — contextual handles override.
+                let shapeResize: boolean | Record<string, boolean> = !blk.locked;
+                let shapeDisableDrag = !!blk.locked;
+                let shapeLockAspect = false;
+                if (blk.kind === "shape" && !blk.locked) {
+                  const sb = blk as ShapeBlock;
+                  if (isLineFamily(sb.shape)) {
+                    shapeResize = false;
+                    shapeDisableDrag = true; // overlay owns move
+                  } else if (sb.shape === "circle") {
+                    shapeLockAspect = true;
+                    shapeResize = { top: true, bottom: true, left: true, right: true,
+                      topLeft: false, topRight: false, bottomLeft: false, bottomRight: false };
+                  } else if (sb.shape === "ellipse") {
+                    shapeResize = { top: true, bottom: true, left: true, right: true,
+                      topLeft: false, topRight: false, bottomLeft: false, bottomRight: false };
+                  } else if (sb.shape === "triangle" || sb.shape === "right-triangle") {
+                    shapeResize = false; // overlay vertex handles only
+                  }
+                }
                 return (
                 <ContextMenu key={blk.id}>
                   <ContextMenuTrigger asChild>
@@ -499,8 +519,9 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                       position={{ x: blk.x, y: blk.y }}
                       bounds="parent"
                       scale={scale}
-                      disableDragging={!!blk.locked}
-                      enableResizing={!blk.locked}
+                      lockAspectRatio={shapeLockAspect}
+                      disableDragging={shapeDisableDrag}
+                      enableResizing={shapeResize}
                       onDragStart={(_e, _d) => {
                         // If shift wasn't held and this block isn't already
                         // selected, select it before drag begins.
