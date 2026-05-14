@@ -50,9 +50,14 @@ export function ShapeInspector({ block, onChange }: {
       {!isLine && (
         <Section title="Preenchimento">
           <Row>
-            <ColorField label="Cor" value={b.fill} onChange={(v) => onChange({ fill: v })} />
+            <ColorField label="Cor" value={b.fill} allowTransparent
+              onTransparentChange={(t) => onChange(t
+                ? { fill: "transparent", fillOpacity: 0 }
+                : { fill: "EEF2F6", fillOpacity: 100 })}
+              onChange={(v) => onChange({ fill: v })} />
             <SliderField label={`Opacidade ${b.fillOpacity}%`} min={0} max={100} step={1}
-              value={b.fillOpacity} onChange={(v) => onChange({ fillOpacity: v })} />
+              value={b.fillOpacity} disabled={b.fill === "transparent"}
+              onChange={(v) => onChange({ fillOpacity: v })} />
           </Row>
         </Section>
       )}
