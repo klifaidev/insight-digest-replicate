@@ -12,7 +12,7 @@ import { toPng } from "html-to-image";
 import {
   CANVAS_W, CANVAS_H, type CustomSlideConfig, type CustomBlock,
   type TitleBlock, type TextBlock, type KpiBlock, type ImageBlock,
-  type ShapeBlock, KPI_MEASURES,
+  type ShapeBlock, type ShapeType, KPI_MEASURES, ensureShapeBlock, isLineFamily,
 } from "./customSlide";
 import haraldFooterPng from "@/assets/harald-footer-bar.png";
 import { usePricing } from "@/store/pricing";
@@ -79,20 +79,81 @@ function renderKpi(slide: PptxGenJS.Slide, b: KpiBlock,
     });
   }
 }
-function renderShape(slide: PptxGenJS.Slide, b: ShapeBlock) {
+const PPTX_SHAPE_MAP: Record<ShapeType, string> = {
+  rect: "rect", roundRect: "roundRect",
+  circle: "ellipse", ellipse: "ellipse",
+  triangle: "triangle", "right-triangle": "rtTriangle",
+  diamond: "diamond", pentagon: "pentagon", hexagon: "hexagon",
+  "star-4": "star4", "star-5": "star5", "star-6": "star6",
+  line: "line", "dashed-line": "line",
+  arrow: "rightArrow", "double-arrow": "leftRightArrow",
+  "callout-rect": "wedgeRectCallout", "callout-rounded": "wedgeRoundRectCallout",
+  chevron: "chevron", ribbon: "ribbon",
+  "brace-left": "leftBrace", "brace-right": "rightBrace",
+  "bracket-left": "leftBracket", "bracket-right": "rightBracket",
+};
+
+function dashTypeFor(s: "solid" | "dashed" | "dotted"): string {
+  return s === "dashed" ? "dash" : s === "dotted" ? "dot" : "solid";
+}
+
+function renderShape(slide: PptxGenJS.Slide, raw: ShapeBlock) {
+  const b = ensureShapeBlock(raw);
   const box = BOX(b);
-  if (b.shape === "line") {
-    slide.addShape("line", {
-      x: box.x, y: box.y + box.h / 2, w: box.w, h: 0,
-      line: { color: b.fill, width: Math.max(1, b.h * 0.4) },
+  const pptxShape = PPTX_SHAPE_MAP[b.shape] ?? "rect";
+  const isLine = isLineFamily(b.shape);
+
+  const shadow = b.shadowEnabled ? {
+    type: "outer" as const,
+    color: b.shadowColor,
+    opacity: b.shadowOpacity / 100,
+    blur: b.shadowBlur,
+    offset: Math.max(Math.abs(b.shadowX), Math.abs(b.shadowY)),
+    angle: 135,
+  } : undefined;
+
+  if (isLine) {
+    const dash = b.shape === "dashed-line" ? "dash" : dashTypeFor(b.strokeStyle);
+    // approximate orientation via box geometry — pptx "line" goes from top-left to bottom-right of the box
+    const dir = b.lineDirection;
+    let lineBox = box;
+    if (dir === "horizontal") {
+      lineBox = { x: box.x, y: box.y + box.h / 2, w: box.w, h: 0 };
+    } else if (dir === "vertical") {
+      lineBox = { x: box.x + box.w / 2, y: box.y, w: 0, h: box.h };
+    }
+    slide.addShape(pptxShape as never, {
+      ...lineBox,
+      line: {
+        color: b.fill,
+        width: Math.max(0.5, b.lineThickness * 0.75),
+        dashType: dash as never,
+        beginArrowType: (b.arrowStart ? "triangle" : "none") as never,
+        endArrowType: ((b.arrowEnd || b.shape === "arrow" || b.shape === "double-arrow") ? "triangle" : "none") as never,
+      },
+      rotate: b.rotation || 0,
+      ...(shadow ? { shadow } : {}),
     });
     return;
   }
-  slide.addShape("roundRect", {
-    ...box, fill: { color: b.fill },
-    line: { color: b.fill, width: 0 },
-    rectRadius: Math.min(0.5, b.radius * SX),
-  });
+
+  const opts: Record<string, unknown> = {
+    ...box,
+    fill: { color: b.fill, transparency: 100 - b.fillOpacity },
+    line: b.strokeWidth > 0 ? {
+      color: b.strokeColor,
+      width: b.strokeWidth * 0.75,
+      dashType: dashTypeFor(b.strokeStyle),
+    } : { type: "none" },
+    rotate: b.rotation || 0,
+  };
+  if (shadow) opts.shadow = shadow;
+  if (pptxShape === "roundRect" || b.shape === "callout-rect" || b.shape === "callout-rounded") {
+    // PptxGenJS rectRadius is a fraction of the smaller box dimension (0..0.5)
+    const minDim = Math.min(box.w, box.h);
+    opts.rectRadius = Math.max(0, Math.min(0.5, (b.radius * SX) / Math.max(0.01, minDim)));
+  }
+  slide.addShape(pptxShape as never, opts);
 }
 function renderImage(slide: PptxGenJS.Slide, b: ImageBlock) {
   if (!b.src) return;

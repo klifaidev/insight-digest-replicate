@@ -54,6 +54,7 @@ import haraldFooterPng from "@/assets/harald-footer-bar.png";
 import { registerCustomCanvas } from "@/lib/customCanvasRegistry";
 import { saveUserTemplate } from "@/lib/customTemplates";
 import { TemplatePicker } from "./templates/TemplatePicker";
+import { ShapeInspector } from "./ShapeInspector";
 import { useSlidesFlow } from "@/store/slidesFlow";
 import { newId } from "@/lib/slidesFlow";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -1050,26 +1051,7 @@ function BlockSpecificEditor({ block, onChange }: {
       );
 
     case "shape":
-      return (
-        <div className="space-y-2">
-          <div>
-            <Label className="text-[10px] uppercase text-muted-foreground">Forma</Label>
-            <Select value={block.shape} onValueChange={(v) => onChange({ shape: v as "rect"|"line" } as never)}>
-              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="rect">Retângulo</SelectItem>
-                <SelectItem value="line">Linha</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="Cor (hex)" value={block.fill}
-              onChange={(v) => onChange({ fill: v.replace("#", "") } as never)} />
-            <NumField label="Raio" value={block.radius}
-              onChange={(v) => onChange({ radius: v } as never)} />
-          </div>
-        </div>
-      );
+      return <ShapeInspector block={block} onChange={onChange} />;
 
     case "bridge":
       return <FilteredInspector
