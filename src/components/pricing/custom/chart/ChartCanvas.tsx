@@ -670,17 +670,7 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
               stroke="#3b82f6" strokeOpacity={0.35} strokeDasharray="3 3"
               ifOverflow="extendDomain" />
           ))}
-        {hasPeriodFilter && (ct === "line" || ct === "combo") && (
-          <Customized
-            component={(props: any) => (
-              <CrossingSegments
-                formattedGraphicalItems={props.formattedGraphicalItems}
-                activePeriods={activePeriods}
-                thickness={style.series[0]?.thickness ?? 2.5}
-              />
-            )}
-          />
-        )}
+        {/* CrossingSegments removido — segmentos agora são desenhados dentro do CrossingDot */}
         {renderLegend}
         {data.series.map((s, i) => {
           const cfg = style.series.find((x) => x.key === s.name);
