@@ -1452,7 +1452,7 @@ function CustomLegend({ payload, ownFilter, legendDim, onLegendClick, emits, col
           <button
             key={entry.value}
             type="button"
-            onClick={(e) => { if (emits) onLegendClick(entry.value, e.shiftKey); }}
+            onClick={(e) => { e.stopPropagation(); if (emits) onLegendClick(entry.value, e.shiftKey); }}
             style={{
               display: "flex", alignItems: "center", gap: 5,
               padding: "2px 8px", borderRadius: 20,
