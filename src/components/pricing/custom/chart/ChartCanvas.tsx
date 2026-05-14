@@ -764,6 +764,9 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
             </Line>
           );
         })}
+        {hasPeriodFilter && (
+          <Customized component={SegmentOverlay as any} activePeriods={activePeriods as any} />
+        )}
       </Comp>
     );
   } else if (ct === "bar" || ct === "column" || ct === "stackedColumn") {
