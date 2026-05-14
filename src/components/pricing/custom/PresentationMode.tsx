@@ -258,7 +258,7 @@ function CustomCanvasReadOnly({ config }: { config: CustomSlideConfig }) {
       ref={ref}
       style={{
         width: CANVAS_W, height: CANVAS_H,
-        background: `#${config.background}`,
+        background: config.background === "transparent" ? "#FFFFFF" : `#${config.background}`,
         position: "relative", overflow: "hidden",
       }}
     >

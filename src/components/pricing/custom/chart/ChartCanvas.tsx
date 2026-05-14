@@ -97,11 +97,13 @@ function makeLabelContent(opts: {
     // FIX 11 — auto-contrast works even without explicit bg
     if (dl.autoContrast) {
       const insidePos = ["inside-end", "inside-base", "center", "inside"].includes(dl.position);
+      const bgRef = (cs.general?.background && cs.general.background !== "transparent")
+        ? cs.general.background : "#FFFFFF";
       const ref = dl.bgOpacity > 0
         ? dl.bgColor
         : insidePos && seriesColor
           ? seriesColor
-          : (cs.general?.background ?? "#FFFFFF");
+          : bgRef;
       color = luminance(ref) > 0.55 ? "#000000" : "#FFFFFF";
     }
     const fs = dl.size;
@@ -807,7 +809,8 @@ export function ChartCanvas({ block }: { block: ChartBlock }) {
       const anchor: "start" | "end" | "middle" = inside ? "middle" : (x > cx ? "start" : "end");
       let color = dl.color;
       if (dl.autoContrast) {
-        const ref = dl.bgOpacity > 0 ? dl.bgColor : (inside ? (props.fill ?? "#FFFFFF") : (style.general?.background ?? "#FFFFFF"));
+        const sb = (style.general?.background && style.general.background !== "transparent") ? style.general.background : "#FFFFFF";
+        const ref = dl.bgOpacity > 0 ? dl.bgColor : (inside ? (props.fill ?? "#FFFFFF") : sb);
         color = luminance(ref) > 0.55 ? "#000000" : "#FFFFFF";
       }
       const padX = 3, padY = 2;
@@ -1174,7 +1177,7 @@ function Wrapper({ children, style }: { children: React.ReactNode; style: ChartS
   return (
     <div style={{
       width: "100%", height: "100%", display: "flex", flexDirection: "column",
-      background: style.general.background,
+      background: style.general.background === "transparent" ? "transparent" : style.general.background,
       border: style.general.borderWidth > 0
         ? `${style.general.borderWidth}px solid ${style.general.borderColor}` : undefined,
       padding: style.general.padding,

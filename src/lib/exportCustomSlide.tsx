@@ -58,10 +58,13 @@ function renderKpi(slide: PptxGenJS.Slide, b: KpiBlock,
   const value = computeKpiBlock(pricing, b);
   const measureLabel = b.source === "dynamic"
     ? KPI_MEASURES.find((m) => m.id === b.measure)?.label ?? "" : "";
-  slide.addShape("roundRect", {
-    ...box, fill: { color: "F8FAFC" },
-    line: { color: "E2E8F0", width: 0.75 }, rectRadius: 0.08,
-  });
+  const cardBg = b.cardBg ?? "F8FAFC";
+  if (cardBg !== "transparent") {
+    slide.addShape("roundRect", {
+      ...box, fill: { color: cardBg },
+      line: { color: "E2E8F0", width: 0.75 }, rectRadius: 0.08,
+    });
+  }
   slide.addText(b.label || measureLabel || "KPI", {
     x: box.x + 0.1, y: box.y + 0.08, w: box.w - 0.2, h: 0.25,
     fontFace: "Calibri", fontSize: 9, color: "64748B", margin: 0, charSpacing: 1,
@@ -137,9 +140,12 @@ function renderShape(slide: PptxGenJS.Slide, raw: ShapeBlock) {
     return;
   }
 
+  const isTransparentFill = b.fill === "transparent";
   const opts: Record<string, unknown> = {
     ...box,
-    fill: { color: b.fill, transparency: 100 - b.fillOpacity },
+    fill: isTransparentFill
+      ? { type: "none" }
+      : { color: b.fill, transparency: 100 - b.fillOpacity },
     line: b.strokeWidth > 0 ? {
       color: b.strokeColor,
       width: b.strokeWidth * 0.75,
@@ -176,14 +182,14 @@ async function waitFonts() {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
 }
 
-async function captureNode(node: HTMLElement): Promise<string> {
+async function captureNode(node: HTMLElement, bgColor: string | undefined = "#FFFFFF"): Promise<string> {
   const width = Math.max(1, Math.ceil(node.offsetWidth || node.getBoundingClientRect().width));
   const height = Math.max(1, Math.ceil(node.offsetHeight || node.getBoundingClientRect().height));
   return toPng(node, {
     width,
     height,
     pixelRatio: 2,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: bgColor,
     cacheBust: true,
     style: {
       width: `${width}px`,
@@ -199,12 +205,22 @@ async function captureNode(node: HTMLElement): Promise<string> {
   });
 }
 
+function isBlockTransparent(block: CustomBlock): boolean {
+  if (block.kind === "chart") {
+    const bg = (block.style as { general?: { background?: string } } | undefined)?.general?.background;
+    return bg === "transparent";
+  }
+  return false;
+}
+
 async function renderBlockOffscreen(block: CustomBlock): Promise<string> {
+  const transparent = isBlockTransparent(block);
+  const bgCss = transparent ? "transparent" : "#FFFFFF";
   const host = document.createElement("div");
   host.style.cssText = [
     "position:fixed", "left:0", "top:0",
     `width:${block.w}px`, `height:${block.h}px`,
-    "background:#FFFFFF", "overflow:hidden", "pointer-events:none",
+    `background:${bgCss}`, "overflow:hidden", "pointer-events:none",
     "transform:translateX(-150vw)", "z-index:2147483647",
   ].join(";");
   document.body.appendChild(host);
@@ -212,7 +228,7 @@ async function renderBlockOffscreen(block: CustomBlock): Promise<string> {
   try {
     flushSync(() => {
       root.render(React.createElement("div", {
-        style: { width: block.w, height: block.h, background: "#FFFFFF", overflow: "hidden" },
+        style: { width: block.w, height: block.h, background: bgCss, overflow: "hidden" },
       }, React.createElement(BlockRenderer, { block })));
     });
     // Aguarda render + dados. Recharts usa ResizeObserver (assíncrono) para
@@ -238,7 +254,7 @@ async function renderBlockOffscreen(block: CustomBlock): Promise<string> {
       await new Promise((r) => setTimeout(r, 120));
       tries++;
     }
-    return await captureNode(host);
+    return await captureNode(host, transparent ? undefined : "#FFFFFF");
   } finally {
     setTimeout(() => { try { root.unmount(); } catch {} host.remove(); }, 0);
   }
@@ -292,7 +308,9 @@ export async function addCustomSlide(
   opts?: { slideId?: string },
 ) {
   const slide = pptx.addSlide();
-  slide.background = { color: config.background };
+  if (config.background && config.background !== "transparent") {
+    slide.background = { color: config.background };
+  }
   const pricing = usePricing.getState().rows;
 
   const sorted = [...config.blocks].sort((a, b) => a.z - b.z);

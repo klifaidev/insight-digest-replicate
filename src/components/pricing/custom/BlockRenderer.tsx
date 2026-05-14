@@ -95,12 +95,15 @@ function KpiRender({ block: b }: { block: KpiBlock }) {
     ? KPI_MEASURES.find((m) => m.id === b.measure)?.label
     : null;
 
+  const cardBg = b.cardBg ?? "F8FAFC";
+  const isTransparent = cardBg === "transparent";
   return (
     <div style={{
       width: "100%", height: "100%",
       display: "flex", flexDirection: "column", justifyContent: "center",
-      padding: 12, borderRadius: 12,
-      background: "#F8FAFC", border: "1px solid #E2E8F0",
+      padding: 12, borderRadius: isTransparent ? 0 : 12,
+      background: isTransparent ? "transparent" : `#${cardBg}`,
+      border: isTransparent ? "none" : "1px solid #E2E8F0",
       fontFamily: "Calibri, sans-serif",
     }}>
       <div style={{ fontSize: 14, color: "#64748B", textTransform: "uppercase", letterSpacing: 1 }}>
