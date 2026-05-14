@@ -96,22 +96,47 @@ function KpiRender({ block: b }: { block: KpiBlock }) {
     [b.dataSource, pricing, budget],
   );
 
+  // Split incoming filters into "period" (special: format-tolerant + overrides
+  // the block's own periodMode/periodValue) and "dimensional" (other dims).
+  const incoming = useMemo(
+    () => (participates ? filters.filter((f) => f.sourceBlockId !== b.id) : []),
+    [filters, participates, b.id],
+  );
+  const periodFilterValues = useMemo(() => {
+    const vals: string[] = [];
+    for (const f of incoming) {
+      if (f.dimension === "period" || f.dimension === "periodo") vals.push(...f.values);
+    }
+    return vals;
+  }, [incoming]);
+
   const rows = useMemo(() => {
-    if (!participates) return baseRows;
-    const incoming = filters.filter((f) => f.sourceBlockId !== b.id);
     if (incoming.length === 0) return baseRows;
     return baseRows.filter((r) => {
+      // Period filter — match against display label OR raw periodo to handle
+      // both formats charts may emit (e.g. "jan/24" vs "2024-01").
+      if (periodFilterValues.length > 0) {
+        const lbl = monthLabel((r as any).mes, (r as any).ano);
+        const raw = String((r as any).periodo ?? "");
+        if (!periodFilterValues.includes(lbl) && !periodFilterValues.includes(raw)) return false;
+      }
       for (const f of incoming) {
-        // KPIs ignore period filters — they have their own period selector
         if (f.dimension === "period" || f.dimension === "periodo") continue;
         const v = resolveFieldValue(r as unknown as Record<string, unknown>, f.dimension);
         if (!f.values.includes(v)) return false;
       }
       return true;
     });
-  }, [baseRows, filters, participates, b.id]);
+  }, [baseRows, incoming, periodFilterValues]);
 
-  const value = useMemo(() => computeKpiBlock(rows, b), [rows, b]);
+  // When a cross-filter period is active, override the block's own
+  // periodMode so computeKpiBlock doesn't double-filter into an empty set.
+  const effectiveBlock = useMemo<KpiBlock>(
+    () => (periodFilterValues.length > 0 ? { ...b, periodMode: "all", periodValue: null } : b),
+    [b, periodFilterValues.length],
+  );
+
+  const value = useMemo(() => computeKpiBlock(rows, effectiveBlock), [rows, effectiveBlock]);
   const measureLabel = b.source === "dynamic"
     ? KPI_MEASURES.find((m) => m.id === b.measure)?.label
     : null;
