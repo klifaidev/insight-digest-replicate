@@ -84,6 +84,7 @@ import {
   sendToBackAction, toggleLockAction, undo as undoAction, redo as redoAction,
   setShowHaraldFooter as setShowHaraldFooterAction,
   setBackground as setBackgroundAction,
+  setThemeAction,
   useSelection, selectBlock, setSelection, clearSelection,
   selectAllOnSlide, enterGroupEdit, exitGroupEdit,
   deleteBlocksAction, duplicateBlocksAction,
@@ -94,6 +95,7 @@ import {
   type AlignKind,
 } from "./editorStore";
 import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
+import { SLIDE_THEMES, getTheme, DEFAULT_THEME_ID, type SlideTheme } from "@/lib/slideThemes";
 import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
 import { PresentationMode } from "./PresentationMode";
 import { InlineTextEditor, InlineTextToolbar } from "./InlineTextEditor";
