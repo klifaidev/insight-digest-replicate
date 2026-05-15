@@ -376,3 +376,173 @@ function EffectList({
     </section>
   );
 }
+
+// ---------- Leitura do resultado ----------
+
+import type { PVMResult } from "@/lib/analytics";
+
+const EFFECT_LABELS: Record<keyof Pick<PVMResult, "volume" | "price" | "cost" | "freight" | "commission" | "others">, string> = {
+  volume: "Volume",
+  price: "Preço",
+  cost: "Custo Variável",
+  freight: "Frete",
+  commission: "Comissão",
+  others: "Mix/Outros",
+};
+
+type EffectKey = keyof typeof EFFECT_LABELS;
+
+function buildPvmReading(result: PVMResult): React.ReactNode[] {
+  const sentences: React.ReactNode[] = [];
+  const delta = result.current - result.base;
+  const deltaPct = result.base !== 0 ? delta / Math.abs(result.base) : 0;
+
+  const fmt = (v: number) => formatBRL(v, { compact: true });
+  const strong = (children: React.ReactNode, tone: "neutral" | "pos" | "neg" = "neutral") => (
+    <span
+      className={
+        tone === "pos"
+          ? "font-semibold text-success"
+          : tone === "neg"
+          ? "font-semibold text-destructive"
+          : "font-semibold text-primary"
+      }
+    >
+      {children}
+    </span>
+  );
+
+  // Sentence 1: saldo geral
+  if (delta >= 0) {
+    sentences.push(
+      <>
+        A margem cresceu {strong(fmt(delta), "pos")} ({strong(`${(deltaPct * 100).toFixed(1)}%`, "pos")}) de{" "}
+        {strong(result.baseLabel)} para {strong(result.currentLabel)}.
+      </>,
+    );
+  } else {
+    sentences.push(
+      <>
+        A margem recuou {strong(fmt(Math.abs(delta)), "neg")} ({strong(`${(deltaPct * 100).toFixed(1)}%`, "neg")}) de{" "}
+        {strong(result.baseLabel)} para {strong(result.currentLabel)}.
+      </>,
+    );
+  }
+
+  const effects: Array<{ key: EffectKey; value: number }> = (
+    ["volume", "price", "cost", "freight", "commission", "others"] as EffectKey[]
+  ).map((k) => ({ key: k, value: result[k] }));
+
+  const positives = effects.filter((e) => e.value > 0);
+  const negatives = effects.filter((e) => e.value < 0);
+  const sumPos = positives.reduce((s, e) => s + e.value, 0);
+  const sumNeg = negatives.reduce((s, e) => s + e.value, 0); // negative number
+
+  // Sentence 2: maior driver positivo
+  if (positives.length > 0) {
+    const top = [...positives].sort((a, b) => b.value - a.value)[0];
+    const share = sumPos > 0 ? top.value / sumPos : 0;
+    sentences.push(
+      <>
+        O principal fator de ganho foi {strong(EFFECT_LABELS[top.key], "pos")} ({strong(`+${fmt(top.value)}`, "pos")}),
+        representando {strong(`${(share * 100).toFixed(0)}%`)} da variação total positiva.
+      </>,
+    );
+  }
+
+  // Sentence 3: maior driver negativo
+  let topNegKey: EffectKey | null = null;
+  if (negatives.length > 0) {
+    const top = [...negatives].sort((a, b) => a.value - b.value)[0];
+    topNegKey = top.key;
+    const share = sumNeg < 0 ? top.value / sumNeg : 0;
+    sentences.push(
+      <>
+        A maior pressão veio de {strong(EFFECT_LABELS[top.key], "neg")} ({strong(fmt(top.value), "neg")}), representando{" "}
+        {strong(`${(share * 100).toFixed(0)}%`)} da variação negativa.
+      </>,
+    );
+  }
+
+  // Sentence 4: SKU mais impactante positivo (preço + volume)
+  const skuScored = result.skuDetails.map((d) => ({
+    sku: d.sku,
+    name: d.skuDesc?.trim() || d.sku,
+    pos: d.priceEffect + d.volumeEffect,
+    neg: d.priceEffect + d.volumeEffect + d.costEffect + d.freightEffect + d.commissionEffect + d.othersEffect,
+  }));
+  const topSkuPos = [...skuScored].filter((s) => s.pos > 0).sort((a, b) => b.pos - a.pos)[0];
+  if (topSkuPos) {
+    sentences.push(
+      <>
+        O SKU mais impactante positivamente foi {strong(topSkuPos.name)} com {strong(`+${fmt(topSkuPos.pos)}`, "pos")} de
+        contribuição líquida.
+      </>,
+    );
+  }
+
+  // Sentence 5: SKU com maior pressão negativa (soma total)
+  const topSkuNeg = [...skuScored].filter((s) => s.neg < 0).sort((a, b) => a.neg - b.neg)[0];
+  if (topSkuNeg) {
+    sentences.push(
+      <>
+        O SKU com maior pressão negativa foi {strong(topSkuNeg.name)} com {strong(fmt(topSkuNeg.neg), "neg")} — avaliar
+        pricing ou mix.
+      </>,
+    );
+  }
+
+  // Sentence 6: conclusão acionável
+  const allPositive = effects.every((e) => e.value >= 0);
+  if (result.price < 0 && result.volume > 0) {
+    sentences.push(
+      <>
+        <strong className="text-warning">Atenção:</strong> o crescimento de volume está mascarando deterioração de preço — revisar
+        política comercial.
+      </>,
+    );
+  } else if (topNegKey === "cost") {
+    sentences.push(
+      <>
+        A pressão de {strong("custo variável", "neg")} é o principal detrator — priorizar revisão de fornecedores ou
+        reformulação.
+      </>,
+    );
+  } else if (allPositive) {
+    sentences.push(
+      <>
+        Resultado equilibrado — ganhos distribuídos entre {strong("preço", "pos")}, {strong("volume", "pos")} e {" "}
+        {strong("eficiência de custo", "pos")}.
+      </>,
+    );
+  }
+
+  return sentences;
+}
+
+function PvmReadingCard({ result }: { result: PVMResult }) {
+  const sentences = useMemo(() => buildPvmReading(result), [result]);
+  return (
+    <GlassCard glow="blue">
+      <div className="mb-4 flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <BookOpen className="h-4 w-4" />
+        </div>
+        <div>
+          <h2 className="text-sm font-medium">Leitura do resultado</h2>
+          <p className="text-[11px] text-muted-foreground">Interpretação automática do bridge</p>
+        </div>
+      </div>
+      <ol className="space-y-2.5">
+        {sentences.map((s, i) => (
+          <li key={i} className="flex items-start gap-3 rounded-xl border border-border/40 bg-secondary/20 p-3 text-sm leading-relaxed text-foreground/90">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+              {i + 1}
+            </span>
+            <span>{s}</span>
+          </li>
+        ))}
+      </ol>
+    </GlassCard>
+  );
+}
