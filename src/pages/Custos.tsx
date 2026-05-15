@@ -120,6 +120,12 @@ export default function Custos() {
           <KpiCard label="Custo Fixo" value={formatBRL(totals.custoFixo, { compact: true })} subValue={formatPct(custoFixoPct)} accent="violet" />
           <KpiCard label="Custo Total" value={formatBRL(custoTotal, { compact: true })} subValue={formatBRL(custoTotalPorKg, { digits: 2 }) + "/kg"} accent="blue" glow="blue" />
           <KpiCard label="Volume filtrado" value={formatTon(totals.volumeKg)} subValue={`${evolution.length} período(s)`} accent="green" />
+          {compTotals.hasMP && compTotals.materiaPrima !== 0 && (
+            <KpiCard label="Matéria Prima / ROL" value={formatPct(mpPctRol)} subValue={formatBRL(compTotals.materiaPrima, { compact: true })} accent="blue" />
+          )}
+          {compTotals.hasEmb && compTotals.embalagem !== 0 && (
+            <KpiCard label="Embalagem / ROL" value={formatPct(embPctRol)} subValue={formatBRL(compTotals.embalagem, { compact: true })} accent="amber" />
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
