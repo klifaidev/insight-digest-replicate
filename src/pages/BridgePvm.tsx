@@ -379,7 +379,7 @@ function EffectList({
 
 // ---------- Leitura do resultado ----------
 
-import type { PVMResult } from "@/lib/analytics";
+
 
 const EFFECT_LABELS: Record<keyof Pick<PVMResult, "volume" | "price" | "cost" | "freight" | "commission" | "others">, string> = {
   volume: "Volume",
