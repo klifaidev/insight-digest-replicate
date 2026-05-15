@@ -4,7 +4,7 @@
 // Espelha exatamente: cores, posições, fontes (proporcionalmente), curvas suaves
 // para o Budget Evo (Overview CM/VOL) e bridge waterfall com retângulos pretos
 // (totais) + linha vermelha curta (deltas) + labels abaixo.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { applyFilters, calcPVM, type PVMResult } from "@/lib/analytics";
 import { computeBudgetEvoMonthly, isItemReady, type SlideItem } from "@/lib/slidesFlow";
 import { monthLabel } from "@/lib/format";
@@ -590,42 +590,30 @@ function PreviewContent({ item }: { item: SlideItem }) {
 // Para slides custom o canvas tem dimensões reais (1333x750) e precisa ser
 // escalado via transform para caber no painel. Para os SVG (cover/bridge/
 // budget) o próprio viewBox cuida disso.
-function ScaledPreview({ item, targetWidth }: { item: SlideItem; targetWidth?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(targetWidth ?? 280);
+const PREVIEW_W_INSPECTOR = 260;
+const PREVIEW_W_DIALOG = 800;
 
-  useEffect(() => {
-    if (targetWidth) { setWidth(targetWidth); return; }
-    if (!ref.current) return;
-    const el = ref.current;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width;
-      if (w && w > 0) setWidth(w);
-    });
-    ro.observe(el);
-    setWidth(el.getBoundingClientRect().width);
-    return () => ro.disconnect();
-  }, [targetWidth]);
+function ScaledPreview({ item, targetWidth }: { item: SlideItem; targetWidth?: number }) {
+  const previewW = targetWidth ?? PREVIEW_W_INSPECTOR;
 
   if (item.kind !== "custom") {
     // SVG previews já escalam via viewBox.
     return (
       <div
-        ref={ref}
-        className="w-full overflow-hidden rounded-lg border border-border/40 bg-card"
-        style={{ aspectRatio: `${CANVAS_W} / ${CANVAS_H}` }}
+        className="overflow-hidden rounded-lg border border-border/40 bg-card"
+        style={{ width: previewW, height: (CANVAS_H / CANVAS_W) * previewW }}
       >
         <PreviewContent item={item} />
       </div>
     );
   }
 
-  const factor = width / CANVAS_W;
+  const factor = previewW / CANVAS_W;
+  const previewH = CANVAS_H * factor;
   return (
     <div
-      ref={ref}
-      className="w-full overflow-hidden rounded-lg border border-border/40 bg-white"
-      style={{ height: CANVAS_H * factor }}
+      className="overflow-hidden rounded-lg border border-border/40 bg-white"
+      style={{ width: previewW, height: previewH, position: "relative" }}
     >
       <div
         style={{
@@ -633,6 +621,10 @@ function ScaledPreview({ item, targetWidth }: { item: SlideItem; targetWidth?: n
           height: CANVAS_H,
           transform: `scale(${factor})`,
           transformOrigin: "top left",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          pointerEvents: "none",
         }}
       >
         <CustomCanvasReadOnly config={item.config} />
@@ -669,12 +661,12 @@ export function SlidePreview({ item }: { item: SlideItem }) {
       <ScaledPreview item={item} />
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="max-w-[900px] p-0 gap-0">
+        <DialogContent className="max-w-[860px] p-0 gap-0">
           <DialogHeader className="px-5 pt-5 pb-3 border-b border-border/40">
             <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
           </DialogHeader>
           <div className="p-5">
-            <ScaledPreview item={item} targetWidth={840} />
+            <ScaledPreview item={item} targetWidth={800} />
           </div>
         </DialogContent>
       </Dialog>
