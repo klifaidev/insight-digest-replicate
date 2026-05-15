@@ -45,6 +45,7 @@ import {
   BUDGET_UNAVAILABLE_MEASURES, BUDGET_UNAVAILABLE_HINT,
   type CustomBlock, type CustomBlockKind, type CustomChartType, type CustomSlideConfig,
   type KpiBlock, type ChartBlock, type TopSkuBlock, type ShapeBlock,
+  type TitleBlock, type TextBlock,
   isLineFamily,
 } from "@/lib/customSlide";
 import { ShapeHandleOverlay } from "./ShapeHandleOverlay";
