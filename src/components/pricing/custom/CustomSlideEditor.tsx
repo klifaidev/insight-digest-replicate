@@ -397,6 +397,34 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
 
           <Separator className="my-2" />
           <div className="px-2">
+            <Label className="text-[10px] uppercase text-muted-foreground">Tema do slide</Label>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              {SLIDE_THEMES.map((t) => {
+                const active = (config.theme ?? DEFAULT_THEME_ID) === t.id
+                  && config.background.toUpperCase() === t.background.toUpperCase();
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setThemeAction(t.id, t.background)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded border px-1.5 py-1 text-left text-[10px] transition",
+                      active ? "border-primary ring-1 ring-primary" : "border-border/60 hover:border-border",
+                    )}
+                    title={t.name}
+                  >
+                    <span className="flex h-4 w-6 shrink-0 overflow-hidden rounded-sm border border-border/40">
+                      <span className="flex-1" style={{ background: `#${t.background}` }} />
+                      <span className="w-1.5" style={{ background: `#${t.primaryColor}` }} />
+                    </span>
+                    <span className="truncate">{t.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <Separator className="my-2" />
+          <div className="px-2">
             <Label className="text-[10px] uppercase text-muted-foreground">Fundo do slide</Label>
             <BgField label="" value={config.background}
               onChange={(v) => setBackgroundAction(v)} />
