@@ -624,6 +624,91 @@ export function generateAlerts(
     }
   }
 
+  // (6-8) Alertas derivados do PVM automático (mês mais recente vs. anterior)
+  const periodMeta = new Map<string, { ano: number; mes: number; label: string }>();
+  for (const r of rows) {
+    if (!periodMeta.has(r.periodo)) {
+      periodMeta.set(r.periodo, {
+        ano: r.ano,
+        mes: r.mes,
+        label: `${String(r.mes).padStart(2, "0")}/${String(r.ano).slice(-2)}`,
+      });
+    }
+  }
+  const sortedPeriods = Array.from(periodMeta.entries()).sort(
+    (a, b) => a[1].ano - b[1].ano || a[1].mes - b[1].mes,
+  );
+  if (sortedPeriods.length >= 2) {
+    const [basePeriod, baseMeta] = sortedPeriods[sortedPeriods.length - 2];
+    const [compPeriod, compMeta] = sortedPeriods[sortedPeriods.length - 1];
+    const pvm = calcPVM(rows, metric, basePeriod, compPeriod, "month", {
+      base: baseMeta.label,
+      comp: compMeta.label,
+    });
+    const compRol = rows
+      .filter((r) => r.periodo === compPeriod)
+      .reduce((s, r) => s + r.rol, 0);
+    const effects: Record<string, number> = {
+      volume: pvm.volume,
+      price: pvm.price,
+      cost: pvm.cost,
+      freight: pvm.freight,
+      commission: pvm.commission,
+      others: pvm.others,
+    };
+    const totalNeg = Object.values(effects)
+      .filter((v) => v < 0)
+      .reduce((s, v) => s + Math.abs(v), 0);
+    const negEntries = Object.entries(effects).filter(([, v]) => v < 0);
+    const largestNeg = negEntries.sort((a, b) => a[1] - b[1])[0];
+    const fmtBRL = (v: number) =>
+      v.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+        maximumFractionDigits: 0,
+        notation: Math.abs(v) >= 1_000_000 ? "compact" : "standard",
+      });
+
+    if (
+      largestNeg &&
+      largestNeg[0] === "price" &&
+      totalNeg > 0 &&
+      Math.abs(effects.price) / totalNeg > 0.4
+    ) {
+      alerts.push({
+        id: "pvm-price-deterioration",
+        severity: "high",
+        message: `Deterioração de preço detectada em ${compMeta.label} — efeito preço de ${fmtBRL(effects.price)} está puxando a margem para baixo`,
+        page: "/bridge-pvm",
+        icon: "trending-down",
+      });
+    }
+
+    if (effects.cost < 0 && compRol > 0 && Math.abs(effects.cost) / compRol > 0.3) {
+      alerts.push({
+        id: "pvm-cost-pressure",
+        severity: "high",
+        message: `Pressão de custo variável elevada em ${compMeta.label} — impacto de ${fmtBRL(effects.cost)} na margem`,
+        page: "/bridge-pvm",
+        icon: "alert-triangle",
+      });
+    }
+
+    const totalDelta = pvm.current - pvm.base;
+    if (pvm.base !== 0) {
+      const deltaPct = totalDelta / Math.abs(pvm.base);
+      if (deltaPct < -0.05) {
+        alerts.push({
+          id: "pvm-margin-drop",
+          severity: "medium",
+          message: `Margem ${compMeta.label} recuou ${Math.abs(deltaPct * 100).toFixed(1)}% vs. ${baseMeta.label} — acessar Bridge PVM para diagnóstico completo`,
+          page: "/bridge-pvm",
+          icon: "alert-circle",
+        });
+      }
+    }
+  }
+
   const order = { high: 0, medium: 1, low: 2 } as const;
   return alerts.sort((a, b) => order[a.severity] - order[b.severity]);
 }
