@@ -68,6 +68,8 @@ import type { Filters, FilterKey, PricingRow } from "@/lib/types";
 import type { BudgetRow } from "@/lib/budget";
 import { SlidePreview } from "@/components/pricing/SlidePreview";
 import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor";
+import { TemplateGallery } from "@/components/pricing/custom/TemplateGallery";
+import type { SlideTemplate } from "@/lib/slideTemplates";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
@@ -173,7 +175,7 @@ function uniqueValues(
 // ----------------------------------------------------------------------------
 // Drop zone vazio
 // ----------------------------------------------------------------------------
-function EmptyFlow({ onAdd, isOver }: { onAdd: (k: SlideKind) => void; isOver?: boolean }) {
+function EmptyFlow({ onAdd, onOpenGallery, isOver }: { onAdd: (k: SlideKind) => void; onOpenGallery: () => void; isOver?: boolean }) {
   return (
     <div
       className={cn(
@@ -192,8 +194,17 @@ function EmptyFlow({ onAdd, isOver }: { onAdd: (k: SlideKind) => void; isOver?: 
       <div className="relative max-w-md space-y-2">
         <h3 className="text-xl font-semibold tracking-tight">Comece sua apresentação</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          {isOver ? "Solte aqui para adicionar à esteira." : "Arraste um modelo da coluna esquerda — ou clique abaixo — para começar. Combine quantos slides quiser, configure filtros independentes e exporte tudo em um único PPTX."}
+          {isOver
+            ? "Solte aqui para adicionar à esteira."
+            : "Escolha um template pronto para começar em segundos — ou monte do zero arrastando slides do catálogo à esquerda."}
         </p>
+      </div>
+      <div className="relative flex flex-col sm:flex-row items-center gap-2">
+        <Button size="lg" onClick={onOpenGallery} className="gap-2 shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.6)]">
+          <Sparkles className="h-4 w-4" />
+          Nova apresentação
+        </Button>
+        <span className="text-xs text-muted-foreground">ou clique nos modelos abaixo</span>
       </div>
       <div className="relative grid w-full max-w-2xl grid-cols-2 gap-2.5 sm:grid-cols-4">
         {SLIDE_CATALOG.map((s) => {
@@ -924,6 +935,25 @@ export default function SlidesBeta() {
   const [fileName, setFileName] = useState("apresentacao-pricing.pptx");
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [dragging, setDragging] = useState<{ source: "catalog"; kind: SlideKind } | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+
+  const applyTemplate = (tpl: SlideTemplate) => {
+    const built = tpl.build({ months, budgetMonths });
+    if (built.length === 0) {
+      // "Em Branco" — apenas fecha o modal.
+      return;
+    }
+    // Insere cada slide via addItem + updateItem para reaproveitar a lógica
+    // do store (sem precisar de uma nova action setItems).
+    for (const slide of built) {
+      addItem(slide.kind);
+      const state = useSlidesFlow.getState();
+      const created = state.items[state.items.length - 1];
+      if (!created) continue;
+      updateItem(created.id, () => ({ ...slide, id: created.id } as SlideItem));
+    }
+    toast.success(`Template "${tpl.name}" aplicado`);
+  };
 
   const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? null, [items, selectedId]);
   const readyAll = items.every((i) => isItemReady(i).ok);
@@ -1059,6 +1089,19 @@ export default function SlidesBeta() {
             </div>
             <TooltipProvider delayDuration={200}>
               <div className="flex items-center gap-1.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline" size="sm" className="h-8 gap-1.5"
+                      onClick={() => setGalleryOpen(true)}
+                      aria-label="Abrir galeria de templates"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Templates
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Galeria de templates</TooltipContent>
+                </Tooltip>
                 <SavePresetDialog />
                 {items.length > 0 && (
                   <Tooltip>
@@ -1114,7 +1157,7 @@ export default function SlidesBeta() {
             <div className="mx-auto max-w-2xl px-4 py-5">
               <FlowDropZone>
                 {items.length === 0 ? (
-                  <EmptyFlow onAdd={addWithDefaults} />
+                  <EmptyFlow onAdd={addWithDefaults} onOpenGallery={() => setGalleryOpen(true)} />
                 ) : (
                   <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
@@ -1172,6 +1215,12 @@ export default function SlidesBeta() {
         })() : null}
       </DragOverlay>
       </DndContext>
+      <TemplateGallery
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        ctx={{ months, budgetMonths }}
+        onSelect={applyTemplate}
+      />
     </>
   );
 }
