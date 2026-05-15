@@ -762,6 +762,22 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 );
               })}
 
+              {/* Inline text edit toolbar. */}
+              {(() => {
+                if (!inlineEditId) return null;
+                const blk = config.blocks.find((b) => b.id === inlineEditId);
+                if (!blk || (blk.kind !== "title" && blk.kind !== "text")) return null;
+                return (
+                  <InlineTextToolbar
+                    block={blk as TitleBlock | TextBlock}
+                    scale={scale}
+                    onPatch={(patch) =>
+                      patchBlockAction(blk.id, patch, "Alterar estilo")
+                    }
+                  />
+                );
+              })()}
+
               {/* Contextual handles for selected shape blocks. */}
               {config.blocks
                 .filter((b): b is ShapeBlock =>
