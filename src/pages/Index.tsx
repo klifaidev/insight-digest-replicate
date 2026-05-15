@@ -1,22 +1,47 @@
 import { Topbar } from "@/components/pricing/Topbar";
-import { FilterGrid } from "@/components/pricing/FilterGrid";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { usePricing } from "@/store/pricing";
+import { useBudget } from "@/store/budget";
 import { useMonthsInfo } from "@/store/selectors";
-import { applyFilters, computeKPIs, computeKPIComparison, getKpiComparisonContext } from "@/lib/analytics";
-import { formatBRL, formatNum, formatPct, formatTon } from "@/lib/format";
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import {
+  applyFilters,
+  computeKPIs,
+  computeKPIComparison,
+  getKpiComparisonContext,
+  generateAlerts,
+  type Alert,
+} from "@/lib/analytics";
+import { formatBRL, formatNum, formatPct, formatTon, monthLabel } from "@/lib/format";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Minus,
+  Sparkles,
+  BarChart3,
+  TrendingUp,
+  Database,
+  ArrowRight,
+  Upload as UploadIcon,
+  CheckCircle2,
+  AlertTriangle,
+  AlertCircle,
+  Target,
+  TrendingDown,
+  Layers,
+  Activity,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Sparkles, BarChart3, TrendingUp, Database, ArrowRight, Upload as UploadIcon } from "lucide-react";
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Index() {
   const rows = usePricing((s) => s.rows);
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
   const metric = usePricing((s) => s.metric);
+  const budgetRows = useBudget((s) => s.rows);
   const months = useMonthsInfo();
+  const navigate = useNavigate();
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const kpis = useMemo(() => computeKPIs(filtered, metric), [filtered, metric]);
@@ -28,13 +53,19 @@ export default function Index() {
     return { ...cmp, label: ctx.label };
   }, [rows, filters, selected, filtered, metric]);
 
+  const alerts = useMemo(
+    () => generateAlerts(rows, budgetRows, metric).slice(0, 5),
+    [rows, budgetRows, metric],
+  );
+
+  const lastMonth = months.length ? months[months.length - 1] : null;
   const empty = rows.length === 0;
 
   return (
     <>
       <Topbar
         title="Pricing Analytics — Harald"
-        subtitle="Análise de pricing e lucratividade B2B"
+        subtitle="Painel executivo de pricing e lucratividade B2B"
       />
 
       <div className="space-y-6 px-8 py-6 animate-fade-up">
@@ -100,6 +131,23 @@ export default function Index() {
           </>
         ) : (
           <>
+            {/* Linha de status */}
+            {lastMonth && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
+                  <Activity className="h-3 w-3" />
+                  {monthLabel(lastMonth.mes, lastMonth.ano)}
+                </span>
+                <span className="rounded-full border border-border/60 bg-card/40 px-3 py-1 text-[11px] text-muted-foreground">
+                  {lastMonth.fy}
+                </span>
+                <span className="rounded-full border border-border/60 bg-card/40 px-3 py-1 text-[11px] text-muted-foreground">
+                  {months.length} {months.length === 1 ? "mês carregado" : "meses carregados"}
+                </span>
+              </div>
+            )}
+
+            {/* KPIs */}
             <GlassCard className="grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
               <Stat
                 label="ROL Total"
@@ -133,13 +181,128 @@ export default function Index() {
               />
             </GlassCard>
 
-            <GlassCard>
-              <FilterGrid />
+            {/* Atenção necessária */}
+            <GlassCard
+              className={cn(
+                "border-l-4",
+                alerts.length > 0 ? "border-l-warning" : "border-l-success",
+              )}
+            >
+              <header className="mb-3 flex items-center gap-2">
+                {alerts.length > 0 ? (
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                )}
+                <h3 className="text-sm font-medium">Atenção necessária</h3>
+                {alerts.length > 0 && (
+                  <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+                    {alerts.length} {alerts.length === 1 ? "alerta" : "alertas"}
+                  </span>
+                )}
+              </header>
+              {alerts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Tudo certo — nenhum ponto de atenção no período atual.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {alerts.map((a) => (
+                    <AlertCard key={a.id} alert={a} onClick={() => navigate(a.page)} />
+                  ))}
+                </div>
+              )}
             </GlassCard>
+
+            {/* Atalhos rápidos */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <ShortcutCard
+                to="/bridge"
+                icon={TrendingUp}
+                title="Bridge PVM"
+                desc="O que explica a variação de margem entre dois períodos?"
+              />
+              <ShortcutCard
+                to="/abc"
+                icon={Layers}
+                title="Portfólio de SKUs"
+                desc="Quais SKUs sustentam o portfólio e quais drenam margem?"
+              />
+              <ShortcutCard
+                to="/budget"
+                icon={Target}
+                title="Budget"
+                desc="Vou fechar o ano dentro do budget? Onde está o gap?"
+              />
+              <ShortcutCard
+                to="/canais"
+                icon={BarChart3}
+                title="Canais"
+                desc="Quais canais estão crescendo ou perdendo margem?"
+              />
+            </div>
           </>
         )}
       </div>
     </>
+  );
+}
+
+const ALERT_ICONS: Record<string, typeof AlertCircle> = {
+  "trending-down": TrendingDown,
+  "alert-triangle": AlertTriangle,
+  "alert-circle": AlertCircle,
+  target: Target,
+};
+
+function AlertCard({ alert, onClick }: { alert: Alert; onClick: () => void }) {
+  const Icon = ALERT_ICONS[alert.icon] ?? AlertCircle;
+  const tone =
+    alert.severity === "high"
+      ? "border-destructive/40 bg-destructive/5 hover:border-destructive/70 text-destructive"
+      : alert.severity === "medium"
+      ? "border-warning/40 bg-warning/5 hover:border-warning/70 text-warning"
+      : "border-border/60 bg-card/40 hover:border-primary/40 text-muted-foreground";
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "group flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all",
+        tone,
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="flex-1 text-sm text-foreground">{alert.message}</span>
+      <ArrowRight className="h-4 w-4 shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5 group-hover:opacity-100" />
+    </button>
+  );
+}
+
+function ShortcutCard({
+  to,
+  icon: Icon,
+  title,
+  desc,
+}: {
+  to: string;
+  icon: typeof TrendingUp;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-border/60 bg-card/40 p-5 transition-all hover:border-primary/50 hover:shadow-glow"
+    >
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="flex-1">
+        <h4 className="text-sm font-medium">{title}</h4>
+        <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
+      </div>
+      <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+    </Link>
   );
 }
 
