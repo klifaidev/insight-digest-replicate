@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
+import { useHasActiveFilters } from "./ActiveFiltersBar";
 import { AlertTriangle, BarChart3, Coins, Database, FileSpreadsheet, Home, KanbanSquare, LineChart, Network, Presentation, TableProperties, Target, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 
