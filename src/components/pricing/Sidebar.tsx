@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
+import { useHasActiveFilters } from "./ActiveFiltersBar";
 import { AlertTriangle, BarChart3, Coins, Database, FileSpreadsheet, Home, KanbanSquare, LineChart, Network, Presentation, TableProperties, Target, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 
@@ -28,6 +29,7 @@ export function Sidebar() {
   const setMetric = usePricing((s) => s.setMetric);
   const missing = usePricing((s) => s.missing);
   const monthsCount = useMonthsInfo().length;
+  const hasFilters = useHasActiveFilters();
 
   const cm = useMemo(() => metric === "cm", [metric]);
   const missingCount = useMemo(
@@ -62,7 +64,15 @@ export function Sidebar() {
                 className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 activeClassName="bg-sidebar-accent text-sidebar-foreground !text-primary font-medium shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]"
               >
-                <item.icon className="h-4 w-4" />
+                <span className="relative inline-flex">
+                  <item.icon className="h-4 w-4" />
+                  {hasFilters && (
+                    <span
+                      className="absolute -right-1 -top-1 h-[5px] w-[5px] rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary))]"
+                      title="Filtros ativos aplicados"
+                    />
+                  )}
+                </span>
                 <span>{item.label}</span>
               </NavLink>
             </li>
