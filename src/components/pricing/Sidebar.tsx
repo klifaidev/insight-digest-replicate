@@ -64,7 +64,15 @@ export function Sidebar() {
                 className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 activeClassName="bg-sidebar-accent text-sidebar-foreground !text-primary font-medium shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]"
               >
-                <item.icon className="h-4 w-4" />
+                <span className="relative inline-flex">
+                  <item.icon className="h-4 w-4" />
+                  {hasFilters && (
+                    <span
+                      className="absolute -right-1 -top-1 h-[5px] w-[5px] rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary))]"
+                      title="Filtros ativos aplicados"
+                    />
+                  )}
+                </span>
                 <span>{item.label}</span>
               </NavLink>
             </li>
