@@ -30,7 +30,6 @@ import {
 } from "recharts";
 
 type PerfBy = "categoria" | "subcategoria" | "sku";
-type PerfBy = "categoria" | "subcategoria" | "sku";
 
 const MES_NOMES = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
