@@ -1,16 +1,33 @@
 import { Topbar } from "@/components/pricing/Topbar";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { KpiCard } from "@/components/pricing/KpiCard";
-import { BubbleChart } from "@/components/pricing/BubbleChart";
 import { AbcBar } from "@/components/pricing/AbcBar";
 import { DataTable } from "@/components/pricing/DataTable";
 import { EmptyState } from "@/components/pricing/EmptyState";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
-import { aggregateBy, applyFilters, computeKPIs, computeKPIComparison, getKpiComparisonContext } from "@/lib/analytics";
+import {
+  aggregateBy,
+  applyFilters,
+  computeKPIs,
+  computeKPIComparison,
+  getKpiComparisonContext,
+  computeCanalTrend,
+} from "@/lib/analytics";
 import { formatBRL, formatNum, formatPct, formatTon } from "@/lib/format";
 import { useMemo, useState } from "react";
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 type GroupBy = "categoria" | "subcategoria";
 type PerfBy = "categoria" | "subcategoria" | "sku";
