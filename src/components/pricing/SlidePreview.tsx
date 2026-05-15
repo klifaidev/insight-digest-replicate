@@ -661,7 +661,7 @@ export function SlidePreview({ item }: { item: SlideItem }) {
       <ScaledPreview item={item} />
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="max-w-[900px] p-0 gap-0">
+        <DialogContent className="max-w-[860px] p-0 gap-0">
           <DialogHeader className="px-5 pt-5 pb-3 border-b border-border/40">
             <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
           </DialogHeader>
