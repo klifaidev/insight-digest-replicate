@@ -926,6 +926,25 @@ export default function SlidesBeta() {
   const [fileName, setFileName] = useState("apresentacao-pricing.pptx");
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [dragging, setDragging] = useState<{ source: "catalog"; kind: SlideKind } | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+
+  const applyTemplate = (tpl: SlideTemplate) => {
+    const built = tpl.build({ months, budgetMonths });
+    if (built.length === 0) {
+      // "Em Branco" — apenas fecha o modal.
+      return;
+    }
+    // Insere cada slide via addItem + updateItem para reaproveitar a lógica
+    // do store (sem precisar de uma nova action setItems).
+    for (const slide of built) {
+      addItem(slide.kind);
+      const state = useSlidesFlow.getState();
+      const created = state.items[state.items.length - 1];
+      if (!created) continue;
+      updateItem(created.id, () => ({ ...slide, id: created.id } as SlideItem));
+    }
+    toast.success(`Template "${tpl.name}" aplicado`);
+  };
 
   const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? null, [items, selectedId]);
   const readyAll = items.every((i) => isItemReady(i).ok);
