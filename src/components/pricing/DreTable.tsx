@@ -157,9 +157,6 @@ function getBudgetValue(lineId: string, a: BudgetAgg): number | null {
     case "vol": return a.volume;
     case "rol": return a.rol;
     case "rolKg": return safe(a.rol, a.volume);
-    case "cogs": return -Math.abs(a.cpv);
-    case "mb": return a.rol - a.cpv;
-    case "mbPct": return safe(a.rol - a.cpv, a.rol);
     case "cm": return a.cm;
     case "cmPct": return safe(a.cm, a.rol);
     case "cmKg": return safe(a.cm, a.volume);
