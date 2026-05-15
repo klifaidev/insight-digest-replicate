@@ -12,7 +12,7 @@ import { formatBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowRight, Calendar, CalendarDays, Download, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowRight, BookOpen, Calendar, CalendarDays, Download, TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
