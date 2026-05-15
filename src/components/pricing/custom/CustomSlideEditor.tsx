@@ -1068,6 +1068,9 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         </div>
       </div>
 
+      {/* Asset library */}
+      <AssetLibrary open={assetsOpen} onOpenChange={setAssetsOpen} />
+
       {/* Templates picker */}
       <TemplatePicker
         open={tplOpen}
