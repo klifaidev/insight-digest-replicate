@@ -87,11 +87,22 @@ export function getKpiComparisonContext(
   filters: Filters,
   selectedPeriods: string[] | null,
 ): { previousRows: PricingRow[]; label: string } | null {
-  const allPeriods = Array.from(new Set(rows.map((r) => r.periodo))).sort();
+  // Sort periods chronologically by (ano, mes), not lexicographically — "001.2026"
+  // would otherwise sort before "012.2025" and break January's previous-month lookup.
+  const periodMeta = new Map<string, { ano: number; mes: number; fy: string }>();
+  for (const r of rows) {
+    if (!periodMeta.has(r.periodo)) {
+      periodMeta.set(r.periodo, { ano: r.ano, mes: r.mes, fy: r.fy });
+    }
+  }
+  const allPeriods = Array.from(periodMeta.keys()).sort((a, b) => {
+    const ma = periodMeta.get(a)!;
+    const mb = periodMeta.get(b)!;
+    return ma.ano - mb.ano || ma.mes - mb.mes;
+  });
   if (allPeriods.length < 2) return null;
 
-  const fyOf = (p: string): string | undefined =>
-    rows.find((r) => r.periodo === p)?.fy;
+  const fyOf = (p: string): string | undefined => periodMeta.get(p)?.fy;
 
   let previousPeriods: string[] = [];
   let label = "";
