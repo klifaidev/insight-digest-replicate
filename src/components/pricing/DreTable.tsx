@@ -94,9 +94,6 @@ const LINES: DreLine[] = [
   { id: "vol", label: "Volume (Kg)", kind: "kg", bold: true, get: (a) => a.volume },
   { id: "rol", label: "Receita Líquida", kind: "value", get: (a) => a.rol },
   { id: "rolKg", label: "ROL (R$/Kg)", kind: "perKg", bold: true, get: (a) => safe(a.rol, a.volume) },
-  { id: "cogs", label: "CPV (Custo do Produto)", kind: "value", get: (a) => -Math.abs(a.cogs) },
-  { id: "mb", label: "Margem Bruta", kind: "value", bold: true, get: (a) => a.mb },
-  { id: "mbPct", label: "Margem Bruta (%/ROL)", kind: "pct", bold: true, anomaly: true, get: (a) => safe(a.mb, a.rol) },
   { id: "cv", label: "Custo Variável", kind: "value", get: (a) => -Math.abs(a.custoVariavel) },
   { id: "cvPctRol", label: "Custo Variável (%/ROL)", kind: "pct", get: (a) => -safe(Math.abs(a.custoVariavel), a.rol) },
   { id: "cvKg", label: "Custo Variável (R$/Kg)", kind: "perKg", bold: true, get: (a) => -safe(Math.abs(a.custoVariavel), a.volume) },
@@ -160,9 +157,6 @@ function getBudgetValue(lineId: string, a: BudgetAgg): number | null {
     case "vol": return a.volume;
     case "rol": return a.rol;
     case "rolKg": return safe(a.rol, a.volume);
-    case "cogs": return -Math.abs(a.cpv);
-    case "mb": return a.rol - a.cpv;
-    case "mbPct": return safe(a.rol - a.cpv, a.rol);
     case "cm": return a.cm;
     case "cmPct": return safe(a.cm, a.rol);
     case "cmKg": return safe(a.cm, a.volume);
