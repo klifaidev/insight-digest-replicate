@@ -1135,7 +1135,7 @@ export default function SlidesBeta() {
             <div className="mx-auto max-w-2xl px-4 py-5">
               <FlowDropZone>
                 {items.length === 0 ? (
-                  <EmptyFlow onAdd={addWithDefaults} />
+                  <EmptyFlow onAdd={addWithDefaults} onOpenGallery={() => setGalleryOpen(true)} />
                 ) : (
                   <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
