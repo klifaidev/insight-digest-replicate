@@ -142,6 +142,11 @@ export function setThemeAction(themeId: string, themeBg: string) {
   mutate("Alterar slide", (c) => ({ ...c, theme: themeId, background: themeBg }));
 }
 
+/** Define ou limpa a imagem de fundo do slide. Passe undefined para limpar. */
+export function setBackgroundImageAction(src: string | undefined) {
+  mutate("Alterar slide", (c) => ({ ...c, backgroundImage: src }));
+}
+
 export function addBlockAction(kind: CustomBlockKind): string | null {
   const cur = baseStore.getState().config;
   if (!cur) return null;
