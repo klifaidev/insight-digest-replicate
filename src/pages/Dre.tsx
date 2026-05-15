@@ -61,7 +61,13 @@ export default function Dre() {
             </div>
             <PeriodModeToggle mode={mode} onChange={setMode} />
           </header>
-          <DreTable rows={filtered} months={months} mode={mode} />
+          <DreTable
+            rows={filtered}
+            months={months}
+            mode={mode}
+            budgetRows={filteredBudget}
+            allRows={filtered}
+          />
         </GlassCard>
       </div>
     </>
