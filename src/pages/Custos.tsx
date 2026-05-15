@@ -33,6 +33,55 @@ export default function Custos() {
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const evolution = useMemo(() => computeCostEvolution(filtered), [filtered]);
 
+  // Composition of variable cost per period (MP, Embalagem, MOD, CIF)
+  const composition = useMemo(() => {
+    const map = new Map<string, {
+      periodo: string; label: string;
+      materiaPrima: number; embalagem: number; mod: number; cif: number;
+      rol: number;
+      hasMP: boolean; hasEmb: boolean; hasMod: boolean; hasCif: boolean;
+    }>();
+    for (const r of filtered) {
+      const cur = map.get(r.periodo) ?? {
+        periodo: r.periodo,
+        label: `${String(r.mes).padStart(2, "0")}/${String(r.ano).slice(-2)}`,
+        materiaPrima: 0, embalagem: 0, mod: 0, cif: 0, rol: 0,
+        hasMP: false, hasEmb: false, hasMod: false, hasCif: false,
+      };
+      cur.rol += r.rol;
+      if (r.materiaPrima != null) { cur.materiaPrima += r.materiaPrima; cur.hasMP = true; }
+      if (r.embalagem != null) { cur.embalagem += r.embalagem; cur.hasEmb = true; }
+      if (r.mod != null) { cur.mod += r.mod; cur.hasMod = true; }
+      if (r.cif != null) { cur.cif += r.cif; cur.hasCif = true; }
+      map.set(r.periodo, cur);
+    }
+    return Array.from(map.values()).sort((a, b) => a.periodo.localeCompare(b.periodo));
+  }, [filtered]);
+
+  const compTotals = useMemo(() => {
+    return composition.reduce(
+      (acc, r) => {
+        acc.materiaPrima += r.materiaPrima;
+        acc.embalagem += r.embalagem;
+        acc.mod += r.mod;
+        acc.cif += r.cif;
+        acc.rol += r.rol;
+        acc.hasMP = acc.hasMP || r.hasMP;
+        acc.hasEmb = acc.hasEmb || r.hasEmb;
+        acc.hasMod = acc.hasMod || r.hasMod;
+        acc.hasCif = acc.hasCif || r.hasCif;
+        return acc;
+      },
+      { materiaPrima: 0, embalagem: 0, mod: 0, cif: 0, rol: 0, hasMP: false, hasEmb: false, hasMod: false, hasCif: false },
+    );
+  }, [composition]);
+
+  const showComposition =
+    (compTotals.hasMP && compTotals.materiaPrima !== 0) ||
+    (compTotals.hasEmb && compTotals.embalagem !== 0) ||
+    (compTotals.hasMod && compTotals.mod !== 0) ||
+    (compTotals.hasCif && compTotals.cif !== 0);
+
   const totals = useMemo(() => {
     return evolution.reduce(
       (acc, row) => {
@@ -50,6 +99,8 @@ export default function Custos() {
   const custoVariavelPct = totals.rol > 0 ? totals.custoVariavel / totals.rol : 0;
   const custoFixoPct = totals.rol > 0 ? totals.custoFixo / totals.rol : 0;
   const custoTotalPorKg = totals.volumeKg > 0 ? custoTotal / totals.volumeKg : 0;
+  const mpPctRol = totals.rol > 0 ? compTotals.materiaPrima / totals.rol : 0;
+  const embPctRol = totals.rol > 0 ? compTotals.embalagem / totals.rol : 0;
 
   if (rows.length === 0) {
     return (
