@@ -13,9 +13,9 @@ import { exportBudgetEvoPpt } from "@/lib/exportPpt";
 import { toast } from "sonner";
 
 import { formatBRL, formatPct, monthLabel } from "@/lib/format";
-import { Download, Target, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, Target, TrendingDown, TrendingUp, XCircle } from "lucide-react";
 import {
-  Area, Bar, BarChart, CartesianGrid, ComposedChart, Line,
+  Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
