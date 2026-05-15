@@ -532,8 +532,32 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 width: CANVAS_W,
                 height: CANVAS_H,
                 background: config.background === "transparent" ? "#FFFFFF" : `#${config.background}`,
+                backgroundImage: config.backgroundImage ? `url(${config.backgroundImage})` : undefined,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
                 position: "relative",
                 overflow: "hidden",
+              }}
+              onDragOver={(e) => {
+                if (e.dataTransfer.types.includes("application/x-slide-asset")) {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "copy";
+                }
+              }}
+              onDrop={(e) => {
+                const src = e.dataTransfer.getData("application/x-slide-asset");
+                if (!src) return;
+                e.preventDefault();
+                const pos = clientToCanvas(canvasRef.current, e.clientX, e.clientY, scaleRef.current);
+                const id = addBlockAction("image");
+                if (id) {
+                  const w = 360, h = 220;
+                  const x = pos ? Math.max(0, pos.x - w / 2) : 60;
+                  const y = pos ? Math.max(0, pos.y - h / 2) : 60;
+                  patchBlockAction(id, { src, w, h, x, y } as Partial<CustomBlock>, "Alterar dados");
+                  setSelection([id]);
+                }
               }}
             >
               {/* Snap-to-grid background — dot pattern, behind blocks. */}
