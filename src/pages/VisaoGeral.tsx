@@ -29,7 +29,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-type GroupBy = "categoria" | "subcategoria";
+type PerfBy = "categoria" | "subcategoria" | "sku";
 type PerfBy = "categoria" | "subcategoria" | "sku";
 
 const MES_NOMES = [
