@@ -217,6 +217,8 @@ export default function BridgePvm() {
               <Waterfall data={result} />
             </GlassCard>
 
+            <PvmReadingCard result={result} />
+
             <div className="grid gap-4 xl:grid-cols-3">
               {EFFECTS.map((effect) => (
                 <EffectRankingCard
