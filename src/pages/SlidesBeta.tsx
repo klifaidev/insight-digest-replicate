@@ -1089,6 +1089,19 @@ export default function SlidesBeta() {
             </div>
             <TooltipProvider delayDuration={200}>
               <div className="flex items-center gap-1.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline" size="sm" className="h-8 gap-1.5"
+                      onClick={() => setGalleryOpen(true)}
+                      aria-label="Abrir galeria de templates"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Templates
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Galeria de templates</TooltipContent>
+                </Tooltip>
                 <SavePresetDialog />
                 {items.length > 0 && (
                   <Tooltip>
