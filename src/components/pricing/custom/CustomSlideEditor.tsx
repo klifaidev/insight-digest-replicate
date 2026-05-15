@@ -162,6 +162,14 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   // Inline text editing (double-click no bloco title/text).
   const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  // Limpa inline edit se o bloco for excluído ou ficar bloqueado.
+  useEffect(() => {
+    if (!inlineEditId) return;
+    const blk = config.blocks.find((b) => b.id === inlineEditId);
+    if (!blk || blk.locked || (blk.kind !== "title" && blk.kind !== "text")) {
+      setInlineEditId(null);
+    }
+  }, [inlineEditId, config.blocks]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1);
