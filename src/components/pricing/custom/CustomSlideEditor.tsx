@@ -157,6 +157,8 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
   // Marquee selection rectangle (canvas-space coords).
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  // Inline text editing (double-click no bloco title/text).
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1);
