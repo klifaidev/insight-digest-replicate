@@ -4,18 +4,37 @@ import { GlassCard } from "@/components/pricing/GlassCard";
 import { Topbar } from "@/components/pricing/Topbar";
 import { applyFilters } from "@/lib/analytics";
 import { usePricing } from "@/store/pricing";
+import { useBudget } from "@/store/budget";
 import { useMonthsInfo } from "@/store/selectors";
 import { useMemo, useState } from "react";
 import { Calendar, Sigma } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { BudgetRow } from "@/lib/budget";
+import type { Filters } from "@/lib/types";
+
+function applyBudgetFilters(rows: BudgetRow[], filters: Filters): BudgetRow[] {
+  return rows.filter((r) => {
+    for (const [k, vals] of Object.entries(filters)) {
+      if (!vals || vals.length === 0) continue;
+      const v = (r as unknown as Record<string, unknown>)[k] as string | undefined;
+      if (!v || !vals.includes(v)) return false;
+    }
+    return true;
+  });
+}
 
 export default function Dre() {
   const rows = usePricing((s) => s.rows);
   const filters = usePricing((s) => s.filters);
+  const budgetRowsAll = useBudget((s) => s.rows);
   const months = useMonthsInfo();
   const [mode, setMode] = useState<DrePeriodMode>("month");
 
   const filtered = useMemo(() => applyFilters(rows, filters, null), [rows, filters]);
+  const filteredBudget = useMemo(
+    () => applyBudgetFilters(budgetRowsAll, filters),
+    [budgetRowsAll, filters],
+  );
 
   if (rows.length === 0) {
     return (
