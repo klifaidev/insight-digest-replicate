@@ -13,9 +13,9 @@ import { exportBudgetEvoPpt } from "@/lib/exportPpt";
 import { toast } from "sonner";
 
 import { formatBRL, formatPct, monthLabel } from "@/lib/format";
-import { Download, Target, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, Target, TrendingDown, TrendingUp, XCircle } from "lucide-react";
 import {
-  Area, Bar, BarChart, CartesianGrid, ComposedChart, Line,
+  Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
@@ -355,6 +355,127 @@ export default function Budget() {
     return Array.from(map.values()).sort((a, b) => b.realRol + b.budRol - (a.realRol + a.budRol));
   }, [realFiltered, budgetFiltered, dim]);
 
+  // ---------------------------------------------------------------
+  // Painel YTD + Projeção de fechamento (FY mais recente nos dados Real)
+  // ---------------------------------------------------------------
+  const projection = useMemo(() => {
+    // FY mais recente que tenha pelo menos uma linha Real
+    const realByFy = new Map<string, { ano: number; mes: number }[]>();
+    for (const r of budgetRows) {
+      if (r.kind !== "real") continue;
+      const arr = realByFy.get(r.fy) ?? [];
+      arr.push({ ano: r.ano, mes: r.mes });
+      realByFy.set(r.fy, arr);
+    }
+    const fys = Array.from(realByFy.keys()).sort();
+    const currentFy = fys[fys.length - 1];
+    if (!currentFy) return null;
+
+    // Períodos com Real no FY atual (ignora seleção de meses, mas respeita filtros dim)
+    const filteredNoPeriod = applyBudgetFilters(budgetRows, filters, null);
+    const currentFyRows = filteredNoPeriod.filter((r) => r.fy === currentFy);
+    const realPeriods = new Set(
+      currentFyRows.filter((r) => r.kind === "real").map((r) => r.periodo),
+    );
+
+    let realRolYtd = 0, realCmYtd = 0, realVolYtd = 0;
+    let budRolYtd = 0, budCmYtd = 0, budVolYtd = 0;
+    let budRolFy = 0, budCmFy = 0, budVolFy = 0;
+    for (const r of currentFyRows) {
+      if (r.kind === "real") {
+        realRolYtd += r.receita; realCmYtd += r.cm; realVolYtd += r.volumeKg;
+      } else {
+        budRolFy += r.receita; budCmFy += r.cm; budVolFy += r.volumeKg;
+        if (realPeriods.has(r.periodo)) {
+          budRolYtd += r.receita; budCmYtd += r.cm; budVolYtd += r.volumeKg;
+        }
+      }
+    }
+    const ratio = budRolYtd > 0 ? realRolYtd / budRolYtd : 0;
+    const remainingBud = budRolFy - budRolYtd;
+    const projected = realRolYtd + remainingBud * ratio;
+    const attainment = budRolFy > 0 ? projected / budRolFy : 0;
+    const status: "ok" | "risk" | "off" =
+      attainment >= 0.98 ? "ok" : attainment >= 0.9 ? "risk" : "off";
+    const gapAbs = realRolYtd - budRolYtd;
+    const gapPct = budRolYtd > 0 ? gapAbs / budRolYtd : 0;
+
+    return {
+      currentFy,
+      realRolYtd, budRolYtd, budRolFy, projected, attainment, status,
+      gapAbs, gapPct, ratio,
+      realCmYtd, budCmYtd, budCmFy, realVolYtd, budVolYtd, budVolFy,
+      monthsRealized: realPeriods.size,
+    };
+  }, [budgetRows, filters]);
+
+  // Waterfall Budget YTD → Δ por dimensão → Real YTD
+  const waterfallData = useMemo(() => {
+    if (!projection) return [];
+    const filteredNoPeriod = applyBudgetFilters(budgetRows, filters, null);
+    const fyRows = filteredNoPeriod.filter((r) => r.fy === projection.currentFy);
+    const realPeriods = new Set(
+      fyRows.filter((r) => r.kind === "real").map((r) => r.periodo),
+    );
+    type Cell = { real: number; bud: number };
+    const map = new Map<string, Cell>();
+    for (const r of fyRows) {
+      const k = String((r as unknown as Record<string, unknown>)[dim] ?? "—");
+      const c = map.get(k) ?? { real: 0, bud: 0 };
+      if (r.kind === "real") c.real += r.receita;
+      else if (realPeriods.has(r.periodo)) c.bud += r.receita;
+      map.set(k, c);
+    }
+    const gaps = Array.from(map.entries())
+      .map(([key, v]) => ({ key, gap: v.real - v.bud }))
+      .filter((g) => Math.abs(g.gap) > 0)
+      .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))
+      .slice(0, 6);
+    let running = projection.budRolYtd;
+    const out: Array<{ name: string; base: number; value: number; type: "anchor" | "pos" | "neg"; total: number }> = [];
+    out.push({ name: "Budget YTD", base: 0, value: projection.budRolYtd, type: "anchor", total: projection.budRolYtd });
+    for (const g of gaps) {
+      const isPos = g.gap >= 0;
+      const next = running + g.gap;
+      out.push({
+        name: g.key,
+        base: isPos ? running : next,
+        value: Math.abs(g.gap),
+        type: isPos ? "pos" : "neg",
+        total: next,
+      });
+      running = next;
+    }
+    out.push({ name: "Real YTD", base: 0, value: projection.realRolYtd, type: "anchor", total: projection.realRolYtd });
+    return out;
+  }, [projection, budgetRows, filters, dim]);
+
+  // Tabela de desvios por dimensão (YTD do FY corrente)
+  const deviationRows = useMemo(() => {
+    if (!projection) return [] as Array<{ key: string; bud: number; real: number; gapAbs: number; gapPct: number }>;
+    const filteredNoPeriod = applyBudgetFilters(budgetRows, filters, null);
+    const fyRows = filteredNoPeriod.filter((r) => r.fy === projection.currentFy);
+    const realPeriods = new Set(
+      fyRows.filter((r) => r.kind === "real").map((r) => r.periodo),
+    );
+    const map = new Map<string, { bud: number; real: number }>();
+    for (const r of fyRows) {
+      const k = String((r as unknown as Record<string, unknown>)[dim] ?? "—");
+      const c = map.get(k) ?? { bud: 0, real: 0 };
+      if (r.kind === "real") c.real += r.receita;
+      else if (realPeriods.has(r.periodo)) c.bud += r.receita;
+      map.set(k, c);
+    }
+    return Array.from(map.entries())
+      .map(([key, v]) => {
+        const gapAbs = v.real - v.bud;
+        const gapPct = v.bud > 0 ? gapAbs / v.bud : 0;
+        return { key, bud: v.bud, real: v.real, gapAbs, gapPct };
+      })
+      .filter((r) => r.bud > 0 || r.real > 0)
+      .sort((a, b) => a.gapAbs - b.gapAbs);
+  }, [projection, budgetRows, filters, dim]);
+
   if (budgetRows.length === 0) {
     return (
       <>
@@ -407,6 +528,126 @@ export default function Budget() {
             accent="amber"
           />
         </div>
+
+        {/* Painel YTD + Projeção de fechamento */}
+        {projection && <ProjectionPanel p={projection} />}
+
+        {/* Waterfall Budget YTD → decomposição → Real YTD */}
+        {projection && waterfallData.length > 0 && (
+          <GlassCard>
+            <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">Waterfall Budget vs. Real YTD ({projection.currentFy})</h3>
+                <p className="text-[11px] text-muted-foreground">Decomposição do gap por <span className="capitalize">{dim}</span> (top 6 contribuintes)</p>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-secondary/30 p-1">
+                {(["canal", "categoria", "subcategoria", "marca"] as Dim[]).map((d) => (
+                  <Button key={d} size="sm" variant={dim === d ? "secondary" : "ghost"} className="h-7 px-3 text-xs capitalize" onClick={() => setDim(d)}>
+                    {d}
+                  </Button>
+                ))}
+              </div>
+            </header>
+            <div className="h-[340px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={waterfallData} margin={{ top: 24, right: 16, left: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.35} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={0} angle={-15} textAnchor="end" height={60} />
+                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => fmtCurrencyBR(v)} width={80} />
+                  <Tooltip
+                    cursor={{ fill: "hsl(var(--foreground))", fillOpacity: 0.04 }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload as typeof waterfallData[number];
+                      const signed = d.type === "neg" ? -d.value : d.value;
+                      return (
+                        <div className="rounded-xl border border-border/60 bg-popover/95 px-3 py-2 text-xs shadow-2xl backdrop-blur-md">
+                          <p className="mb-1 font-medium">{d.name}</p>
+                          {d.type === "anchor" ? (
+                            <p className="tabular-nums">{fmtCurrencyBR(d.value)}</p>
+                          ) : (
+                            <>
+                              <p className={cn("tabular-nums font-semibold", d.type === "pos" ? "text-success" : "text-destructive")}>
+                                {signed >= 0 ? "+" : ""}{fmtCurrencyBR(signed)}
+                              </p>
+                              <p className="text-muted-foreground">Acumulado: <span className="tabular-nums">{fmtCurrencyBR(d.total)}</span></p>
+                            </>
+                          )}
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar dataKey="base" stackId="w" fill="transparent" />
+                  <Bar dataKey="value" stackId="w" radius={[4, 4, 0, 0]}>
+                    {waterfallData.map((d, i) => (
+                      <Cell
+                        key={i}
+                        fill={d.type === "anchor" ? "hsl(var(--primary))" : d.type === "pos" ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Tabela de desvios por dimensão (YTD) */}
+        {projection && deviationRows.length > 0 && (
+          <GlassCard>
+            <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">Desvios por <span className="capitalize">{dim}</span> — YTD {projection.currentFy}</h3>
+                <p className="text-[11px] text-muted-foreground">Linhas com gap inferior a -10% destacadas em vermelho</p>
+              </div>
+            </header>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="capitalize">{dim}</TableHead>
+                    <TableHead className="text-right">Budget YTD</TableHead>
+                    <TableHead className="text-right">Real YTD</TableHead>
+                    <TableHead className="text-right">Gap R$</TableHead>
+                    <TableHead className="text-right">Gap %</TableHead>
+                    <TableHead className="text-right">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {deviationRows.map((r) => {
+                    const critical = r.gapPct < -0.1;
+                    const status: "ok" | "risk" | "off" =
+                      r.gapPct >= -0.02 ? "ok" : r.gapPct >= -0.1 ? "risk" : "off";
+                    return (
+                      <TableRow key={r.key} className={cn(critical && "bg-destructive/10 hover:bg-destructive/15")}>
+                        <TableCell className="font-medium">{r.key}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtCurrencyBR(r.bud)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtCurrencyBR(r.real)}</TableCell>
+                        <TableCell className={cn("text-right tabular-nums font-medium", r.gapAbs >= 0 ? "text-success" : "text-destructive")}>
+                          {r.gapAbs >= 0 ? "+" : ""}{fmtCurrencyBR(r.gapAbs)}
+                        </TableCell>
+                        <TableCell className="text-right"><VarBadge v={r.gapPct} /></TableCell>
+                        <TableCell className="text-right">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "px-2 text-[10px] font-bold",
+                              status === "ok" && "bg-success/15 text-success border border-success/30",
+                              status === "risk" && "bg-warning/15 text-warning border border-warning/30",
+                              status === "off" && "bg-destructive/15 text-destructive border border-destructive/30",
+                            )}
+                          >
+                            {status === "ok" ? "No caminho" : status === "risk" ? "Em risco" : "Fora"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </GlassCard>
+        )}
 
         {/* Overview CM/VOL — 4 evolutivos Real vs Budget */}
         <GlassCard>
@@ -612,5 +853,127 @@ export default function Budget() {
         </div>
       </div>
     </>
+  );
+}
+
+// ---------------------------------------------------------------
+// Painel YTD + Projeção de fechamento
+// ---------------------------------------------------------------
+interface ProjectionData {
+  currentFy: string;
+  realRolYtd: number; budRolYtd: number; budRolFy: number;
+  projected: number; attainment: number;
+  status: "ok" | "risk" | "off";
+  gapAbs: number; gapPct: number;
+  monthsRealized: number;
+}
+
+function ProjectionPanel({ p }: { p: ProjectionData }) {
+  const statusMeta = {
+    ok:   { label: "No caminho",     icon: CheckCircle2,   tone: "text-success border-success/30 bg-success/10" },
+    risk: { label: "Em risco",       icon: AlertTriangle,  tone: "text-warning border-warning/30 bg-warning/10" },
+    off:  { label: "Fora do budget", icon: XCircle,        tone: "text-destructive border-destructive/30 bg-destructive/10" },
+  }[p.status];
+  const StatusIcon = statusMeta.icon;
+  const projGap = p.projected - p.budRolFy;
+
+  return (
+    <GlassCard glow={p.status === "ok" ? "green" : p.status === "off" ? "red" : "blue"}>
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">
+            <Target className="mr-2 inline h-4 w-4 text-accent" /> Projeção de fechamento — {p.currentFy}
+          </h3>
+          <p className="text-[11px] text-muted-foreground">
+            {p.monthsRealized} mês(es) realizado(s) · projeção linear pelo ratio Real/Budget YTD
+          </p>
+        </div>
+        <div className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold", statusMeta.tone)}>
+          <StatusIcon className="h-4 w-4" />
+          {statusMeta.label}
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ProjStat label="YTD Real"   value={fmtCurrencyBR(p.realRolYtd)} />
+        <ProjStat label="YTD Budget" value={fmtCurrencyBR(p.budRolYtd)} muted />
+        <ProjStat
+          label="Gap YTD"
+          value={`${p.gapAbs >= 0 ? "+" : ""}${fmtCurrencyBR(p.gapAbs)}`}
+          extra={
+            <Badge
+              variant="secondary"
+              className={cn(
+                "ml-2 px-2 text-[10px] font-bold tabular-nums",
+                p.gapPct >= 0
+                  ? "bg-success/15 text-success border border-success/30"
+                  : "bg-destructive/15 text-destructive border border-destructive/30",
+              )}
+            >
+              {p.gapPct >= 0 ? "+" : ""}{(p.gapPct * 100).toFixed(1)}%
+            </Badge>
+          }
+          valueClass={p.gapAbs >= 0 ? "text-success" : "text-destructive"}
+        />
+        <ProjStat
+          label="Projeção FY"
+          value={fmtCurrencyBR(p.projected)}
+          subValue={`Budget anual ${fmtCurrencyBR(p.budRolFy)} · ${(p.attainment * 100).toFixed(1)}% atingimento${
+            projGap !== 0 ? ` (${projGap >= 0 ? "+" : ""}${fmtCurrencyBR(projGap)})` : ""
+          }`}
+          valueClass={
+            p.status === "ok" ? "text-success" : p.status === "off" ? "text-destructive" : "text-warning"
+          }
+        />
+      </div>
+
+      {/* Barra visual de atingimento */}
+      <div className="mt-5">
+        <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>Atingimento projetado</span>
+          <span className="tabular-nums font-semibold text-foreground">{(p.attainment * 100).toFixed(1)}%</span>
+        </div>
+        <div className="relative h-3 overflow-hidden rounded-full bg-secondary/50">
+          <div
+            className={cn(
+              "absolute inset-y-0 left-0 rounded-full transition-all",
+              p.status === "ok" ? "bg-success" : p.status === "risk" ? "bg-warning" : "bg-destructive",
+            )}
+            style={{ width: `${Math.min(p.attainment, 1.2) * 100 / 1.2}%`, opacity: 0.85 }}
+          />
+          {/* marca de 100% */}
+          <div className="absolute inset-y-0" style={{ left: `${100 / 1.2}%` }}>
+            <div className="h-full w-px bg-foreground/40" />
+          </div>
+        </div>
+        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+          <span>0%</span>
+          <span style={{ marginRight: `${100 / 1.2 - 100}%` }}>100% (budget)</span>
+          <span>120%</span>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+function ProjStat({
+  label, value, subValue, valueClass, extra, muted,
+}: {
+  label: string;
+  value: string;
+  subValue?: string;
+  valueClass?: string;
+  extra?: React.ReactNode;
+  muted?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-border/40 bg-secondary/20 p-4">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={cn("mt-1 flex items-baseline text-xl font-bold tabular-nums", muted && "text-muted-foreground", valueClass)}>
+        <span>{value}</span>
+        {extra}
+      </div>
+      {subValue && <div className="mt-1 text-[11px] text-muted-foreground">{subValue}</div>}
+    </div>
   );
 }
