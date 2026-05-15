@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
+import { useSidebarState } from "@/store/sidebar";
 import { cn } from "@/lib/utils";
 import { InnovationToggle } from "./InnovationToggle";
-import { Sparkles } from "lucide-react";
+import { Menu, Sparkles, CalendarRange } from "lucide-react";
 
 interface TopbarProps {
   title: string;
