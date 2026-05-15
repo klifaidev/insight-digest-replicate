@@ -485,3 +485,145 @@ export function uniqueValues<K extends keyof PricingRow>(rows: PricingRow[], key
   }
   return Array.from(set).sort();
 }
+
+// ---------------------------------------------------------------
+// Alertas executivos para a home
+// ---------------------------------------------------------------
+export interface Alert {
+  id: string;
+  severity: "high" | "medium" | "low";
+  message: string;
+  page: string;
+  icon: string;
+}
+
+function median(arr: number[]): number {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+export function generateAlerts(
+  rows: PricingRow[],
+  budgetRows: BudgetRow[],
+  metric: Metric,
+): Alert[] {
+  const alerts: Alert[] = [];
+  if (rows.length === 0) return alerts;
+
+  // ---- SKU agg total (período inteiro carregado) ----
+  const skuAgg = aggregateBy(rows, metric, (r) => r.skuDesc || r.sku || "—");
+  const totalRol = skuAgg.reduce((s, r) => s + r.rol, 0);
+  const validSkus = skuAgg.filter((s) => s.rol > 0 && isFinite(s.margemPct));
+  const medMargemSku = median(validSkus.map((s) => s.margemPct));
+
+  // (1) SKUs classe A com margem% < mediana
+  const sortedByRol = [...validSkus].sort((a, b) => b.rol - a.rol);
+  let acc = 0;
+  const classeA: typeof sortedByRol = [];
+  for (const s of sortedByRol) {
+    if (acc / totalRol >= 0.8) break;
+    classeA.push(s);
+    acc += s.rol;
+  }
+  const aBelow = classeA.filter((s) => s.margemPct < medMargemSku);
+  if (aBelow.length > 0) {
+    const worst = aBelow.sort((a, b) => a.margemPct - b.margemPct)[0];
+    alerts.push({
+      id: "a-below-median",
+      severity: "high",
+      message: `${aBelow.length} SKU(s) classe A com margem abaixo da mediana — pior: ${worst.key} (${(worst.margemPct * 100).toFixed(1)}%)`,
+      page: "/abc",
+      icon: "trending-down",
+    });
+  }
+
+  // (2) Canal > 15% ROL com margem caindo 2+ meses consecutivos
+  const canais = aggregateBy(rows, metric, (r) => r.canalAjustado || "Sem canal");
+  for (const c of canais) {
+    if (totalRol === 0 || c.rol / totalRol <= 0.15) continue;
+    const trend = computeCanalTrend(rows, c.key, metric);
+    if (trend.length < 3) continue;
+    const last3 = trend.slice(-3);
+    const drop1 = last3[1].margemPct - last3[0].margemPct;
+    const drop2 = last3[2].margemPct - last3[1].margemPct;
+    if (drop1 < 0 && drop2 < 0) {
+      const totalDrop = (last3[2].margemPct - last3[0].margemPct) * 100;
+      alerts.push({
+        id: `canal-drop-${c.key}`,
+        severity: "high",
+        message: `Canal ${c.key} com queda de margem em 2 meses consecutivos (${totalDrop.toFixed(1)}pp)`,
+        page: "/canais",
+        icon: "alert-triangle",
+      });
+    }
+  }
+
+  // (3) Projeção de fechamento do Budget < 95%
+  if (budgetRows.length > 0) {
+    const fysWithReal = new Set(budgetRows.filter((r) => r.kind === "real").map((r) => r.fy));
+    const currentFy = Array.from(fysWithReal).sort().pop();
+    if (currentFy) {
+      const fyRows = budgetRows.filter((r) => r.fy === currentFy);
+      const realPeriods = new Set(fyRows.filter((r) => r.kind === "real").map((r) => r.periodo));
+      let realRolYtd = 0, budRolYtd = 0, budRolFy = 0;
+      for (const r of fyRows) {
+        if (r.kind === "real") realRolYtd += r.receita;
+        else {
+          budRolFy += r.receita;
+          if (realPeriods.has(r.periodo)) budRolYtd += r.receita;
+        }
+      }
+      const ratio = budRolYtd > 0 ? realRolYtd / budRolYtd : 0;
+      const projected = realRolYtd + (budRolFy - budRolYtd) * ratio;
+      const attainment = budRolFy > 0 ? projected / budRolFy : 0;
+      if (attainment > 0 && attainment < 0.95) {
+        alerts.push({
+          id: "budget-projection",
+          severity: "high",
+          message: `Projeção de fechamento do FY ${currentFy} em ${(attainment * 100).toFixed(1)}% do budget`,
+          page: "/budget",
+          icon: "target",
+        });
+      }
+    }
+  }
+
+  // (4) SKUs no quadrante Abacaxis com ROL > 1% do total
+  const vols = validSkus.map((s) => s.volumeKg);
+  const medVol = median(vols);
+  const abacaxis = validSkus.filter(
+    (s) => s.volumeKg < medVol && s.margemPct < medMargemSku && s.rol / Math.max(totalRol, 1) > 0.01,
+  );
+  if (abacaxis.length > 0) {
+    alerts.push({
+      id: "abacaxis-relevantes",
+      severity: "medium",
+      message: `${abacaxis.length} SKU(s) "Abacaxi" com ROL relevante (>1% do total) — avaliar descontinuação`,
+      page: "/abc",
+      icon: "alert-circle",
+    });
+  }
+
+  // (5) Margem% do último mês > 2pp abaixo da média histórica
+  const monthly = computeCanalTrend(rows, null, metric);
+  if (monthly.length >= 2) {
+    const last = monthly[monthly.length - 1];
+    const prior = monthly.slice(0, -1);
+    const avg = prior.reduce((s, p) => s + p.margemPct, 0) / prior.length;
+    const diffPp = (last.margemPct - avg) * 100;
+    if (diffPp < -2) {
+      alerts.push({
+        id: "margin-below-historical",
+        severity: "medium",
+        message: `Margem de ${last.label} (${(last.margemPct * 100).toFixed(1)}%) está ${Math.abs(diffPp).toFixed(1)}pp abaixo da média histórica`,
+        page: "/dre",
+        icon: "trending-down",
+      });
+    }
+  }
+
+  const order = { high: 0, medium: 1, low: 2 } as const;
+  return alerts.sort((a, b) => order[a.severity] - order[b.severity]);
+}
