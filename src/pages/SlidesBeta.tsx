@@ -175,7 +175,7 @@ function uniqueValues(
 // ----------------------------------------------------------------------------
 // Drop zone vazio
 // ----------------------------------------------------------------------------
-function EmptyFlow({ onAdd, isOver }: { onAdd: (k: SlideKind) => void; isOver?: boolean }) {
+function EmptyFlow({ onAdd, onOpenGallery, isOver }: { onAdd: (k: SlideKind) => void; onOpenGallery: () => void; isOver?: boolean }) {
   return (
     <div
       className={cn(
@@ -194,8 +194,17 @@ function EmptyFlow({ onAdd, isOver }: { onAdd: (k: SlideKind) => void; isOver?: 
       <div className="relative max-w-md space-y-2">
         <h3 className="text-xl font-semibold tracking-tight">Comece sua apresentação</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          {isOver ? "Solte aqui para adicionar à esteira." : "Arraste um modelo da coluna esquerda — ou clique abaixo — para começar. Combine quantos slides quiser, configure filtros independentes e exporte tudo em um único PPTX."}
+          {isOver
+            ? "Solte aqui para adicionar à esteira."
+            : "Escolha um template pronto para começar em segundos — ou monte do zero arrastando slides do catálogo à esquerda."}
         </p>
+      </div>
+      <div className="relative flex flex-col sm:flex-row items-center gap-2">
+        <Button size="lg" onClick={onOpenGallery} className="gap-2 shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.6)]">
+          <Sparkles className="h-4 w-4" />
+          Nova apresentação
+        </Button>
+        <span className="text-xs text-muted-foreground">ou clique nos modelos abaixo</span>
       </div>
       <div className="relative grid w-full max-w-2xl grid-cols-2 gap-2.5 sm:grid-cols-4">
         {SLIDE_CATALOG.map((s) => {
