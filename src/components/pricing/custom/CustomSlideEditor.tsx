@@ -95,6 +95,8 @@ import {
 import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
 import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
 import { PresentationMode } from "./PresentationMode";
+import { InlineTextEditor, InlineTextToolbar } from "./InlineTextEditor";
+import { Pencil } from "lucide-react";
 
 type Icon = React.ComponentType<{ className?: string }>;
 
