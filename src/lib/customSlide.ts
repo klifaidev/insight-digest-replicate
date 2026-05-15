@@ -349,6 +349,8 @@ export interface CustomSlideConfig {
   blocks: CustomBlock[];
   background: string;
   showHaraldFooter: boolean;
+  /** ID do tema visual aplicado (slideThemes.ts). Default "harald-classic". */
+  theme?: string;
   /** Block groups (B8.2). Optional for retro-compat. */
   groups?: BlockGroup[];
 }
