@@ -99,7 +99,8 @@ import { SLIDE_THEMES, getTheme, DEFAULT_THEME_ID, type SlideTheme } from "@/lib
 import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
 import { PresentationMode } from "./PresentationMode";
 import { InlineTextEditor, InlineTextToolbar } from "./InlineTextEditor";
-import { Pencil } from "lucide-react";
+import { AssetLibrary } from "./AssetLibrary";
+import { Pencil, Images } from "lucide-react";
 
 type Icon = React.ComponentType<{ className?: string }>;
 
