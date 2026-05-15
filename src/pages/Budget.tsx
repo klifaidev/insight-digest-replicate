@@ -355,6 +355,127 @@ export default function Budget() {
     return Array.from(map.values()).sort((a, b) => b.realRol + b.budRol - (a.realRol + a.budRol));
   }, [realFiltered, budgetFiltered, dim]);
 
+  // ---------------------------------------------------------------
+  // Painel YTD + Projeção de fechamento (FY mais recente nos dados Real)
+  // ---------------------------------------------------------------
+  const projection = useMemo(() => {
+    // FY mais recente que tenha pelo menos uma linha Real
+    const realByFy = new Map<string, { ano: number; mes: number }[]>();
+    for (const r of budgetRows) {
+      if (r.kind !== "real") continue;
+      const arr = realByFy.get(r.fy) ?? [];
+      arr.push({ ano: r.ano, mes: r.mes });
+      realByFy.set(r.fy, arr);
+    }
+    const fys = Array.from(realByFy.keys()).sort();
+    const currentFy = fys[fys.length - 1];
+    if (!currentFy) return null;
+
+    // Períodos com Real no FY atual (ignora seleção de meses, mas respeita filtros dim)
+    const filteredNoPeriod = applyBudgetFilters(budgetRows, filters, null);
+    const currentFyRows = filteredNoPeriod.filter((r) => r.fy === currentFy);
+    const realPeriods = new Set(
+      currentFyRows.filter((r) => r.kind === "real").map((r) => r.periodo),
+    );
+
+    let realRolYtd = 0, realCmYtd = 0, realVolYtd = 0;
+    let budRolYtd = 0, budCmYtd = 0, budVolYtd = 0;
+    let budRolFy = 0, budCmFy = 0, budVolFy = 0;
+    for (const r of currentFyRows) {
+      if (r.kind === "real") {
+        realRolYtd += r.receita; realCmYtd += r.cm; realVolYtd += r.volumeKg;
+      } else {
+        budRolFy += r.receita; budCmFy += r.cm; budVolFy += r.volumeKg;
+        if (realPeriods.has(r.periodo)) {
+          budRolYtd += r.receita; budCmYtd += r.cm; budVolYtd += r.volumeKg;
+        }
+      }
+    }
+    const ratio = budRolYtd > 0 ? realRolYtd / budRolYtd : 0;
+    const remainingBud = budRolFy - budRolYtd;
+    const projected = realRolYtd + remainingBud * ratio;
+    const attainment = budRolFy > 0 ? projected / budRolFy : 0;
+    const status: "ok" | "risk" | "off" =
+      attainment >= 0.98 ? "ok" : attainment >= 0.9 ? "risk" : "off";
+    const gapAbs = realRolYtd - budRolYtd;
+    const gapPct = budRolYtd > 0 ? gapAbs / budRolYtd : 0;
+
+    return {
+      currentFy,
+      realRolYtd, budRolYtd, budRolFy, projected, attainment, status,
+      gapAbs, gapPct, ratio,
+      realCmYtd, budCmYtd, budCmFy, realVolYtd, budVolYtd, budVolFy,
+      monthsRealized: realPeriods.size,
+    };
+  }, [budgetRows, filters]);
+
+  // Waterfall Budget YTD → Δ por dimensão → Real YTD
+  const waterfallData = useMemo(() => {
+    if (!projection) return [];
+    const filteredNoPeriod = applyBudgetFilters(budgetRows, filters, null);
+    const fyRows = filteredNoPeriod.filter((r) => r.fy === projection.currentFy);
+    const realPeriods = new Set(
+      fyRows.filter((r) => r.kind === "real").map((r) => r.periodo),
+    );
+    type Cell = { real: number; bud: number };
+    const map = new Map<string, Cell>();
+    for (const r of fyRows) {
+      const k = String((r as Record<string, unknown>)[dim] ?? "—");
+      const c = map.get(k) ?? { real: 0, bud: 0 };
+      if (r.kind === "real") c.real += r.receita;
+      else if (realPeriods.has(r.periodo)) c.bud += r.receita;
+      map.set(k, c);
+    }
+    const gaps = Array.from(map.entries())
+      .map(([key, v]) => ({ key, gap: v.real - v.bud }))
+      .filter((g) => Math.abs(g.gap) > 0)
+      .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))
+      .slice(0, 6);
+    let running = projection.budRolYtd;
+    const out: Array<{ name: string; base: number; value: number; type: "anchor" | "pos" | "neg"; total: number }> = [];
+    out.push({ name: "Budget YTD", base: 0, value: projection.budRolYtd, type: "anchor", total: projection.budRolYtd });
+    for (const g of gaps) {
+      const isPos = g.gap >= 0;
+      const next = running + g.gap;
+      out.push({
+        name: g.key,
+        base: isPos ? running : next,
+        value: Math.abs(g.gap),
+        type: isPos ? "pos" : "neg",
+        total: next,
+      });
+      running = next;
+    }
+    out.push({ name: "Real YTD", base: 0, value: projection.realRolYtd, type: "anchor", total: projection.realRolYtd });
+    return out;
+  }, [projection, budgetRows, filters, dim]);
+
+  // Tabela de desvios por dimensão (YTD do FY corrente)
+  const deviationRows = useMemo(() => {
+    if (!projection) return [] as Array<{ key: string; bud: number; real: number; gapAbs: number; gapPct: number }>;
+    const filteredNoPeriod = applyBudgetFilters(budgetRows, filters, null);
+    const fyRows = filteredNoPeriod.filter((r) => r.fy === projection.currentFy);
+    const realPeriods = new Set(
+      fyRows.filter((r) => r.kind === "real").map((r) => r.periodo),
+    );
+    const map = new Map<string, { bud: number; real: number }>();
+    for (const r of fyRows) {
+      const k = String((r as Record<string, unknown>)[dim] ?? "—");
+      const c = map.get(k) ?? { bud: 0, real: 0 };
+      if (r.kind === "real") c.real += r.receita;
+      else if (realPeriods.has(r.periodo)) c.bud += r.receita;
+      map.set(k, c);
+    }
+    return Array.from(map.entries())
+      .map(([key, v]) => {
+        const gapAbs = v.real - v.bud;
+        const gapPct = v.bud > 0 ? gapAbs / v.bud : 0;
+        return { key, bud: v.bud, real: v.real, gapAbs, gapPct };
+      })
+      .filter((r) => r.bud > 0 || r.real > 0)
+      .sort((a, b) => a.gapAbs - b.gapAbs);
+  }, [projection, budgetRows, filters, dim]);
+
   if (budgetRows.length === 0) {
     return (
       <>
