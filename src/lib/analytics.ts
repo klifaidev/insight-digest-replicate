@@ -1,4 +1,5 @@
 import type { Filters, Metric, PricingRow } from "./types";
+import type { BudgetRow } from "./budget";
 
 export const measureOf = (r: PricingRow, m: Metric) =>
   m === "cm" ? r.contribMarginal : r.margemBruta;
