@@ -40,11 +40,32 @@ export function Topbar({ title, subtitle }: TopbarProps) {
   };
 
   const inovActive = usePricing((s) => s.filters.inovacao?.[0] === "Inovação");
+  const setMobileOpen = useSidebarState((s) => s.setMobileOpen);
+
+  // Breadcrumb de período
+  const periodBadge = (() => {
+    if (months.length === 0) return null;
+    const fy = months[months.length - 1].fy;
+    const activeMonths = allSelected ? months : months.filter((m) => selected!.includes(m.periodo));
+    if (activeMonths.length === 0) return null;
+    const first = activeMonths[0].label;
+    const last = activeMonths[activeMonths.length - 1].label;
+    const range = activeMonths.length === 1 ? first : `${first} – ${last}`;
+    return `${range} · ${fy}`;
+  })();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border/40 bg-background/60 px-8 py-4 backdrop-blur-2xl">
+    <header className="sticky top-0 z-20 border-b border-border/40 bg-background/60 px-4 py-4 backdrop-blur-2xl md:px-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Abrir menu de navegação"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-card/50 text-muted-foreground outline-none transition-colors hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/60 md:hidden"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight text-gradient-primary">{title}</h1>
@@ -59,7 +80,18 @@ export function Topbar({ title, subtitle }: TopbarProps) {
           </div>
         </div>
 
-        <InnovationToggle />
+        <div className="flex items-center gap-3">
+          {periodBadge && (
+            <span
+              className="hidden items-center gap-1.5 rounded-full border border-border/60 bg-card/40 px-3 py-1 text-[11px] font-medium text-muted-foreground sm:inline-flex"
+              title="Período ativo no app"
+            >
+              <CalendarRange className="h-3 w-3 text-primary" />
+              {periodBadge}
+            </span>
+          )}
+          <InnovationToggle />
+        </div>
 
         {months.length > 0 && (
           <div className="flex w-full flex-wrap items-center gap-1.5">
