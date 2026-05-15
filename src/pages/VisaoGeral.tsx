@@ -66,7 +66,6 @@ export default function VisaoGeral() {
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
 
-  const [bubbleBy, setBubbleBy] = useState<GroupBy>("categoria");
   const [perfBy, setPerfBy] = useState<PerfBy>("categoria");
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
@@ -85,12 +84,13 @@ export default function VisaoGeral() {
   );
   const periodoInfo = useMemo(() => periodoLabel(selected, allPeriods), [selected, allPeriods]);
 
-  const byBubble = useMemo(
+  const monthlyTrend = useMemo(
     () =>
-      aggregateBy(filtered, metric, (r) =>
-        (bubbleBy === "categoria" ? r.categoria : r.subcategoria) || `Sem ${bubbleBy}`,
-      ),
-    [filtered, metric, bubbleBy],
+      computeCanalTrend(filtered, null, metric).map((p) => ({
+        ...p,
+        margemPctNum: p.margemPct * 100,
+      })),
+    [filtered, metric],
   );
 
   const bySku = useMemo(
