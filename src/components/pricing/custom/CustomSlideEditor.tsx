@@ -84,6 +84,7 @@ import {
   sendToBackAction, toggleLockAction, undo as undoAction, redo as redoAction,
   setShowHaraldFooter as setShowHaraldFooterAction,
   setBackground as setBackgroundAction,
+  setThemeAction,
   useSelection, selectBlock, setSelection, clearSelection,
   selectAllOnSlide, enterGroupEdit, exitGroupEdit,
   deleteBlocksAction, duplicateBlocksAction,
@@ -94,6 +95,7 @@ import {
   type AlignKind,
 } from "./editorStore";
 import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
+import { SLIDE_THEMES, getTheme, DEFAULT_THEME_ID, type SlideTheme } from "@/lib/slideThemes";
 import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
 import { PresentationMode } from "./PresentationMode";
 import { InlineTextEditor, InlineTextToolbar } from "./InlineTextEditor";
@@ -393,6 +395,34 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             ))}
           </PaletteGroup>
 
+          <Separator className="my-2" />
+          <div className="px-2">
+            <Label className="text-[10px] uppercase text-muted-foreground">Tema do slide</Label>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              {SLIDE_THEMES.map((t) => {
+                const active = (config.theme ?? DEFAULT_THEME_ID) === t.id
+                  && config.background.toUpperCase() === t.background.toUpperCase();
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setThemeAction(t.id, t.background)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded border px-1.5 py-1 text-left text-[10px] transition",
+                      active ? "border-primary ring-1 ring-primary" : "border-border/60 hover:border-border",
+                    )}
+                    title={t.name}
+                  >
+                    <span className="flex h-4 w-6 shrink-0 overflow-hidden rounded-sm border border-border/40">
+                      <span className="flex-1" style={{ background: `#${t.background}` }} />
+                      <span className="w-1.5" style={{ background: `#${t.primaryColor}` }} />
+                    </span>
+                    <span className="truncate">{t.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <Separator className="my-2" />
           <div className="px-2">
             <Label className="text-[10px] uppercase text-muted-foreground">Fundo do slide</Label>
@@ -879,6 +909,12 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             title={undoRedo.redoLabel ? `Refazer: ${undoRedo.redoLabel.toLowerCase()}` : "Refazer (⌘⇧Z)"}>
             <Redo2 className="h-3.5 w-3.5" />
           </Button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <PalettePopover
+            theme={getTheme(config.theme)}
+            blocks={config.blocks}
+            selected={selected}
+          />
           <Separator orientation="vertical" className="mx-1 h-5" />
           <Button size="icon" variant="ghost" className="h-7 w-7"
             onClick={() => setZoom(scale - 0.1)} title="Diminuir zoom">
@@ -2181,5 +2217,109 @@ function GroupOverlay({
         </div>
       )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PalettePopover — paleta de cores rápidas (cores usadas + cores do tema)
+// ---------------------------------------------------------------------------
+function collectUsedColors(blocks: CustomBlock[]): string[] {
+  const set = new Set<string>();
+  for (const b of blocks) {
+    if (b.kind === "title" || b.kind === "text") set.add(b.color);
+    else if (b.kind === "kpi") set.add(b.color);
+    else if (b.kind === "shape") set.add(b.fill);
+  }
+  return Array.from(set).filter(Boolean).slice(0, 7);
+}
+
+function PalettePopover({
+  theme, blocks, selected,
+}: {
+  theme: SlideTheme;
+  blocks: CustomBlock[];
+  selected: CustomBlock | null;
+}) {
+  const used = collectUsedColors(blocks);
+  const canApply = !!selected && (
+    selected.kind === "title" || selected.kind === "text" ||
+    selected.kind === "kpi" || selected.kind === "shape"
+  );
+
+  const apply = (hex: string) => {
+    if (!selected) {
+      toast.info("Selecione um bloco para aplicar a cor.");
+      return;
+    }
+    if (selected.kind === "shape") {
+      patchBlockAction(selected.id, { fill: hex } as Partial<CustomBlock>, "Alterar estilo");
+    } else if (
+      selected.kind === "title" || selected.kind === "text" || selected.kind === "kpi"
+    ) {
+      patchBlockAction(selected.id, { color: hex } as Partial<CustomBlock>, "Alterar estilo");
+    } else {
+      toast.info("Este bloco não suporta cor direta.");
+    }
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          size="sm" variant="ghost"
+          className="h-7 gap-1 px-2 text-[11px]"
+          title="Paleta de cores"
+        >
+          <Paintbrush className="h-3.5 w-3.5" /> Paleta
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3" align="start">
+        <div className="space-y-3">
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Cores deste slide
+            </div>
+            {used.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">Nenhuma cor usada ainda.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {used.map((hex) => (
+                  <button
+                    key={`u-${hex}`} type="button"
+                    onClick={() => apply(hex)}
+                    disabled={!canApply}
+                    className="h-6 w-6 rounded-md border border-border/50 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ background: `#${hex}` }}
+                    title={`#${hex}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Tema · {theme.name}
+            </div>
+            <div className="grid grid-cols-8 gap-1.5">
+              {theme.swatches.map((hex, i) => (
+                <button
+                  key={`t-${i}-${hex}`} type="button"
+                  onClick={() => apply(hex)}
+                  disabled={!canApply}
+                  className="h-6 w-6 rounded-md border border-border/50 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ background: `#${hex}` }}
+                  title={`#${hex}`}
+                />
+              ))}
+            </div>
+          </div>
+          {!canApply && (
+            <p className="text-[10px] text-muted-foreground">
+              Selecione um título, texto, KPI ou forma para aplicar.
+            </p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
