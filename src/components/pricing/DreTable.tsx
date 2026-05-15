@@ -509,50 +509,28 @@ export function DreTable({ rows, months, mode = "month", budgetRows = [], allRow
               <td className="sticky left-0 z-[1] border-t-2 border-border/60 bg-card/95 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
                 Média do período
               </td>
-              {columns.flatMap((c, colIdx) => {
-                const subs = subColsFor(c.key);
-                const isFirst = colIdx === 0;
-                return subs.map((sub, subIdx) => {
-                  if (!isFirst || subIdx > 0) {
+              <td
+                colSpan={columns.flatMap((cc) => subColsFor(cc.key)).length}
+                className="border-t-2 border-border/60 bg-card/50 px-3 py-2.5 text-right text-xs"
+              >
+                <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-1 text-muted-foreground">
+                  {LINES.filter((l) => l.kind === "pct").map((l) => {
+                    const avg = pctAverages.get(l.id);
+                    if (avg == null) return null;
                     return (
-                      <td
-                        key={`avg-${c.key}-${sub}`}
-                        className="border-t-2 border-border/60 bg-card/50 px-3 py-2.5"
-                      />
+                      <span key={l.id} className="inline-flex items-center gap-1.5">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                          {l.label.replace(/\s*\(%\/ROL\)\s*$/i, "")}
+                        </span>
+                        <span className="font-semibold tabular-nums text-foreground">
+                          {formatPct(avg)}
+                        </span>
+                      </span>
                     );
-                  }
-                  // Render the averages summary stacked in the very first data cell.
-                  return (
-                    <td
-                      key={`avg-${c.key}-${sub}`}
-                      colSpan={
-                        // span across all remaining columns for clean read
-                        columns.flatMap((cc) => subColsFor(cc.key)).length
-                      }
-                      className="border-t-2 border-border/60 bg-card/50 px-3 py-2.5 text-right text-xs"
-                    >
-                      <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-1 text-muted-foreground">
-                        {LINES.filter((l) => l.kind === "pct").map((l) => {
-                          const avg = pctAverages.get(l.id);
-                          if (avg == null) return null;
-                          return (
-                            <span key={l.id} className="inline-flex items-center gap-1.5">
-                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                                {l.label.replace(/\s*\(%\/ROL\)\s*$/i, "")}
-                              </span>
-                              <span className="font-semibold tabular-nums text-foreground">
-                                {formatPct(avg)}
-                              </span>
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </td>
-                  );
-                });
-              })}
+                  })}
+                </div>
+              </td>
             </tr>
-            {/* Suppress nothing — colSpan in the first cell already covers the row */}
           </tbody>
         </table>
 
