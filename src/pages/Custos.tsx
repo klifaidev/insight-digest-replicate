@@ -168,6 +168,47 @@ export default function Custos() {
           </GlassCard>
         </div>
 
+        {showComposition && (
+          <GlassCard>
+            <header className="mb-4">
+              <h2 className="text-lg font-medium">Composição do custo variável</h2>
+              <p className="text-xs text-muted-foreground">Decomposição mensal por componente: Matéria Prima, Embalagem, MOD e CIF.</p>
+            </header>
+            <ChartContainer config={chartConfig} className="h-[340px] w-full">
+              <ComposedChart data={composition} margin={{ left: 8, right: 8, top: 12, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatBRL(Number(v), { compact: true })} width={88} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [formatBRL(Number(value), { compact: true }), chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)]} />} />
+                <Legend />
+                {compTotals.hasMP && <Bar dataKey="materiaPrima" stackId="comp" fill="var(--color-materiaPrima)" name="materiaPrima" radius={[0, 0, 0, 0]} />}
+                {compTotals.hasEmb && <Bar dataKey="embalagem" stackId="comp" fill="var(--color-embalagem)" name="embalagem" radius={[0, 0, 0, 0]} />}
+                {compTotals.hasMod && <Bar dataKey="mod" stackId="comp" fill="var(--color-mod)" name="mod" radius={[0, 0, 0, 0]} />}
+                {compTotals.hasCif && <Bar dataKey="cif" stackId="comp" fill="var(--color-cif)" name="cif" radius={[4, 4, 0, 0]} />}
+              </ComposedChart>
+            </ChartContainer>
+
+            <div className="mt-6">
+              <DataTable
+                rows={composition.map((c) => ({
+                  label: c.label,
+                  mpPctRol: c.rol > 0 ? c.materiaPrima / c.rol : 0,
+                  embPctRol: c.rol > 0 ? c.embalagem / c.rol : 0,
+                  modPctRol: c.rol > 0 ? c.mod / c.rol : 0,
+                  cifPctRol: c.rol > 0 ? c.cif / c.rol : 0,
+                })) as unknown as Record<string, unknown>[]}
+                columns={[
+                  { key: "label", label: "Período", align: "left", format: (v) => <span className="font-medium">{String(v)}</span> },
+                  ...(compTotals.hasMP ? [{ key: "mpPctRol", label: "MP / ROL", align: "right" as const, format: (v: unknown) => formatPct(Number(v)) }] : []),
+                  ...(compTotals.hasEmb ? [{ key: "embPctRol", label: "Embalagem / ROL", align: "right" as const, format: (v: unknown) => formatPct(Number(v)) }] : []),
+                  ...(compTotals.hasMod ? [{ key: "modPctRol", label: "MOD / ROL", align: "right" as const, format: (v: unknown) => formatPct(Number(v)) }] : []),
+                  ...(compTotals.hasCif ? [{ key: "cifPctRol", label: "CIF / ROL", align: "right" as const, format: (v: unknown) => formatPct(Number(v)) }] : []),
+                ]}
+              />
+            </div>
+          </GlassCard>
+        )}
+
         <GlassCard>
           <header className="mb-4">
             <h2 className="text-lg font-medium">Detalhe mensal de custos</h2>
