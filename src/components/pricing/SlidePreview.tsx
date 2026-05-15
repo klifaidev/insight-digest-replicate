@@ -576,11 +576,108 @@ function BridgeWaterfall({ pvm, x, y, w, h }: { pvm: PVMResult; x: number; y: nu
 // ---------------------------------------------------------------------------
 // Wrapper
 // ---------------------------------------------------------------------------
-export function SlidePreview({ item }: { item: SlideItem }) {
+// Renderiza o conteúdo do preview (sem o wrapper de expand).
+function PreviewContent({ item }: { item: SlideItem }) {
   switch (item.kind) {
     case "cover": return <CoverPreview item={item} />;
     case "bridge_pvm": return <BridgePvmPreview item={item} />;
     case "budget_evo": return <BudgetEvoPreview item={item} />;
-    case "custom": return null;
+    case "custom":
+      return <CustomCanvasReadOnly config={item.config} />;
   }
+}
+
+// Para slides custom o canvas tem dimensões reais (1333x750) e precisa ser
+// escalado via transform para caber no painel. Para os SVG (cover/bridge/
+// budget) o próprio viewBox cuida disso.
+function ScaledPreview({ item, targetWidth }: { item: SlideItem; targetWidth?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(targetWidth ?? 280);
+
+  useEffect(() => {
+    if (targetWidth) { setWidth(targetWidth); return; }
+    if (!ref.current) return;
+    const el = ref.current;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w && w > 0) setWidth(w);
+    });
+    ro.observe(el);
+    setWidth(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, [targetWidth]);
+
+  if (item.kind !== "custom") {
+    // SVG previews já escalam via viewBox.
+    return (
+      <div
+        ref={ref}
+        className="w-full overflow-hidden rounded-lg border border-border/40 bg-card"
+        style={{ aspectRatio: `${CANVAS_W} / ${CANVAS_H}` }}
+      >
+        <PreviewContent item={item} />
+      </div>
+    );
+  }
+
+  const factor = width / CANVAS_W;
+  return (
+    <div
+      ref={ref}
+      className="w-full overflow-hidden rounded-lg border border-border/40 bg-white"
+      style={{ height: CANVAS_H * factor }}
+    >
+      <div
+        style={{
+          width: CANVAS_W,
+          height: CANVAS_H,
+          transform: `scale(${factor})`,
+          transformOrigin: "top left",
+        }}
+      >
+        <CustomCanvasReadOnly config={item.config} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Wrapper público — preview + botão de expandir
+// ---------------------------------------------------------------------------
+export function SlidePreview({ item }: { item: SlideItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const title = item.label ?? "Slide";
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Prévia
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => setExpanded(true)}
+          aria-label="Expandir prévia"
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+          Expandir
+        </Button>
+      </div>
+      <ScaledPreview item={item} />
+
+      <Dialog open={expanded} onOpenChange={setExpanded}>
+        <DialogContent className="max-w-[900px] p-0 gap-0">
+          <DialogHeader className="px-5 pt-5 pb-3 border-b border-border/40">
+            <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
+          </DialogHeader>
+          <div className="p-5">
+            <ScaledPreview item={item} targetWidth={840} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
