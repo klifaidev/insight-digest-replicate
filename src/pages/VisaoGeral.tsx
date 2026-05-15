@@ -118,16 +118,39 @@ export default function VisaoGeral() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="ROL Total" value={formatBRL(kpis.rol, { compact: true })} subValue={formatBRL(kpis.rol)} accent="blue" glow="blue" />
+          <KpiCard
+            label="ROL Total"
+            value={formatBRL(kpis.rol, { compact: true })}
+            subValue={formatBRL(kpis.rol)}
+            accent="blue"
+            glow="blue"
+            delta={comparison?.deltaPct.rol}
+            deltaLabel={comparison?.label}
+          />
           <KpiCard
             label={metric === "cm" ? "Contrib. Marginal" : "Margem Bruta"}
             value={formatBRL(kpis.margem, { compact: true })}
             subValue={formatPct(kpis.margemPct)}
             accent="green"
             glow="green"
+            delta={comparison?.deltaPct.margem}
+            deltaLabel={comparison?.label}
           />
-          <KpiCard label="Volume" value={formatTon(kpis.volumeKg)} subValue={`${formatNum(kpis.volumeKg)} t`} accent="amber" />
-          <KpiCard label="SKUs ativos" value={formatNum(kpis.skus)} accent="violet" />
+          <KpiCard
+            label="Volume"
+            value={formatTon(kpis.volumeKg)}
+            subValue={`${formatNum(kpis.volumeKg)} t`}
+            accent="amber"
+            delta={comparison?.deltaPct.volumeKg}
+            deltaLabel={comparison?.label}
+          />
+          <KpiCard
+            label="SKUs ativos"
+            value={formatNum(kpis.skus)}
+            accent="violet"
+            delta={comparison?.deltaPct.skus}
+            deltaLabel={comparison?.label}
+          />
         </div>
 
         <GlassCard>
