@@ -1,18 +1,34 @@
 import { Topbar } from "@/components/pricing/Topbar";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { KpiCard } from "@/components/pricing/KpiCard";
-import { BubbleChart } from "@/components/pricing/BubbleChart";
 import { AbcBar } from "@/components/pricing/AbcBar";
 import { DataTable } from "@/components/pricing/DataTable";
 import { EmptyState } from "@/components/pricing/EmptyState";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
-import { aggregateBy, applyFilters, computeKPIs, computeKPIComparison, getKpiComparisonContext } from "@/lib/analytics";
+import {
+  aggregateBy,
+  applyFilters,
+  computeKPIs,
+  computeKPIComparison,
+  getKpiComparisonContext,
+  computeCanalTrend,
+} from "@/lib/analytics";
 import { formatBRL, formatNum, formatPct, formatTon } from "@/lib/format";
 import { useMemo, useState } from "react";
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
-type GroupBy = "categoria" | "subcategoria";
 type PerfBy = "categoria" | "subcategoria" | "sku";
 
 const MES_NOMES = [
@@ -49,7 +65,6 @@ export default function VisaoGeral() {
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
 
-  const [bubbleBy, setBubbleBy] = useState<GroupBy>("categoria");
   const [perfBy, setPerfBy] = useState<PerfBy>("categoria");
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
@@ -68,12 +83,13 @@ export default function VisaoGeral() {
   );
   const periodoInfo = useMemo(() => periodoLabel(selected, allPeriods), [selected, allPeriods]);
 
-  const byBubble = useMemo(
+  const monthlyTrend = useMemo(
     () =>
-      aggregateBy(filtered, metric, (r) =>
-        (bubbleBy === "categoria" ? r.categoria : r.subcategoria) || `Sem ${bubbleBy}`,
-      ),
-    [filtered, metric, bubbleBy],
+      computeCanalTrend(filtered, null, metric).map((p) => ({
+        ...p,
+        margemPctNum: p.margemPct * 100,
+      })),
+    [filtered, metric],
   );
 
   const bySku = useMemo(
@@ -154,25 +170,76 @@ export default function VisaoGeral() {
         </div>
 
         <GlassCard>
-          <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-medium">
-                {bubbleBy === "categoria" ? "Categorias" : "Subcategorias"} — Margem % × Share Volume
-              </h2>
-              <p className="text-xs text-muted-foreground">Tamanho da bolha = participação na receita</p>
-            </div>
-            <ToggleGroup
-              type="single"
-              value={bubbleBy}
-              onValueChange={(v) => v && setBubbleBy(v as GroupBy)}
-              variant="outline"
-              size="sm"
-            >
-              <ToggleGroupItem value="categoria">Categoria</ToggleGroupItem>
-              <ToggleGroupItem value="subcategoria">Subcategoria</ToggleGroupItem>
-            </ToggleGroup>
+          <header className="mb-4">
+            <h2 className="text-lg font-medium">Evolução mensal — ROL, Margem % e Volume</h2>
+            <p className="text-xs text-muted-foreground">
+              Linha do tempo do período carregado — leitura imediata de tendência.
+            </p>
           </header>
-          <BubbleChart data={byBubble} />
+          {monthlyTrend.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">Sem dados mensais para exibir.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <ComposedChart data={monthlyTrend} margin={{ top: 10, right: 24, bottom: 8, left: 8 }}>
+                <CartesianGrid stroke="hsl(var(--border) / 0.4)" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                />
+                <YAxis
+                  yAxisId="left"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tickFormatter={(v) => formatBRL(Number(v), { compact: true })}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tickFormatter={(v) => `${Number(v).toFixed(0)}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--popover) / 0.95)",
+                    border: "1px solid hsl(var(--border) / 0.6)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  formatter={(value: number, name: string) => {
+                    if (name === "Margem %") return [`${value.toFixed(1)}%`, name];
+                    if (name === "Volume (kg)") return [formatTon(value), name];
+                    return [formatBRL(value, { compact: true }), name];
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar
+                  yAxisId="left"
+                  dataKey="volumeKg"
+                  name="Volume (kg)"
+                  fill="hsl(var(--warning) / 0.35)"
+                  stroke="hsl(var(--warning) / 0.6)"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="rol"
+                  name="ROL (R$)"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2.2}
+                  dot={{ r: 3 }}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="margemPctNum"
+                  name="Margem %"
+                  stroke="hsl(var(--success))"
+                  strokeWidth={2.2}
+                  dot={{ r: 3 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
         </GlassCard>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
