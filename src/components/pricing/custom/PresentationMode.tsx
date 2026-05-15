@@ -251,7 +251,7 @@ function SlideRenderArea({
   );
 }
 
-function CustomCanvasReadOnly({ config }: { config: CustomSlideConfig }) {
+export function CustomCanvasReadOnly({ config }: { config: CustomSlideConfig }) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div
