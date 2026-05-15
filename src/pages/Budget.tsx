@@ -420,7 +420,7 @@ export default function Budget() {
     type Cell = { real: number; bud: number };
     const map = new Map<string, Cell>();
     for (const r of fyRows) {
-      const k = String((r as Record<string, unknown>)[dim] ?? "—");
+      const k = String((r as unknown as Record<string, unknown>)[dim] ?? "—");
       const c = map.get(k) ?? { real: 0, bud: 0 };
       if (r.kind === "real") c.real += r.receita;
       else if (realPeriods.has(r.periodo)) c.bud += r.receita;
@@ -460,7 +460,7 @@ export default function Budget() {
     );
     const map = new Map<string, { bud: number; real: number }>();
     for (const r of fyRows) {
-      const k = String((r as Record<string, unknown>)[dim] ?? "—");
+      const k = String((r as unknown as Record<string, unknown>)[dim] ?? "—");
       const c = map.get(k) ?? { bud: 0, real: 0 };
       if (r.kind === "real") c.real += r.receita;
       else if (realPeriods.has(r.periodo)) c.bud += r.receita;
