@@ -2219,3 +2219,107 @@ function GroupOverlay({
     </>
   );
 }
+
+// ---------------------------------------------------------------------------
+// PalettePopover — paleta de cores rápidas (cores usadas + cores do tema)
+// ---------------------------------------------------------------------------
+function collectUsedColors(blocks: CustomBlock[]): string[] {
+  const set = new Set<string>();
+  for (const b of blocks) {
+    if (b.kind === "title" || b.kind === "text") set.add(b.color);
+    else if (b.kind === "kpi") set.add(b.color);
+    else if (b.kind === "shape") set.add(b.fill);
+  }
+  return Array.from(set).filter(Boolean).slice(0, 7);
+}
+
+function PalettePopover({
+  theme, blocks, selected,
+}: {
+  theme: SlideTheme;
+  blocks: CustomBlock[];
+  selected: CustomBlock | null;
+}) {
+  const used = collectUsedColors(blocks);
+  const canApply = !!selected && (
+    selected.kind === "title" || selected.kind === "text" ||
+    selected.kind === "kpi" || selected.kind === "shape"
+  );
+
+  const apply = (hex: string) => {
+    if (!selected) {
+      toast.info("Selecione um bloco para aplicar a cor.");
+      return;
+    }
+    if (selected.kind === "shape") {
+      patchBlockAction(selected.id, { fill: hex } as Partial<CustomBlock>, "Alterar estilo");
+    } else if (
+      selected.kind === "title" || selected.kind === "text" || selected.kind === "kpi"
+    ) {
+      patchBlockAction(selected.id, { color: hex } as Partial<CustomBlock>, "Alterar estilo");
+    } else {
+      toast.info("Este bloco não suporta cor direta.");
+    }
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          size="sm" variant="ghost"
+          className="h-7 gap-1 px-2 text-[11px]"
+          title="Paleta de cores"
+        >
+          <Paintbrush className="h-3.5 w-3.5" /> Paleta
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3" align="start">
+        <div className="space-y-3">
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Cores deste slide
+            </div>
+            {used.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">Nenhuma cor usada ainda.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {used.map((hex) => (
+                  <button
+                    key={`u-${hex}`} type="button"
+                    onClick={() => apply(hex)}
+                    disabled={!canApply}
+                    className="h-6 w-6 rounded-md border border-border/50 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ background: `#${hex}` }}
+                    title={`#${hex}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Tema · {theme.name}
+            </div>
+            <div className="grid grid-cols-8 gap-1.5">
+              {theme.swatches.map((hex, i) => (
+                <button
+                  key={`t-${i}-${hex}`} type="button"
+                  onClick={() => apply(hex)}
+                  disabled={!canApply}
+                  className="h-6 w-6 rounded-md border border-border/50 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ background: `#${hex}` }}
+                  title={`#${hex}`}
+                />
+              ))}
+            </div>
+          </div>
+          {!canApply && (
+            <p className="text-[10px] text-muted-foreground">
+              Selecione um título, texto, KPI ou forma para aplicar.
+            </p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
