@@ -55,6 +55,13 @@ export default function VisaoGeral() {
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const kpis = useMemo(() => computeKPIs(filtered, metric), [filtered, metric]);
 
+  const comparison = useMemo(() => {
+    const ctx = getKpiComparisonContext(rows, filters, selected);
+    if (!ctx) return null;
+    const cmp = computeKPIComparison(filtered, ctx.previousRows, metric);
+    return { ...cmp, label: ctx.label };
+  }, [rows, filters, selected, filtered, metric]);
+
   const allPeriods = useMemo(
     () => Array.from(new Set(rows.map((r) => r.periodo))).sort(),
     [rows],
