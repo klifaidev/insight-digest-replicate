@@ -855,3 +855,125 @@ export default function Budget() {
     </>
   );
 }
+
+// ---------------------------------------------------------------
+// Painel YTD + Projeção de fechamento
+// ---------------------------------------------------------------
+interface ProjectionData {
+  currentFy: string;
+  realRolYtd: number; budRolYtd: number; budRolFy: number;
+  projected: number; attainment: number;
+  status: "ok" | "risk" | "off";
+  gapAbs: number; gapPct: number;
+  monthsRealized: number;
+}
+
+function ProjectionPanel({ p }: { p: ProjectionData }) {
+  const statusMeta = {
+    ok:   { label: "No caminho",     icon: CheckCircle2,   tone: "text-success border-success/30 bg-success/10" },
+    risk: { label: "Em risco",       icon: AlertTriangle,  tone: "text-warning border-warning/30 bg-warning/10" },
+    off:  { label: "Fora do budget", icon: XCircle,        tone: "text-destructive border-destructive/30 bg-destructive/10" },
+  }[p.status];
+  const StatusIcon = statusMeta.icon;
+  const projGap = p.projected - p.budRolFy;
+
+  return (
+    <GlassCard glow={p.status === "ok" ? "green" : p.status === "off" ? "red" : "blue"}>
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">
+            <Target className="mr-2 inline h-4 w-4 text-accent" /> Projeção de fechamento — {p.currentFy}
+          </h3>
+          <p className="text-[11px] text-muted-foreground">
+            {p.monthsRealized} mês(es) realizado(s) · projeção linear pelo ratio Real/Budget YTD
+          </p>
+        </div>
+        <div className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold", statusMeta.tone)}>
+          <StatusIcon className="h-4 w-4" />
+          {statusMeta.label}
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ProjStat label="YTD Real"   value={fmtCurrencyBR(p.realRolYtd)} />
+        <ProjStat label="YTD Budget" value={fmtCurrencyBR(p.budRolYtd)} muted />
+        <ProjStat
+          label="Gap YTD"
+          value={`${p.gapAbs >= 0 ? "+" : ""}${fmtCurrencyBR(p.gapAbs)}`}
+          extra={
+            <Badge
+              variant="secondary"
+              className={cn(
+                "ml-2 px-2 text-[10px] font-bold tabular-nums",
+                p.gapPct >= 0
+                  ? "bg-success/15 text-success border border-success/30"
+                  : "bg-destructive/15 text-destructive border border-destructive/30",
+              )}
+            >
+              {p.gapPct >= 0 ? "+" : ""}{(p.gapPct * 100).toFixed(1)}%
+            </Badge>
+          }
+          valueClass={p.gapAbs >= 0 ? "text-success" : "text-destructive"}
+        />
+        <ProjStat
+          label="Projeção FY"
+          value={fmtCurrencyBR(p.projected)}
+          subValue={`Budget anual ${fmtCurrencyBR(p.budRolFy)} · ${(p.attainment * 100).toFixed(1)}% atingimento${
+            projGap !== 0 ? ` (${projGap >= 0 ? "+" : ""}${fmtCurrencyBR(projGap)})` : ""
+          }`}
+          valueClass={
+            p.status === "ok" ? "text-success" : p.status === "off" ? "text-destructive" : "text-warning"
+          }
+        />
+      </div>
+
+      {/* Barra visual de atingimento */}
+      <div className="mt-5">
+        <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>Atingimento projetado</span>
+          <span className="tabular-nums font-semibold text-foreground">{(p.attainment * 100).toFixed(1)}%</span>
+        </div>
+        <div className="relative h-3 overflow-hidden rounded-full bg-secondary/50">
+          <div
+            className={cn(
+              "absolute inset-y-0 left-0 rounded-full transition-all",
+              p.status === "ok" ? "bg-success" : p.status === "risk" ? "bg-warning" : "bg-destructive",
+            )}
+            style={{ width: `${Math.min(p.attainment, 1.2) * 100 / 1.2}%`, opacity: 0.85 }}
+          />
+          {/* marca de 100% */}
+          <div className="absolute inset-y-0" style={{ left: `${100 / 1.2}%` }}>
+            <div className="h-full w-px bg-foreground/40" />
+          </div>
+        </div>
+        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+          <span>0%</span>
+          <span style={{ marginRight: `${100 / 1.2 - 100}%` }}>100% (budget)</span>
+          <span>120%</span>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+function ProjStat({
+  label, value, subValue, valueClass, extra, muted,
+}: {
+  label: string;
+  value: string;
+  subValue?: string;
+  valueClass?: string;
+  extra?: React.ReactNode;
+  muted?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-border/40 bg-secondary/20 p-4">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={cn("mt-1 flex items-baseline text-xl font-bold tabular-nums", muted && "text-muted-foreground", valueClass)}>
+        <span>{value}</span>
+        {extra}
+      </div>
+      {subValue && <div className="mt-1 text-[11px] text-muted-foreground">{subValue}</div>}
+    </div>
+  );
+}
