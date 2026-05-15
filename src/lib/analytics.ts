@@ -234,6 +234,50 @@ export function computeCostEvolution(rows: PricingRow[]): CostEvolutionRow[] {
     .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
 }
 
+export interface CanalTrendPoint {
+  periodo: string;
+  label: string;
+  ano: number;
+  mes: number;
+  rol: number;
+  margem: number;
+  margemPct: number;
+  volumeKg: number;
+}
+
+/**
+ * Monthly time series for a single canal (canalAjustado).
+ * If `canal` is null/undefined, aggregates ALL rows.
+ */
+export function computeCanalTrend(
+  rows: PricingRow[],
+  canal: string | null,
+  metric: Metric,
+): CanalTrendPoint[] {
+  const map = new Map<string, CanalTrendPoint>();
+  for (const r of rows) {
+    const c = r.canalAjustado || "Sem canal";
+    if (canal != null && c !== canal) continue;
+    const cur = map.get(r.periodo) ?? {
+      periodo: r.periodo,
+      label: `${String(r.mes).padStart(2, "0")}/${String(r.ano).slice(-2)}`,
+      ano: r.ano,
+      mes: r.mes,
+      rol: 0,
+      margem: 0,
+      margemPct: 0,
+      volumeKg: 0,
+    };
+    cur.rol += r.rol;
+    cur.margem += measureOf(r, metric);
+    cur.volumeKg += r.volumeKg;
+    map.set(r.periodo, cur);
+  }
+  return Array.from(map.values())
+    .map((p) => ({ ...p, margemPct: p.rol > 0 ? p.margem / p.rol : 0 }))
+    .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+}
+
 export interface PVMSkuDetail {
   sku: string;
   skuDesc?: string;
