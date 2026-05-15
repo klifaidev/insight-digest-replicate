@@ -4,14 +4,18 @@
 // Espelha exatamente: cores, posições, fontes (proporcionalmente), curvas suaves
 // para o Budget Evo (Overview CM/VOL) e bridge waterfall com retângulos pretos
 // (totais) + linha vermelha curta (deltas) + labels abaixo.
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { applyFilters, calcPVM, type PVMResult } from "@/lib/analytics";
 import { computeBudgetEvoMonthly, isItemReady, type SlideItem } from "@/lib/slidesFlow";
 import { monthLabel } from "@/lib/format";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
-import { AlertCircle, Eye } from "lucide-react";
+import { AlertCircle, Eye, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CANVAS_W, CANVAS_H } from "@/lib/customSlide";
+import { CustomCanvasReadOnly } from "@/components/pricing/custom/PresentationMode";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // ---------------------------------------------------------------------------
 // Tokens (espelhando PPT_COLORS de exportPpt.ts)
