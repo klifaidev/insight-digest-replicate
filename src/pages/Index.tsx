@@ -101,15 +101,36 @@ export default function Index() {
         ) : (
           <>
             <GlassCard className="grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
-              <Stat label="ROL Total" value={formatBRL(kpis.rol, { compact: true })} accent="text-primary" />
+              <Stat
+                label="ROL Total"
+                value={formatBRL(kpis.rol, { compact: true })}
+                accent="text-primary"
+                delta={comparison?.deltaPct.rol}
+                deltaLabel={comparison?.label}
+              />
               <Stat
                 label={metric === "cm" ? "Contrib. Marginal" : "Margem Bruta"}
                 value={formatBRL(kpis.margem, { compact: true })}
                 sub={formatPct(kpis.margemPct)}
                 accent="text-success"
+                delta={comparison?.deltaPct.margem}
+                deltaLabel={comparison?.label}
               />
-              <Stat label="Volume" value={formatTon(kpis.volumeKg)} accent="text-warning" />
-              <Stat label="SKUs ativos" value={formatNum(kpis.skus)} sub={`${months.length} mês(es)`} accent="text-accent" />
+              <Stat
+                label="Volume"
+                value={formatTon(kpis.volumeKg)}
+                accent="text-warning"
+                delta={comparison?.deltaPct.volumeKg}
+                deltaLabel={comparison?.label}
+              />
+              <Stat
+                label="SKUs ativos"
+                value={formatNum(kpis.skus)}
+                sub={`${months.length} mês(es)`}
+                accent="text-accent"
+                delta={comparison?.deltaPct.skus}
+                deltaLabel={comparison?.label}
+              />
             </GlassCard>
 
             <GlassCard>
@@ -122,12 +143,54 @@ export default function Index() {
   );
 }
 
-function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent: string }) {
+function formatDeltaPct(d: number): string {
+  const sign = d > 0 ? "+" : d < 0 ? "−" : "";
+  return `${sign}${Math.abs(d * 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
+}
+
+function Stat({
+  label,
+  value,
+  sub,
+  accent,
+  delta,
+  deltaLabel,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent: string;
+  delta?: number;
+  deltaLabel?: string;
+}) {
+  const hasDelta = typeof delta === "number" && isFinite(delta);
+  const dir = hasDelta ? (delta! > 0 ? "up" : delta! < 0 ? "down" : "flat") : null;
   return (
     <div>
       <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
       <div className={`mt-2 text-3xl font-light tabular-nums ${accent}`}>{value}</div>
       {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
+      {hasDelta && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+              dir === "up" && "bg-success/15 text-success",
+              dir === "down" && "bg-destructive/15 text-destructive",
+              dir === "flat" && "bg-muted text-muted-foreground",
+            )}
+          >
+            {dir === "up" && <ArrowUpRight className="h-3 w-3" />}
+            {dir === "down" && <ArrowDownRight className="h-3 w-3" />}
+            {dir === "flat" && <Minus className="h-3 w-3" />}
+            {formatDeltaPct(delta!)}
+          </span>
+          {deltaLabel && <span className="text-[11px] text-muted-foreground">{deltaLabel}</span>}
+        </div>
+      )}
     </div>
   );
 }
