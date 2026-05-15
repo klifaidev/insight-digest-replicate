@@ -1215,6 +1215,12 @@ export default function SlidesBeta() {
         })() : null}
       </DragOverlay>
       </DndContext>
+      <TemplateGallery
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        ctx={{ months, budgetMonths }}
+        onSelect={applyTemplate}
+      />
     </>
   );
 }
