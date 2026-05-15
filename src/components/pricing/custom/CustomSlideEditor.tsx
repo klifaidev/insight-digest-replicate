@@ -45,6 +45,7 @@ import {
   BUDGET_UNAVAILABLE_MEASURES, BUDGET_UNAVAILABLE_HINT,
   type CustomBlock, type CustomBlockKind, type CustomChartType, type CustomSlideConfig,
   type KpiBlock, type ChartBlock, type TopSkuBlock, type ShapeBlock,
+  type TitleBlock, type TextBlock,
   isLineFamily,
 } from "@/lib/customSlide";
 import { ShapeHandleOverlay } from "./ShapeHandleOverlay";
@@ -95,6 +96,8 @@ import {
 import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
 import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
 import { PresentationMode } from "./PresentationMode";
+import { InlineTextEditor, InlineTextToolbar } from "./InlineTextEditor";
+import { Pencil } from "lucide-react";
 
 type Icon = React.ComponentType<{ className?: string }>;
 
@@ -157,6 +160,16 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
   // Marquee selection rectangle (canvas-space coords).
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  // Inline text editing (double-click no bloco title/text).
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  // Limpa inline edit se o bloco for excluído ou ficar bloqueado.
+  useEffect(() => {
+    if (!inlineEditId) return;
+    const blk = config.blocks.find((b) => b.id === inlineEditId);
+    if (!blk || blk.locked || (blk.kind !== "title" && blk.kind !== "text")) {
+      setInlineEditId(null);
+    }
+  }, [inlineEditId, config.blocks]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1);
@@ -514,6 +527,9 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
 
               {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => {
                 const isSelected = selectedIds.includes(blk.id);
+                const isInlineEditable =
+                  (blk.kind === "title" || blk.kind === "text") && !blk.locked;
+                const isEditing = inlineEditId === blk.id && isInlineEditable;
                 // Shape-specific Rnd config — contextual handles override.
                 let shapeResize: boolean | Record<string, boolean> = !blk.locked;
                 let shapeDisableDrag = !!blk.locked;
@@ -533,6 +549,10 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                   } else if (sb.shape === "triangle" || sb.shape === "right-triangle") {
                     shapeResize = false; // overlay vertex handles only
                   }
+                }
+                if (isEditing) {
+                  shapeResize = false;
+                  shapeDisableDrag = true;
                 }
                 return (
                 <ContextMenu key={blk.id}>
@@ -602,23 +622,37 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                         updateBlock(blk.id, { w, h, x, y });
                       }}
                       onMouseDown={(e) => {
+                        if (isEditing) {
+                          // Permite que o textarea receba o clique.
+                          return;
+                        }
                         e.stopPropagation();
                         const wasSelected = selectedIds.includes(blk.id);
                         const shift = (e as MouseEvent).shiftKey;
                         // Click on a single member of a group while group is
                         // already selected → keep group selected.
                         selectBlock(blk.id, { additive: shift });
+                        // Sai de edição inline ao clicar em outro bloco.
+                        if (inlineEditId && inlineEditId !== blk.id) {
+                          setInlineEditId(null);
+                        }
                         if (blk.locked && wasSelected && !shift && (e as MouseEvent).button === 0) {
                           toast("Bloco bloqueado. Clique com botão direito para desbloquear.", { duration: 1800 });
                         }
                       }}
                       onDoubleClick={(e) => {
+                        if (isInlineEditable) {
+                          e.stopPropagation();
+                          setInlineEditId(blk.id);
+                          selectBlock(blk.id);
+                          return;
+                        }
                         if (blk.groupId) {
                           e.stopPropagation();
                           enterGroupEdit(blk.id);
                         }
                       }}
-                      style={{ zIndex: blk.z }}
+                      style={{ zIndex: isEditing ? 9999998 : blk.z }}
                       className={cn(
                         "group/block",
                         isSelected
@@ -632,6 +666,32 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                       }}>
                         <BlockRenderer block={blk} />
                       </div>
+                      {isEditing && (
+                        <InlineTextEditor
+                          block={blk as TitleBlock | TextBlock}
+                          onPatch={(patch) =>
+                            patchBlockAction(blk.id, patch, "Alterar estilo")
+                          }
+                          onExit={() => setInlineEditId(null)}
+                        />
+                      )}
+                      {isInlineEditable && !isEditing && !blk.locked && (
+                        <div
+                          data-export-hide="true"
+                          className="opacity-0 group-hover/block:opacity-100 transition-opacity"
+                          style={{
+                            position: "absolute", top: 4, right: 4,
+                            width: 18, height: 18, borderRadius: 4,
+                            background: "hsl(var(--background) / 0.9)",
+                            border: "1px solid hsl(var(--border))",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            zIndex: 999990, pointerEvents: "none",
+                          }}
+                          title="Duplo-clique para editar"
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      )}
                       <DataSourceBadge block={blk} />
                       {blk.locked && (
                         <div
@@ -709,6 +769,22 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 </ContextMenu>
                 );
               })}
+
+              {/* Inline text edit toolbar. */}
+              {(() => {
+                if (!inlineEditId) return null;
+                const blk = config.blocks.find((b) => b.id === inlineEditId);
+                if (!blk || (blk.kind !== "title" && blk.kind !== "text")) return null;
+                return (
+                  <InlineTextToolbar
+                    block={blk as TitleBlock | TextBlock}
+                    scale={scale}
+                    onPatch={(patch) =>
+                      patchBlockAction(blk.id, patch, "Alterar estilo")
+                    }
+                  />
+                );
+              })()}
 
               {/* Contextual handles for selected shape blocks. */}
               {config.blocks
