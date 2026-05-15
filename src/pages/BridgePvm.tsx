@@ -5,7 +5,7 @@ import { Waterfall } from "@/components/pricing/Waterfall";
 import { EmptyState } from "@/components/pricing/EmptyState";
 import { usePricing } from "@/store/pricing";
 import { useFyList, useMonthsInfo } from "@/store/selectors";
-import { applyFilters, calcPVM, type PVMSkuDetail } from "@/lib/analytics";
+import { applyFilters, calcPVM, type PVMResult, type PVMSkuDetail } from "@/lib/analytics";
 import { exportPvmCsv } from "@/lib/exportCsv";
 import { exportBridgePvmPpt } from "@/lib/exportPpt";
 import { formatBRL } from "@/lib/format";
@@ -379,7 +379,7 @@ function EffectList({
 
 // ---------- Leitura do resultado ----------
 
-import type { PVMResult } from "@/lib/analytics";
+
 
 const EFFECT_LABELS: Record<keyof Pick<PVMResult, "volume" | "price" | "cost" | "freight" | "commission" | "others">, string> = {
   volume: "Volume",
