@@ -371,6 +371,10 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             disabled={config.blocks.length === 0}>
             <Save className="h-3.5 w-3.5" /> Salvar como modelo
           </Button>
+          <Button size="sm" variant="outline" className="h-7 justify-start gap-2 text-xs"
+            onClick={() => setAssetsOpen(true)}>
+            <Images className="h-3.5 w-3.5" /> Assets
+          </Button>
           <Separator className="my-2" />
 
           <PaletteGroup title="Gráficos" defaultOpen>
