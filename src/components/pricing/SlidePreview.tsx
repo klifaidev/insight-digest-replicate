@@ -666,7 +666,7 @@ export function SlidePreview({ item }: { item: SlideItem }) {
             <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
           </DialogHeader>
           <div className="p-5">
-            <ScaledPreview item={item} targetWidth={840} />
+            <ScaledPreview item={item} targetWidth={800} />
           </div>
         </DialogContent>
       </Dialog>
