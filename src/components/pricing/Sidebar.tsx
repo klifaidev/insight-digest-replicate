@@ -29,6 +29,7 @@ export function Sidebar() {
   const setMetric = usePricing((s) => s.setMetric);
   const missing = usePricing((s) => s.missing);
   const monthsCount = useMonthsInfo().length;
+  const hasFilters = useHasActiveFilters();
 
   const cm = useMemo(() => metric === "cm", [metric]);
   const missingCount = useMemo(
