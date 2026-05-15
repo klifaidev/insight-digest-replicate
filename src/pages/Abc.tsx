@@ -1,80 +1,194 @@
 import { Topbar } from "@/components/pricing/Topbar";
 import { GlassCard } from "@/components/pricing/GlassCard";
-import { AbcBar } from "@/components/pricing/AbcBar";
-import { DataTable } from "@/components/pricing/DataTable";
 import { EmptyState } from "@/components/pricing/EmptyState";
-import { Button } from "@/components/ui/button";
+import { PortfolioMatrix, classifyQuadrant, portfolioMedians } from "@/components/pricing/PortfolioMatrix";
+import { AbcPareto, classifyAbc } from "@/components/pricing/AbcPareto";
+import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
-import { aggregateBy, applyFilters } from "@/lib/analytics";
-import { formatBRL, formatPct, formatTon } from "@/lib/format";
-import { useMemo, useState } from "react";
+import { aggregateBy, applyFilters, getKpiComparisonContext } from "@/lib/analytics";
+import { formatBRL, formatPct } from "@/lib/format";
+import { useMemo } from "react";
+import { AlertTriangle, TrendingDown, TrendingUp, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface Alert {
+  id: string;
+  icon: React.ComponentType<{ className?: string }>;
+  type: "risco" | "descontinuar" | "escalar" | "atencao";
+  label: string;
+  badgeClass: string;
+  sku: string;
+  description: string;
+  metric: string;
+}
 
 export default function Abc() {
   const rows = usePricing((s) => s.rows);
   const metric = usePricing((s) => s.metric);
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
-  const [rankingSort, setRankingSort] = useState<"margem" | "volume">("margem");
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const bySku = useMemo(() => aggregateBy(filtered, metric, (r) => r.skuDesc || r.sku || "—"), [filtered, metric]);
-  const rankingRows = useMemo(
-    () =>
-      [...bySku].sort((a, b) =>
-        rankingSort === "margem" ? b.margem - a.margem : b.volumeKg - a.volumeKg,
-      ),
-    [bySku, rankingSort],
-  );
 
-  if (rows.length === 0) return (<><Topbar title="ABC Heróis & Ofensores" /><div className="px-8 py-6"><EmptyState /></div></>);
+  const previousCtx = useMemo(() => getKpiComparisonContext(rows, filters, selected), [rows, filters, selected]);
+  const bySkuPrev = useMemo(
+    () => (previousCtx ? aggregateBy(previousCtx.previousRows, metric, (r) => r.skuDesc || r.sku || "—") : []),
+    [previousCtx, metric],
+  );
+  const prevMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of bySkuPrev) m.set(r.key, r.margemPct);
+    return m;
+  }, [bySkuPrev]);
+
+  const alerts = useMemo<Alert[]>(() => {
+    if (bySku.length === 0) return [];
+    const { medVol, medMargem } = portfolioMedians(bySku);
+    const classified = classifyAbc(bySku);
+    const classeMap = new Map(classified.map((c) => [c.key, c.classe]));
+    const totalRol = bySku.reduce((s, r) => s + r.rol, 0) || 1;
+    const margens = bySku.filter((r) => r.rol > 0).map((r) => r.margemPct).sort((a, b) => a - b);
+    const medGlobal = margens.length ? margens[Math.floor(margens.length / 2)] : 0;
+
+    const out: Alert[] = [];
+    for (const r of bySku) {
+      const classe = classeMap.get(r.key);
+      const quad = classifyQuadrant(r.volumeKg, r.margemPct, medVol, medMargem);
+
+      // Classe A com margem abaixo da mediana → "Em risco"
+      if (classe === "A" && r.margemPct < medGlobal) {
+        out.push({
+          id: `risco-${r.key}`,
+          icon: TrendingDown,
+          type: "risco",
+          label: "Em risco",
+          badgeClass: "bg-destructive/15 text-destructive border border-destructive/30",
+          sku: r.key,
+          description: "SKU classe A com margem abaixo da mediana do portfólio",
+          metric: `Margem: ${formatPct(r.margemPct)} (mediana ${formatPct(medGlobal)})`,
+        });
+      }
+
+      // Abacaxi com ROL relevante
+      if (quad === "abacaxi" && r.rol / totalRol > 0.005) {
+        out.push({
+          id: `desc-${r.key}`,
+          icon: Trash2,
+          type: "descontinuar",
+          label: "Avaliar descontinuação",
+          badgeClass: "bg-orange-500/15 text-orange-400 border border-orange-500/30",
+          sku: r.key,
+          description: "Quadrante Abacaxis com participação relevante no ROL",
+          metric: `ROL: ${formatBRL(r.rol, { compact: true })} (${formatPct(r.rol / totalRol)} do total)`,
+        });
+      }
+
+      // Oportunidade com margem >= 1.5x mediana
+      if (quad === "oportunidade" && r.margemPct >= 1.5 * medGlobal && medGlobal > 0) {
+        out.push({
+          id: `escalar-${r.key}`,
+          icon: TrendingUp,
+          type: "escalar",
+          label: "Escalar",
+          badgeClass: "bg-primary/15 text-primary border border-primary/30",
+          sku: r.key,
+          description: "Quadrante Oportunidades com margem muito acima da mediana",
+          metric: `Margem: ${formatPct(r.margemPct)} (1,5× mediana)`,
+        });
+      }
+
+      // Classe A com queda de margem > 3pp vs período anterior
+      if (classe === "A" && prevMap.has(r.key)) {
+        const prev = prevMap.get(r.key)!;
+        const delta = r.margemPct - prev;
+        if (delta < -0.03) {
+          out.push({
+            id: `atencao-${r.key}`,
+            icon: AlertTriangle,
+            type: "atencao",
+            label: "Atenção",
+            badgeClass: "bg-warning/15 text-warning border border-warning/30",
+            sku: r.key,
+            description: "Classe A com queda relevante de margem vs. período anterior",
+            metric: `Δ Margem: ${(delta * 100).toFixed(1)}pp (${formatPct(prev)} → ${formatPct(r.margemPct)})`,
+          });
+        }
+      }
+    }
+    return out;
+  }, [bySku, prevMap]);
+
+  if (rows.length === 0)
+    return (
+      <>
+        <Topbar title="Portfólio de SKUs" />
+        <div className="px-8 py-6"><EmptyState /></div>
+      </>
+    );
+
+  const metricLabel = metric === "cm" ? "CM" : "MB";
 
   return (
     <>
-      <Topbar title="ABC Heróis" subtitle="Top SKUs por margem e volume" />
+      <Topbar title="Portfólio de SKUs" subtitle="Matriz estratégica, curva ABC e alertas automáticos" />
       <div className="space-y-6 px-8 py-6">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <GlassCard glow="green">
-            <h3 className="mb-4 text-sm font-medium text-success">🏆 Top 5 Heróis em Margem</h3>
-            <AbcBar rows={bySku} variant="hero" limit={5} />
-          </GlassCard>
-          <GlassCard glow="green">
-            <h3 className="mb-4 text-sm font-medium text-success">📦 Top 5 Heróis em Volume</h3>
-            <AbcBar rows={bySku} variant="hero" limit={5} sortBy="volume" />
-          </GlassCard>
-        </div>
-
-        <GlassCard>
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-sm font-medium">Ranking completo de SKUs</h3>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={rankingSort === "margem" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setRankingSort("margem")}
-              >
-                Ordenar por margem
-              </Button>
-              <Button
-                variant={rankingSort === "volume" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setRankingSort("volume")}
-              >
-                Ordenar por volume
-              </Button>
+        <GlassCard glow="blue">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">Matriz de portfólio</h3>
+              <p className="text-xs text-muted-foreground">Volume × Margem % — tamanho do círculo proporcional ao ROL</p>
             </div>
           </div>
-          <DataTable
-            rows={rankingRows as unknown as Record<string, unknown>[]}
-            searchable
-            searchKeys={["key"]}
-            columns={[
-              { key: "key", label: "SKU", align: "left", format: (v) => <span className="truncate font-medium">{String(v)}</span> },
-              { key: "rol", label: "ROL", align: "right", format: (v) => formatBRL(Number(v), { compact: true }) },
-              { key: "margem", label: metric === "cm" ? "CM" : "MB", align: "right", format: (v) => formatBRL(Number(v), { compact: true }) },
-              { key: "margemPct", label: "Mg %", align: "right", format: (v) => formatPct(Number(v)) },
-              { key: "volumeKg", label: "Volume", align: "right", format: (v) => formatTon(Number(v)) },
-            ]}
-          />
+          <PortfolioMatrix rows={bySku} metricLabel={metricLabel} />
+        </GlassCard>
+
+        <GlassCard>
+          <div className="mb-4">
+            <h3 className="text-sm font-medium">Curva ABC (Pareto)</h3>
+            <p className="text-xs text-muted-foreground">Classes A (≤80% ROL acumulado) · B (80–95%) · C (&gt;95%)</p>
+          </div>
+          <AbcPareto rows={bySku} />
+        </GlassCard>
+
+        <GlassCard>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">Alertas de portfólio</h3>
+              <p className="text-xs text-muted-foreground">{alerts.length} insight{alerts.length === 1 ? "" : "s"} gerado{alerts.length === 1 ? "" : "s"} automaticamente</p>
+            </div>
+          </div>
+          {alerts.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">Nenhum alerta no momento. 🎉</div>
+          ) : (
+            <ul className="space-y-2">
+              {alerts.map((a) => {
+                const Icon = a.icon;
+                return (
+                  <li
+                    key={a.id}
+                    className="flex items-start gap-3 rounded-xl border border-border/40 bg-card/40 p-3 transition-colors hover:bg-card/60"
+                  >
+                    <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", a.badgeClass)}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className={cn("px-1.5 text-[10px] font-bold", a.badgeClass)}>
+                          {a.label}
+                        </Badge>
+                        <span className="truncate text-xs font-medium">{a.sku}</span>
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">{a.description}</div>
+                    </div>
+                    <div className="shrink-0 self-center text-right text-xs font-semibold tabular-nums text-foreground">
+                      {a.metric}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </GlassCard>
       </div>
     </>

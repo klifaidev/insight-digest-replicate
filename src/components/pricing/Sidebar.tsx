@@ -13,7 +13,7 @@ const dashItems = [
   { to: "/dre", label: "DRE", icon: FileSpreadsheet },
   { to: "/canais", label: "Canais", icon: Network },
   { to: "/custos", label: "Custos", icon: Coins },
-  { to: "/abc", label: "ABC Heróis", icon: LineChart },
+  { to: "/abc", label: "Portfólio de SKUs", icon: LineChart },
   { to: "/budget", label: "Budget", icon: Target },
   { to: "/detalhe", label: "Tabela Dinâmica", icon: TableProperties },
 ];
