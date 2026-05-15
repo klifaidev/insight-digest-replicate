@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/pricing/EmptyState";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
-import { aggregateBy, applyFilters, computeKPIs } from "@/lib/analytics";
+import { aggregateBy, applyFilters, computeKPIs, computeKPIComparison, getKpiComparisonContext } from "@/lib/analytics";
 import { formatBRL, formatNum, formatPct, formatTon } from "@/lib/format";
 import { useMemo, useState } from "react";
 
@@ -54,6 +54,13 @@ export default function VisaoGeral() {
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const kpis = useMemo(() => computeKPIs(filtered, metric), [filtered, metric]);
+
+  const comparison = useMemo(() => {
+    const ctx = getKpiComparisonContext(rows, filters, selected);
+    if (!ctx) return null;
+    const cmp = computeKPIComparison(filtered, ctx.previousRows, metric);
+    return { ...cmp, label: ctx.label };
+  }, [rows, filters, selected, filtered, metric]);
 
   const allPeriods = useMemo(
     () => Array.from(new Set(rows.map((r) => r.periodo))).sort(),
@@ -111,16 +118,39 @@ export default function VisaoGeral() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="ROL Total" value={formatBRL(kpis.rol, { compact: true })} subValue={formatBRL(kpis.rol)} accent="blue" glow="blue" />
+          <KpiCard
+            label="ROL Total"
+            value={formatBRL(kpis.rol, { compact: true })}
+            subValue={formatBRL(kpis.rol)}
+            accent="blue"
+            glow="blue"
+            delta={comparison?.deltaPct.rol}
+            deltaLabel={comparison?.label}
+          />
           <KpiCard
             label={metric === "cm" ? "Contrib. Marginal" : "Margem Bruta"}
             value={formatBRL(kpis.margem, { compact: true })}
             subValue={formatPct(kpis.margemPct)}
             accent="green"
             glow="green"
+            delta={comparison?.deltaPct.margem}
+            deltaLabel={comparison?.label}
           />
-          <KpiCard label="Volume" value={formatTon(kpis.volumeKg)} subValue={`${formatNum(kpis.volumeKg)} t`} accent="amber" />
-          <KpiCard label="SKUs ativos" value={formatNum(kpis.skus)} accent="violet" />
+          <KpiCard
+            label="Volume"
+            value={formatTon(kpis.volumeKg)}
+            subValue={`${formatNum(kpis.volumeKg)} t`}
+            accent="amber"
+            delta={comparison?.deltaPct.volumeKg}
+            deltaLabel={comparison?.label}
+          />
+          <KpiCard
+            label="SKUs ativos"
+            value={formatNum(kpis.skus)}
+            accent="violet"
+            delta={comparison?.deltaPct.skus}
+            deltaLabel={comparison?.label}
+          />
         </div>
 
         <GlassCard>

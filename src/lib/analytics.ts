@@ -45,6 +45,81 @@ export function computeKPIs(rows: PricingRow[], metric: Metric): KPI {
   };
 }
 
+export interface KPIComparison {
+  current: KPI;
+  previous: KPI;
+  delta: KPI;       // absolute deltas (current - previous), margemPct as pp diff
+  deltaPct: KPI;    // relative deltas ((c - p) / |p|); 0 when previous is 0
+}
+
+export function computeKPIComparison(
+  currentRows: PricingRow[],
+  previousRows: PricingRow[],
+  metric: Metric,
+): KPIComparison {
+  const current = computeKPIs(currentRows, metric);
+  const previous = computeKPIs(previousRows, metric);
+  const sub = (a: number, b: number) => a - b;
+  const rel = (a: number, b: number) => (b !== 0 ? (a - b) / Math.abs(b) : 0);
+  const delta: KPI = {
+    rol: sub(current.rol, previous.rol),
+    margem: sub(current.margem, previous.margem),
+    margemPct: sub(current.margemPct, previous.margemPct),
+    volumeKg: sub(current.volumeKg, previous.volumeKg),
+    skus: sub(current.skus, previous.skus),
+  };
+  const deltaPct: KPI = {
+    rol: rel(current.rol, previous.rol),
+    margem: rel(current.margem, previous.margem),
+    margemPct: rel(current.margemPct, previous.margemPct),
+    volumeKg: rel(current.volumeKg, previous.volumeKg),
+    skus: rel(current.skus, previous.skus),
+  };
+  return { current, previous, delta, deltaPct };
+}
+
+/**
+ * Determine the comparison context (previous-period rows + label) for KPI deltas.
+ * Returns null when no comparable previous period exists in the data.
+ */
+export function getKpiComparisonContext(
+  rows: PricingRow[],
+  filters: Filters,
+  selectedPeriods: string[] | null,
+): { previousRows: PricingRow[]; label: string } | null {
+  const allPeriods = Array.from(new Set(rows.map((r) => r.periodo))).sort();
+  if (allPeriods.length < 2) return null;
+
+  const fyOf = (p: string): string | undefined =>
+    rows.find((r) => r.periodo === p)?.fy;
+
+  let previousPeriods: string[] = [];
+  let label = "";
+
+  if (selectedPeriods && selectedPeriods.length === 1) {
+    const idx = allPeriods.indexOf(selectedPeriods[0]);
+    if (idx <= 0) return null;
+    previousPeriods = [allPeriods[idx - 1]];
+    label = "vs. mês anterior";
+  } else {
+    const activePeriods = selectedPeriods && selectedPeriods.length
+      ? selectedPeriods
+      : allPeriods;
+    const fys = Array.from(new Set(activePeriods.map(fyOf).filter(Boolean))) as string[];
+    if (fys.length !== 1) return null;
+    const allFys = Array.from(new Set(rows.map((r) => r.fy))).sort();
+    const fyIdx = allFys.indexOf(fys[0]);
+    if (fyIdx <= 0) return null;
+    const prevFy = allFys[fyIdx - 1];
+    previousPeriods = allPeriods.filter((p) => fyOf(p) === prevFy);
+    if (previousPeriods.length === 0) return null;
+    label = "vs. ano fiscal anterior";
+  }
+
+  const previousRows = applyFilters(rows, filters, previousPeriods);
+  return { previousRows, label };
+}
+
 export interface AggRow {
   key: string;
   rol: number;
