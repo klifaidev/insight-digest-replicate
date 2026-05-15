@@ -139,7 +139,7 @@ export function setShowHaraldFooter(v: boolean) {
 
 /** Aplica um tema: muda theme + background do slide automaticamente. */
 export function setThemeAction(themeId: string, themeBg: string) {
-  mutate("Aplicar tema", (c) => ({ ...c, theme: themeId, background: themeBg }));
+  mutate("Alterar slide", (c) => ({ ...c, theme: themeId, background: themeBg }));
 }
 
 export function addBlockAction(kind: CustomBlockKind): string | null {
