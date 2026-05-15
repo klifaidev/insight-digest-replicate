@@ -910,6 +910,12 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             <Redo2 className="h-3.5 w-3.5" />
           </Button>
           <Separator orientation="vertical" className="mx-1 h-5" />
+          <PalettePopover
+            theme={getTheme(config.theme)}
+            blocks={config.blocks}
+            selected={selected}
+          />
+          <Separator orientation="vertical" className="mx-1 h-5" />
           <Button size="icon" variant="ghost" className="h-7 w-7"
             onClick={() => setZoom(scale - 0.1)} title="Diminuir zoom">
             <ZoomOut className="h-3.5 w-3.5" />
