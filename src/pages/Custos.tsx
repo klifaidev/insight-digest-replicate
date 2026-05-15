@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Area, AreaChart, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, XAxis, YAxis } from "recharts";
+import { Area, Bar, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Topbar } from "@/components/pricing/Topbar";
 import { GlassCard } from "@/components/pricing/GlassCard";
@@ -19,6 +19,10 @@ const chartConfig = {
   custoTotalPorKg: { label: "Custo Total / Kg", color: "hsl(var(--primary))" },
   custoVariavelPorKg: { label: "Custo Variável / Kg", color: "hsl(var(--warning))" },
   custoFixoPorKg: { label: "Custo Fixo / Kg", color: "hsl(var(--accent))" },
+  materiaPrima: { label: "Matéria Prima", color: "hsl(var(--primary))" },
+  embalagem: { label: "Embalagem", color: "hsl(var(--warning))" },
+  mod: { label: "MOD", color: "hsl(var(--accent))" },
+  cif: { label: "CIF", color: "hsl(var(--success))" },
 } as const;
 
 export default function Custos() {
