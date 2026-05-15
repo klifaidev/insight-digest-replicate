@@ -4,7 +4,7 @@
 // Espelha exatamente: cores, posições, fontes (proporcionalmente), curvas suaves
 // para o Budget Evo (Overview CM/VOL) e bridge waterfall com retângulos pretos
 // (totais) + linha vermelha curta (deltas) + labels abaixo.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { applyFilters, calcPVM, type PVMResult } from "@/lib/analytics";
 import { computeBudgetEvoMonthly, isItemReady, type SlideItem } from "@/lib/slidesFlow";
 import { monthLabel } from "@/lib/format";
