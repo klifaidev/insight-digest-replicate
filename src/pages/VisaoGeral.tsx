@@ -171,25 +171,76 @@ export default function VisaoGeral() {
         </div>
 
         <GlassCard>
-          <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-medium">
-                {bubbleBy === "categoria" ? "Categorias" : "Subcategorias"} — Margem % × Share Volume
-              </h2>
-              <p className="text-xs text-muted-foreground">Tamanho da bolha = participação na receita</p>
-            </div>
-            <ToggleGroup
-              type="single"
-              value={bubbleBy}
-              onValueChange={(v) => v && setBubbleBy(v as GroupBy)}
-              variant="outline"
-              size="sm"
-            >
-              <ToggleGroupItem value="categoria">Categoria</ToggleGroupItem>
-              <ToggleGroupItem value="subcategoria">Subcategoria</ToggleGroupItem>
-            </ToggleGroup>
+          <header className="mb-4">
+            <h2 className="text-lg font-medium">Evolução mensal — ROL, Margem % e Volume</h2>
+            <p className="text-xs text-muted-foreground">
+              Linha do tempo do período carregado — leitura imediata de tendência.
+            </p>
           </header>
-          <BubbleChart data={byBubble} />
+          {monthlyTrend.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">Sem dados mensais para exibir.</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <ComposedChart data={monthlyTrend} margin={{ top: 10, right: 24, bottom: 8, left: 8 }}>
+                <CartesianGrid stroke="hsl(var(--border) / 0.4)" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                />
+                <YAxis
+                  yAxisId="left"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tickFormatter={(v) => formatBRL(Number(v), { compact: true })}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  tickFormatter={(v) => `${Number(v).toFixed(0)}%`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--popover) / 0.95)",
+                    border: "1px solid hsl(var(--border) / 0.6)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  formatter={(value: number, name: string) => {
+                    if (name === "Margem %") return [`${value.toFixed(1)}%`, name];
+                    if (name === "Volume (kg)") return [formatTon(value), name];
+                    return [formatBRL(value, { compact: true }), name];
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar
+                  yAxisId="left"
+                  dataKey="volumeKg"
+                  name="Volume (kg)"
+                  fill="hsl(var(--warning) / 0.35)"
+                  stroke="hsl(var(--warning) / 0.6)"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="rol"
+                  name="ROL (R$)"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2.2}
+                  dot={{ r: 3 }}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="margemPctNum"
+                  name="Margem %"
+                  stroke="hsl(var(--success))"
+                  strokeWidth={2.2}
+                  dot={{ r: 3 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
         </GlassCard>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
