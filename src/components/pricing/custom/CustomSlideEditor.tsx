@@ -272,6 +272,56 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
     return [id];
   }, [config.blocks, config.groups, groupEditMemberId, selectedIds]);
 
+  // Helpers for clipboard + alignment shortcuts.
+  const copySelectionToClipboard = useCallback((cut: boolean) => {
+    if (selectedIds.length === 0) return;
+    const blk = config.blocks.find((b) => b.id === selectedIds[0]);
+    if (!blk) return;
+    crossSlideClipboard = JSON.parse(JSON.stringify(blk)) as CustomBlock;
+    if (cut) {
+      if (selectedIds.length === 1) removeBlock(selectedIds[0]);
+      else deleteBlocksAction(selectedIds);
+      toast.success("Bloco cortado");
+    } else {
+      toast.success("Bloco copiado");
+    }
+  }, [selectedIds, config.blocks]);
+
+  const pasteFromClipboard = useCallback(() => {
+    if (!crossSlideClipboard) return;
+    const src = crossSlideClipboard;
+    const clone = JSON.parse(JSON.stringify(src)) as CustomBlock;
+    clone.id = crypto.randomUUID();
+    clone.locked = false;
+    let x = src.x + 20;
+    let y = src.y + 20;
+    if (x + src.w > CANVAS_W || y + src.h > CANVAS_H) {
+      x = Math.max(0, Math.round((CANVAS_W - src.w) / 2));
+      y = Math.max(0, Math.round((CANVAS_H - src.h) / 2));
+    }
+    clone.x = x;
+    clone.y = y;
+    const newId = insertBlockAction(clone, "Adicionar bloco");
+    if (newId) {
+      setSelection([newId]);
+      toast.success("Bloco colado");
+    }
+  }, []);
+
+  const centerSelectedH = useCallback(() => {
+    if (selectedIds.length !== 1) return;
+    const b = config.blocks.find((x) => x.id === selectedIds[0]);
+    if (!b) return;
+    patchBlockAction(b.id, { x: Math.round((CANVAS_W - b.w) / 2) } as Partial<CustomBlock>, "Mover bloco");
+  }, [selectedIds, config.blocks]);
+
+  const centerSelectedV = useCallback(() => {
+    if (selectedIds.length !== 1) return;
+    const b = config.blocks.find((x) => x.id === selectedIds[0]);
+    if (!b) return;
+    patchBlockAction(b.id, { y: Math.round((CANVAS_H - b.h) / 2) } as Partial<CustomBlock>, "Mover bloco");
+  }, [selectedIds, config.blocks]);
+
   // Atalhos de teclado
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -283,6 +333,9 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         if (k === "z" && !e.shiftKey) { e.preventDefault(); undoAction(); return; }
         if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); redoAction(); return; }
         if (k === "a") { e.preventDefault(); selectAllOnSlide(); return; }
+        if (k === "c" && !e.shiftKey) { e.preventDefault(); copySelectionToClipboard(false); return; }
+        if (k === "x" && !e.shiftKey) { e.preventDefault(); copySelectionToClipboard(true); return; }
+        if (k === "v" && !e.shiftKey) { e.preventDefault(); pasteFromClipboard(); return; }
         if (k === "g" && !e.shiftKey) {
           e.preventDefault();
           if (selectedIds.length >= 2) { groupBlocksAction(selectedIds); toast.success("Blocos agrupados"); }
@@ -293,11 +346,19 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
           if (selectedIds.length > 0) { ungroupBlocksAction(selectedIds); toast.success("Grupo desfeito"); }
           return;
         }
+        if (e.shiftKey && k === "h") { e.preventDefault(); centerSelectedH(); return; }
+        if (e.shiftKey && k === "v") { e.preventDefault(); centerSelectedV(); return; }
       }
       // F5 / Cmd+Shift+P → presentation mode (works even with no selection).
       if (!inField && (e.key === "F5" || ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p"))) {
         e.preventDefault();
         setPresentOpen(true);
+        return;
+      }
+      // "?" → open shortcuts dialog.
+      if (!inField && (e.key === "?" || (e.shiftKey && e.key === "/"))) {
+        e.preventDefault();
+        setShortcutsOpen(true);
         return;
       }
       if (inField) return;
@@ -320,13 +381,15 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         else duplicateBlocksAction(selectedIds);
         return;
       }
-      if (selectedIds.length === 1) {
-        if ((e.metaKey || e.ctrlKey) && e.key === "]") { e.preventDefault(); bringForward(selectedIds[0]); return; }
-        if ((e.metaKey || e.ctrlKey) && e.key === "[") { e.preventDefault(); sendBack(selectedIds[0]); return; }
+      if (selectedIds.length === 1 && (e.metaKey || e.ctrlKey)) {
+        if (e.shiftKey && e.key === "]") { e.preventDefault(); bringToFrontAction(selectedIds[0]); return; }
+        if (e.shiftKey && e.key === "[") { e.preventDefault(); sendToBackAction(selectedIds[0]); return; }
+        if (e.key === "]") { e.preventDefault(); bringForward(selectedIds[0]); return; }
+        if (e.key === "[") { e.preventDefault(); sendBack(selectedIds[0]); return; }
       }
 
-      // Arrow nudge — works for single or multi.
-      const step = e.shiftKey ? 40 : 4;
+      // Arrow nudge — works for single or multi. Shift = 40px, normal = 10px.
+      const step = e.shiftKey ? 40 : 10;
       const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
       const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
       if (dx !== 0 || dy !== 0) {
@@ -340,7 +403,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedIds, groupEditMemberId, config.blocks]);
+  }, [selectedIds, groupEditMemberId, config.blocks, copySelectionToClipboard, pasteFromClipboard, centerSelectedH, centerSelectedV]);
 
   // Smart guides — compute lines + snap target for the dragging block.
   // Snap is applied by react-rnd via onDrag's returned coords; we mutate
