@@ -154,7 +154,7 @@ function buildDreExportColumns(
 }
 
 function buildDreExportRows(
-  rows: BudgetRow[] extends never ? never : import("@/lib/types").PricingRow[],
+  rows: import("@/lib/types").PricingRow[],
   months: ReturnType<typeof useMonthsInfo>,
   mode: DrePeriodMode,
 ): DreExportRow[] {
