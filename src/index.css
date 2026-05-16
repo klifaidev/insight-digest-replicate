@@ -85,6 +85,67 @@
     --sidebar-ring: 217 91% 60%;
   }
 
+  /* ====== Light mode ====== */
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 91% 60%;
+
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 263 70% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 64% 42%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 50%;
+
+    --glass-bg: 0 0% 100%;
+    --glass-border: 220 20% 10%;
+    --glass-border-opacity: 0.12;
+
+    --gradient-bg: linear-gradient(135deg, hsl(220 30% 97%), hsl(220 20% 94%));
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100% / 0.85), hsl(220 20% 98% / 0.7));
+    --gradient-glow-blue: radial-gradient(circle at center, hsl(217 91% 50% / 0.14), transparent 70%);
+    --gradient-glow-green: radial-gradient(circle at center, hsl(158 64% 42% / 0.14), transparent 70%);
+    --gradient-glow-red: radial-gradient(circle at center, hsl(0 84% 55% / 0.14), transparent 70%);
+
+    --shadow-glass: 0 4px 16px -4px hsl(220 20% 10% / 0.1), inset 0 1px 0 0 hsl(0 0% 100% / 0.8);
+    --shadow-glow: 0 0 40px hsl(217 91% 50% / 0.18);
+    --shadow-elegant: 0 20px 60px -20px hsl(220 20% 10% / 0.18);
+
+    --sidebar-background: 220 14% 96%;
+    --sidebar-foreground: 222 47% 20%;
+    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 90%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 85%;
+    --sidebar-ring: 217 91% 50%;
+  }
+
   /* ====== Modo Inovação ======
      Ativado por <html data-mode="inovacao">. Apenas tokens de accent/primary
      são reescritos: paleta violeta-magenta, mantendo legibilidade e estrutura.
