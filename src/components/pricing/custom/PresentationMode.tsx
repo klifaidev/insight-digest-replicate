@@ -130,6 +130,8 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   const slide = slides[idx];
   const prevSlide = prevIdx !== null ? slides[prevIdx] : null;
   const factor = Math.min(screen.w / CANVAS_W, screen.h / CANVAS_H) * 0.95;
+  const progress = slides.length > 1 ? ((idx + 1) / slides.length) * 100 : 100;
+  const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
 
   return (
     <div
