@@ -949,11 +949,7 @@ function Inspector({ item, onOpenFullscreen }: { item: SlideItem | null; onOpenF
           <CoverConfigPanel item={item} onChange={(next) => updateItem(item.id, () => next)} />
         )}
         {item.kind === "custom" && (
-          <CustomSlideFullscreenEditor
-            slideId={item.id}
-            config={item.config}
-            onChange={(cfg) => updateItem(item.id, (it) => (it.kind === "custom" ? { ...it, config: cfg } : it))}
-          />
+          <CustomSlideFullscreenTrigger onOpen={onOpenFullscreen} />
         )}
 
         {meta.supportsFilters && (item.kind === "bridge_pvm" || item.kind === "budget_evo") && (
