@@ -195,6 +195,16 @@ export function duplicateBlockAction(id: string): string | null {
  * Generic patch. The `label` decides which undo bucket the change falls into.
  * Move / resize / style / data / lock all funnel through here.
  */
+/** Insert a fully-formed block (e.g. paste from clipboard). Returns the id used. */
+export function insertBlockAction(blk: CustomBlock, label: EditorActionLabel = "Adicionar bloco"): string | null {
+  const cur = baseStore.getState().config;
+  if (!cur) return null;
+  const zTop = cur.blocks.reduce((m, b) => Math.max(m, b.z), 0);
+  const next = { ...blk, z: zTop + 1 } as CustomBlock;
+  mutate(label, (c) => ({ ...c, blocks: [...c.blocks, next] }));
+  return next.id;
+}
+
 export function patchBlockAction(id: string, patch: Partial<CustomBlock>, label: EditorActionLabel) {
   mutate(label, (c) => ({
     ...c,
