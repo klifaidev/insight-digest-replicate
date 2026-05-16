@@ -33,6 +33,7 @@ interface Props {
 
 export function PresentationMode({ currentSlideId, currentConfig, onClose }: Props) {
   const items = useSlidesFlow((s) => s.items);
+  const transition = useSlidesFlow((s) => s.transition);
   // If editor was opened standalone (no items in deck), present just the live slide.
   const standaloneList = useMemo(() => {
     if (items.length > 0) return null;
@@ -43,7 +44,8 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   const slides = standaloneList ?? items;
   const initial = Math.max(0, slides.findIndex((s) => s.id === currentSlideId));
   const [idx, setIdx] = useState(initial < 0 ? 0 : initial);
-  const [fade, setFade] = useState(true);
+  const [prevIdx, setPrevIdx] = useState<number | null>(null);
+  const [animKey, setAnimKey] = useState(0);
   const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   // Try fullscreen on mount; non-fatal if blocked (overlay still covers viewport).
@@ -59,13 +61,23 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   }, []);
 
   const goto = (n: number) => {
-    if (n < 0 || n >= slides.length) return;
-    setFade(false);
-    requestAnimationFrame(() => {
+    if (n < 0 || n >= slides.length || n === idx) return;
+    if (transition === "none") {
       setIdx(n);
-      requestAnimationFrame(() => setFade(true));
-    });
+      setAnimKey((k) => k + 1);
+      return;
+    }
+    setPrevIdx(idx);
+    setIdx(n);
+    setAnimKey((k) => k + 1);
   };
+
+  // Clear previous slide after transition duration (longest is 350ms).
+  useEffect(() => {
+    if (prevIdx === null) return;
+    const t = setTimeout(() => setPrevIdx(null), 400);
+    return () => clearTimeout(t);
+  }, [prevIdx, animKey]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -82,9 +94,10 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [idx, slides.length, onClose]);
+  }, [idx, slides.length, onClose, transition]);
 
   const slide = slides[idx];
+  const prevSlide = prevIdx !== null ? slides[prevIdx] : null;
   const factor = Math.min(screen.w / CANVAS_W, screen.h / CANVAS_H) * 0.95;
 
   return (
@@ -101,22 +114,43 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
         else if (x > w * 0.8) goto(idx + 1);
       }}
     >
+      {/* Keyframes for transitions + block enter animations */}
+      <style>{TRANSITION_CSS}</style>
       <SlideFilterProvider slideKey={slide?.id}>
         <div
           style={{
             position: "absolute", inset: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
-            opacity: fade ? 1 : 0,
-            transition: "opacity 150ms",
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          {prevSlide && (
+            <div
+              key={`prev-${animKey}`}
+              style={{
+                position: "absolute", display: "flex", alignItems: "center", justifyContent: "center",
+                inset: 0, animation: exitAnim(transition),
+              }}
+            >
+              <SlideRenderArea slide={prevSlide} factor={factor} animateBlocks={false} />
+            </div>
+          )}
           {slide && (
-            <SlideRenderArea
-              slide={slide}
-              liveConfig={slide.id === currentSlideId ? currentConfig : undefined}
-              factor={factor}
-            />
+            <div
+              key={`cur-${animKey}`}
+              style={{
+                position: "absolute", display: "flex", alignItems: "center", justifyContent: "center",
+                inset: 0, animation: enterAnim(transition),
+              }}
+            >
+              <SlideRenderArea
+                slide={slide}
+                liveConfig={slide.id === currentSlideId ? currentConfig : undefined}
+                factor={factor}
+                animateBlocks
+                animKey={animKey}
+              />
+            </div>
           )}
         </div>
 
