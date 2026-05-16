@@ -43,19 +43,26 @@ export function DataTable<T extends Record<string, unknown>>({
       );
     }
     if (sortKey) {
+      const col = columns.find((c) => c.key === sortKey);
+      const isLeftAligned = col?.align !== "right";
       out = [...out].sort((a, b) => {
         const av = a[sortKey];
         const bv = b[sortKey];
-        if (typeof av === "number" && typeof bv === "number") {
-          return sortDir === "asc" ? av - bv : bv - av;
+        // Coluna textual (esquerda) com valores string → alfabético pt-BR
+        if (isLeftAligned && (typeof av === "string" || typeof bv === "string")) {
+          const sa = String(av ?? "");
+          const sb = String(bv ?? "");
+          return sortDir === "asc"
+            ? sa.localeCompare(sb, "pt-BR")
+            : sb.localeCompare(sa, "pt-BR");
         }
-        return sortDir === "asc"
-          ? String(av).localeCompare(String(bv))
-          : String(bv).localeCompare(String(av));
+        const numA = typeof av === "number" ? av : parseFloat(String(av)) || 0;
+        const numB = typeof bv === "number" ? bv : parseFloat(String(bv)) || 0;
+        return sortDir === "asc" ? numA - numB : numB - numA;
       });
     }
     return out;
-  }, [rows, query, sortKey, sortDir, searchKeys]);
+  }, [rows, query, sortKey, sortDir, searchKeys, columns]);
 
   const visible = filtered.slice(0, maxRows);
 
