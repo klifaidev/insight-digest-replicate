@@ -460,7 +460,7 @@ function FeaturePreview({
   icon: typeof BarChart3;
   title: string;
   text: string;
-  preview: React.ReactNode;
+  preview: ReactNode;
 }) {
   return (
     <GlassCard hoverable className="space-y-3">
