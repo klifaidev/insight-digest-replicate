@@ -28,6 +28,7 @@ interface SlidesFlowState {
   updateItem: (id: string, patch: Partial<SlideItem> | ((s: SlideItem) => SlideItem)) => void;
   reorder: (sourceId: string, targetId: string) => void;
   clearItems: () => void;
+  duplicateDeck: () => void;
   select: (id: string | null) => void;
   setTransition: (t: SlideTransition) => void;
 
