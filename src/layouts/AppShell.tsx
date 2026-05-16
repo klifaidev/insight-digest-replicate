@@ -11,6 +11,7 @@ import { usePricing } from "@/store/pricing";
 import { useHistory } from "@/store/history";
 import { useMonthsInfo } from "@/store/selectors";
 import { PAGE_LABELS, NON_HISTORY_PATHS } from "@/lib/pageMeta";
+import { hasShareParams, parseShareParams } from "@/lib/shareUrl";
 
 const NAV_MAP: Record<string, { path: string; label: string }> = {
   h: { path: "/", label: "Home" },
@@ -41,7 +42,30 @@ export default function AppShell() {
   const months = useMonthsInfo();
   const addEntry = useHistory((s) => s.addEntry);
   const location = useLocation();
+  const setFilter = usePricing((s) => s.setFilter);
+  const setSelectedPeriods = usePricing((s) => s.setSelectedPeriods);
   const [helpOpen, setHelpOpen] = useState(false);
+
+  // Restaura filtros a partir da URL compartilhada (uma vez no mount)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasShareParams(window.location.search)) return;
+    const parsed = parseShareParams(window.location.search);
+    if (parsed.filters) {
+      clearFilters();
+      for (const [k, v] of Object.entries(parsed.filters)) {
+        if (v && v.length > 0) setFilter(k as Parameters<typeof setFilter>[0], v as string[]);
+      }
+    }
+    if (parsed.selectedPeriods !== undefined) {
+      setSelectedPeriods(parsed.selectedPeriods);
+    }
+    toast.info("Filtros restaurados do link compartilhado.", { duration: 2500 });
+    // Limpa os params da URL para não re-aplicar em recargas/navegação
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, "", cleanUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Registra a página visitada no histórico (debounced para capturar filtros já aplicados)
   useEffect(() => {
