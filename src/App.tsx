@@ -15,6 +15,7 @@ import Abc from "./pages/Abc.tsx";
 import Detalhe from "./pages/Detalhe.tsx";
 import Upload from "./pages/Upload.tsx";
 import Atividades from "./pages/Atividades.tsx";
+import Alertas from "./pages/Alertas.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const App = () => (
