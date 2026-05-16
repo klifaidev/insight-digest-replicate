@@ -62,7 +62,23 @@ export default function Dre() {
                   : "Acumulado: somatória dos períodos filtrados em uma única coluna."}
               </p>
             </div>
-            <PeriodModeToggle mode={mode} onChange={setMode} />
+            <div className="flex flex-wrap items-center gap-2">
+              <PeriodModeToggle mode={mode} onChange={setMode} />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  const data = buildDreExportRows(filtered, months, mode);
+                  const cols = buildDreExportColumns(months, mode);
+                  exportTableCsv(data, cols, `dre_${mode === "month" ? "mensal" : "acumulado"}`);
+                  toast.success("Arquivo exportado.");
+                }}
+              >
+                <Download className="h-4 w-4" />
+                Exportar CSV
+              </Button>
+            </div>
           </header>
           <DreTable
             rows={filtered}
