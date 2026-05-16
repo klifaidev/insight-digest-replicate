@@ -45,6 +45,9 @@ export const useSlidesFlow = create<SlidesFlowState>()(
       items: [],
       presets: [],
       selectedId: null,
+      transition: "fade",
+
+      setTransition: (t) => set({ transition: t }),
 
       addItem: (kind) =>
         set((s) => {
