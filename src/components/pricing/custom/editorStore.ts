@@ -148,7 +148,7 @@ export function setBackgroundImageAction(src: string | undefined) {
 }
 
 export function setSpeakerNotesAction(notes: string) {
-  mutate("Editar notas", (c) => ({ ...c, speakerNotes: notes }));
+  mutate("Alterar slide", (c) => ({ ...c, speakerNotes: notes }));
 }
 
 export function addBlockAction(kind: CustomBlockKind): string | null {
