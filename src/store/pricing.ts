@@ -111,6 +111,7 @@ export const usePricing = create<PricingState>((set, get) => ({
         rows: [...keptRows, ...newRows],
         files: [...keptFiles, file],
         missing: missing ? mergeMissing(s.missing, missing) : s.missing,
+        isDemoData: false,
       };
     });
   },
