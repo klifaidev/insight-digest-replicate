@@ -170,10 +170,88 @@ export function DataTable<T extends Record<string, unknown>>({
         </Table>
       </div>
 
-      {filtered.length > maxRows && (
-        <p className="text-center text-[11px] text-muted-foreground">
-          Exibindo {maxRows.toLocaleString("pt-BR")} de {filtered.length.toLocaleString("pt-BR")} linhas. Use a busca para refinar.
-        </p>
+      {pageSize ? (
+        filtered.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-[11px] text-muted-foreground">
+            <span>
+              Mostrando {(safePage * pageSize + 1).toLocaleString("pt-BR")}–
+              {Math.min((safePage + 1) * pageSize, filtered.length).toLocaleString("pt-BR")} de{" "}
+              {filtered.length.toLocaleString("pt-BR")} resultados
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setPage(0)}
+                disabled={safePage === 0}
+                aria-label="Primeira página"
+              >
+                <ChevronsLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={safePage === 0}
+                aria-label="Página anterior"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="px-2 tabular-nums">
+                {safePage + 1} / {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={safePage >= totalPages - 1}
+                aria-label="Próxima página"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setPage(totalPages - 1)}
+                disabled={safePage >= totalPages - 1}
+                aria-label="Última página"
+              >
+                <ChevronsRight className="h-3.5 w-3.5" />
+              </Button>
+              {totalPages > 10 && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const n = parseInt(pageInput, 10);
+                    if (!Number.isNaN(n) && n >= 1 && n <= totalPages) {
+                      setPage(n - 1);
+                      setPageInput("");
+                    }
+                  }}
+                  className="ml-2 flex items-center gap-1"
+                >
+                  <span>Ir para</span>
+                  <Input
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    className="h-7 w-14 border-border/50 bg-secondary/40 px-2 text-xs"
+                    placeholder={`${safePage + 1}`}
+                  />
+                </form>
+              )}
+            </div>
+          </div>
+        )
+      ) : (
+        filtered.length > maxRows && (
+          <p className="text-center text-[11px] text-muted-foreground">
+            Exibindo {maxRows.toLocaleString("pt-BR")} de {filtered.length.toLocaleString("pt-BR")} linhas. Use a busca para refinar.
+          </p>
+        )
       )}
     </div>
   );
