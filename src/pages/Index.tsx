@@ -49,8 +49,26 @@ export default function Index() {
   const metric = usePricing((s) => s.metric);
   const isDemoData = usePricing((s) => s.isDemoData);
   const budgetRows = useBudget((s) => s.rows);
+  const addParsed = usePricing((s) => s.addParsed);
+  const clearAll = usePricing((s) => s.clearAll);
+  const setDemoMode = usePricing((s) => s.setDemoMode);
+  const addBudget = useBudget((s) => s.addBudget);
+  const clearBudget = useBudget((s) => s.clearBudget);
   const months = useMonthsInfo();
   const navigate = useNavigate();
+
+  const handleLoadDemo = () => {
+    clearAll();
+    clearBudget();
+    const demo = generateDemoData();
+    addParsed(demo.realRows, demo.realFile, true, { skus: [], canais: [], regioes: [], ufs: [] });
+    addBudget(demo.budgetRows, demo.budgetFile, true);
+    setDemoMode(true);
+    toast.success("Dados de demonstração carregados", {
+      description: "Explore as análises à vontade.",
+    });
+    navigate("/visao-geral");
+  };
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const kpis = useMemo(() => computeKPIs(filtered, metric), [filtered, metric]);
