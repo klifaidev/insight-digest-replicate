@@ -263,12 +263,14 @@ export default function BridgePvm() {
 
 function PeriodSelect({
   label,
+  tooltip,
   value,
   onChange,
   options,
   excludeValue,
 }: {
   label: string;
+  tooltip?: string;
   value: string | null;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
@@ -276,7 +278,10 @@ function PeriodSelect({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <label
+        className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+        title={tooltip}
+      >
         {label}
       </label>
       <Select value={value ?? undefined} onValueChange={onChange}>
