@@ -20,6 +20,7 @@ import {
   Moon,
   Network,
   Presentation,
+  Search,
   Sun,
   TableProperties,
   Target,
@@ -27,7 +28,8 @@ import {
   X,
 } from "lucide-react";
 import { useTheme, type Theme } from "@/store/theme";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { GlobalSearch } from "./GlobalSearch";
 
 const dashItems = [
   { to: "/", label: "Início", icon: Home, end: true },
