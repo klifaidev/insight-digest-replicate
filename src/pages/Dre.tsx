@@ -130,3 +130,76 @@ function PeriodModeToggle({
     </div>
   );
 }
+
+// ---------- Helpers de exportação CSV ----------
+
+interface DreExportRow extends Record<string, unknown> {
+  metrica: string;
+}
+
+function buildDreExportColumns(
+  months: ReturnType<typeof useMonthsInfo>,
+  mode: DrePeriodMode,
+) {
+  if (mode === "fy") {
+    return [
+      { key: "metrica", label: "Métrica" },
+      { key: "total", label: "Acumulado" },
+    ];
+  }
+  return [
+    { key: "metrica", label: "Métrica" },
+    ...months.map((m) => ({ key: `p_${m.periodo}`, label: m.label })),
+  ];
+}
+
+function buildDreExportRows(
+  rows: BudgetRow[] extends never ? never : import("@/lib/types").PricingRow[],
+  months: ReturnType<typeof useMonthsInfo>,
+  mode: DrePeriodMode,
+): DreExportRow[] {
+  const periods = mode === "fy" ? ["__total__"] : months.map((m) => m.periodo);
+
+  const agg = (filter: (p: string) => boolean) => {
+    let rol = 0, cogs = 0, cv = 0, cf = 0, frete = 0, com = 0, mb = 0, cm = 0, vol = 0;
+    for (const r of rows) {
+      if (!filter(r.periodo)) continue;
+      rol += r.rol;
+      cogs += r.cogs;
+      cv += r.custoVariavel;
+      cf += r.custoFixo;
+      frete += r.frete ?? 0;
+      com += r.comissao ?? 0;
+      mb += r.margemBruta;
+      cm += r.contribMarginal;
+      vol += r.volumeKg;
+    }
+    return { rol, cogs, cv, cf, frete, com, mb, cm, vol };
+  };
+
+  const cellKey = (p: string) => (mode === "fy" ? "total" : `p_${p}`);
+  const buckets = new Map<string, ReturnType<typeof agg>>();
+  for (const p of periods) {
+    buckets.set(p, agg(mode === "fy" ? () => true : (x) => x === p));
+  }
+
+  const mkRow = (label: string, pick: (a: ReturnType<typeof agg>) => number): DreExportRow => {
+    const out: DreExportRow = { metrica: label };
+    for (const p of periods) out[cellKey(p)] = pick(buckets.get(p)!);
+    return out;
+  };
+
+  return [
+    mkRow("Volume (kg)", (a) => a.vol),
+    mkRow("ROL", (a) => a.rol),
+    mkRow("CPV", (a) => a.cogs),
+    mkRow("Margem Bruta", (a) => a.mb),
+    mkRow("Margem Bruta %", (a) => (a.rol > 0 ? a.mb / a.rol : 0)),
+    mkRow("Custo Variável", (a) => a.cv),
+    mkRow("Frete", (a) => a.frete),
+    mkRow("Comissão", (a) => a.com),
+    mkRow("Contribuição Marginal", (a) => a.cm),
+    mkRow("CM %", (a) => (a.rol > 0 ? a.cm / a.rol : 0)),
+    mkRow("Custo Fixo", (a) => a.cf),
+  ];
+}
