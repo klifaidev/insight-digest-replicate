@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { useEffect } from "react";
 import { Sidebar } from "@/components/pricing/Sidebar";
 import { ActiveFiltersBar } from "@/components/pricing/ActiveFiltersBar";
+import { NoResultsBanner } from "@/components/pricing/NoResultsBanner";
 import { useSidebarState } from "@/store/sidebar";
 import { useTheme, applyTheme } from "@/store/theme";
 
