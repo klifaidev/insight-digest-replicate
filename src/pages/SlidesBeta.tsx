@@ -323,6 +323,9 @@ function FlowCard({
   };
 
   return (
+    <TooltipProvider delayDuration={500}>
+    <Tooltip>
+    <TooltipTrigger asChild>
     <div
       ref={setNodeRef}
       style={style}
