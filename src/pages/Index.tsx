@@ -111,60 +111,96 @@ export default function Index() {
           <>
             <GlassCard className="relative overflow-hidden p-10 glow-blue">
               <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
-              <div className="relative space-y-3">
-                <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-primary">
-                  <Sparkles className="h-3 w-3" /> Bem-vindo
+              <div className="relative space-y-6">
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-primary">
+                    <Sparkles className="h-3 w-3" /> Bem-vindo
+                  </div>
+                  <h2 className="text-3xl font-light tracking-tight">
+                    Comece carregando seus <span className="text-primary">CSVs mensais</span>.
+                  </h2>
+                  <p className="max-w-2xl text-sm text-muted-foreground">
+                    Detectamos automaticamente os meses, alertamos duplicidades e geramos análises completas:
+                    KPIs, Bridge PVM, ABC de SKUs e tabela detalhada.
+                  </p>
                 </div>
-                <h2 className="text-3xl font-light tracking-tight">
-                  Comece carregando seus <span className="text-primary">CSVs mensais</span>.
-                </h2>
-                <p className="max-w-2xl text-sm text-muted-foreground">
-                  Detectamos automaticamente os meses, alertamos duplicidades e geramos análises completas:
-                  KPIs, Bridge PVM, ABC de SKUs e tabela detalhada.
-                </p>
+
+                {/* Stepper */}
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {[
+                    { n: 1, icon: UploadIcon, title: "Upload", text: "Carregue seus CSVs mensais de KE30" },
+                    { n: 2, icon: BarChart3, title: "Análise", text: "Explore KPIs, Bridge PVM e Portfólio de SKUs" },
+                    { n: 3, icon: Presentation, title: "Slides", text: "Exporte sua análise como apresentação PPTX" },
+                  ].map((s) => (
+                    <div
+                      key={s.n}
+                      className="flex items-center gap-4 rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur-sm"
+                    >
+                      <div className="text-4xl font-extralight tabular-nums text-primary/60">
+                        {s.n}
+                      </div>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                        <s.icon className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">{s.title}</div>
+                        <div className="text-xs text-muted-foreground">{s.text}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTAs */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <Link
+                    to="/upload"
+                    className="group inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-glow transition-all hover:bg-primary/90"
+                  >
+                    <UploadIcon className="h-4 w-4" />
+                    Ir para Upload
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                  <button
+                    onClick={handleLoadDemo}
+                    className="inline-flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/5 px-5 py-2.5 text-sm font-medium text-primary transition-all hover:bg-primary/10"
+                  >
+                    <PlayCircle className="h-4 w-4" />
+                    Ver com dados de demonstração
+                  </button>
+                </div>
               </div>
             </GlassCard>
 
-            <Link
-              to="/upload"
-              className="group relative block overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card/40 to-accent/10 p-6 transition-all hover:border-primary/60 hover:shadow-glow"
-            >
-              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/20 blur-3xl transition-opacity group-hover:opacity-80" />
-              <div className="relative flex items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/40 to-accent/20 text-primary shadow-glow">
-                    <UploadIcon className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/80">
-                      Comece por aqui
-                    </div>
-                    <h3 className="mt-1 text-xl font-light tracking-tight">
-                      Ir para <span className="text-primary">Upload / Bases</span>
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Carregue seus CSVs mensais, planilha de Budget e gerencie suas bases.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary transition-transform group-hover:translate-x-1">
-                  <ArrowRight className="h-4 w-4" />
-                </div>
+            {/* O que você vai encontrar aqui */}
+            <div>
+              <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                O que você vai encontrar aqui
+              </h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <FeaturePreview
+                  icon={BarChart3}
+                  title="KPIs em tempo real"
+                  text="ROL, margem, volume e SKUs ativos."
+                  preview={<PreviewKpis />}
+                />
+                <FeaturePreview
+                  icon={TrendingUp}
+                  title="Bridge PVM"
+                  text="Decomponha variação por Volume, Preço, Custo, Mix."
+                  preview={<PreviewBridge />}
+                />
+                <FeaturePreview
+                  icon={Database}
+                  title="Filtros dinâmicos"
+                  text="Marca, canal, categoria, região e mais."
+                  preview={<PreviewFilters />}
+                />
               </div>
-            </Link>
+            </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {[
-                { icon: BarChart3, title: "KPIs em tempo real", text: "ROL, margem, volume e SKUs ativos." },
-                { icon: TrendingUp, title: "Bridge PVM", text: "Decomponha variação por Volume, Preço, Custo, Mix." },
-                { icon: Database, title: "Filtros dinâmicos", text: "Marca, canal, categoria, região e mais." },
-              ].map((c) => (
-                <GlassCard key={c.title} hoverable className="space-y-2">
-                  <c.icon className="h-5 w-5 text-primary" />
-                  <h3 className="text-sm font-medium">{c.title}</h3>
-                  <p className="text-xs text-muted-foreground">{c.text}</p>
-                </GlassCard>
-              ))}
+            <div className="flex items-center justify-center gap-2 pt-2 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              Seus dados ficam apenas no seu navegador — nenhuma informação é enviada para servidores.
             </div>
           </>
         ) : (
