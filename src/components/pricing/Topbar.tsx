@@ -5,6 +5,7 @@ import { useSidebarState } from "@/store/sidebar";
 import { cn } from "@/lib/utils";
 import { InnovationToggle } from "./InnovationToggle";
 import { Menu, Sparkles, CalendarRange } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface TopbarProps {
   title: string;
