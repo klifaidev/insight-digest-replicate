@@ -64,6 +64,7 @@ export function Sidebar() {
   const missing = usePricing((s) => s.missing);
   const monthsCount = useMonthsInfo().length;
   const hasFilters = useHasActiveFilters();
+  const activeAlertCount = useActiveAlertCount();
 
   const collapsed = useSidebarState((s) => s.collapsed);
   const toggleCollapsed = useSidebarState((s) => s.toggleCollapsed);
