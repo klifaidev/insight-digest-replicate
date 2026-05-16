@@ -14,9 +14,11 @@ interface PricingState {
   pvmBase: string | null;
   pvmComp: string | null;
   parsing: boolean;
+  isDemoData: boolean;
 
   setParsingStart: () => void;
   setParsingEnd: () => void;
+  setDemoMode: (v: boolean) => void;
   setMetric: (m: Metric) => void;
   setFilter: (k: keyof Filters, v: string[]) => void;
   clearFilters: () => void;
@@ -76,9 +78,11 @@ export const usePricing = create<PricingState>((set, get) => ({
   pvmBase: null,
   pvmComp: null,
   parsing: false,
+  isDemoData: false,
 
   setParsingStart: () => set({ parsing: true }),
   setParsingEnd: () => set({ parsing: false }),
+  setDemoMode: (v) => set({ isDemoData: v }),
 
   setMetric: (m) => set({ metric: m }),
   setFilter: (k, v) =>
@@ -107,6 +111,7 @@ export const usePricing = create<PricingState>((set, get) => ({
         rows: [...keptRows, ...newRows],
         files: [...keptFiles, file],
         missing: missing ? mergeMissing(s.missing, missing) : s.missing,
+        isDemoData: false,
       };
     });
   },
@@ -134,6 +139,7 @@ export const usePricing = create<PricingState>((set, get) => ({
       pvmBase: null,
       pvmComp: null,
       missing: EMPTY_MISSING,
+      isDemoData: false,
     }),
 
   dismissMissing: () => set({ missing: EMPTY_MISSING }),

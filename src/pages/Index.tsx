@@ -39,6 +39,7 @@ export default function Index() {
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
   const metric = usePricing((s) => s.metric);
+  const isDemoData = usePricing((s) => s.isDemoData);
   const budgetRows = useBudget((s) => s.rows);
   const months = useMonthsInfo();
   const navigate = useNavigate();
@@ -144,6 +145,18 @@ export default function Index() {
                 <span className="rounded-full border border-border/60 bg-card/40 px-3 py-1 text-[11px] text-muted-foreground">
                   {months.length} {months.length === 1 ? "mês carregado" : "meses carregados"}
                 </span>
+              </div>
+            )}
+
+            {isDemoData && (
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 animate-fade-in">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+                <div className="flex-1 text-xs text-foreground">
+                  Você está visualizando <span className="font-semibold">dados de demonstração</span>. Os dados reais ainda não foram carregados.
+                </div>
+                <Link to="/upload" className="text-xs font-medium text-warning underline-offset-2 hover:underline">
+                  Gerenciar bases →
+                </Link>
               </div>
             )}
 
