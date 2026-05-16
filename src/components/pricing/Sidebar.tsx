@@ -53,9 +53,10 @@ const dashItems = [
 ];
 
 const workItems = [
+  { to: "/alertas", label: "Alertas", icon: BellRing, alertBadge: true },
   { to: "/atividades", label: "Atividades", icon: KanbanSquare },
   { to: "/slides", label: "Slides", icon: Presentation },
-];
+] as { to: string; label: string; icon: typeof KanbanSquare; alertBadge?: boolean }[];
 
 export function Sidebar() {
   const metric = usePricing((s) => s.metric);
