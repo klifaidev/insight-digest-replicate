@@ -27,6 +27,7 @@ import {
   Network,
   Presentation,
   Search,
+  Star,
   Sun,
   TableProperties,
   Target,
