@@ -9,6 +9,7 @@ import { applyBudgetFilters } from "@/lib/budget";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MoveHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 /**
  * Wrapper que dá overflow-x controlado à tabela pivot, com indicadores
@@ -90,6 +91,7 @@ function HorizontalScrollWrap({ children }: { children: React.ReactNode }) {
 }
 
 export default function Detalhe() {
+  usePageTitle("Tabela Dinâmica");
   const realRows = usePricing((s) => s.rows);
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);

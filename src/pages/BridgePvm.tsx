@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArrowRight, BookOpen, Calendar, CalendarDays, Download, Info, TrendingDown, TrendingUp, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const EFFECTS: Array<{
   key: keyof Pick<PVMSkuDetail, "volumeEffect" | "priceEffect" | "costEffect">;
@@ -41,6 +42,7 @@ const EFFECTS: Array<{
 ];
 
 export default function BridgePvm() {
+  usePageTitle("Bridge PVM");
   const rows = usePricing((s) => s.rows);
   const metric = usePricing((s) => s.metric);
   const filters = usePricing((s) => s.filters);

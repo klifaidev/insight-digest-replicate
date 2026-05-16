@@ -30,6 +30,7 @@ import { ArrowDown, ArrowUp, Crown, Download, Lightbulb, TrendingDown, TrendingU
 import { toast } from "sonner";
 import { exportTableCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 type ChartMetric = "margemPct" | "rol" | "volumeKg";
 
@@ -106,6 +107,7 @@ interface CanalRow {
 // ---------- page ----------
 
 export default function Canais() {
+  usePageTitle("Canais");
   const rows = usePricing((s) => s.rows);
   const metric = usePricing((s) => s.metric);
   const filters = usePricing((s) => s.filters);

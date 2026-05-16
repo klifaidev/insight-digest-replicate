@@ -75,6 +75,7 @@ import { SlidePreview, ScaledPreview } from "@/components/pricing/SlidePreview";
 import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor";
 import { TemplateGallery } from "@/components/pricing/custom/TemplateGallery";
 import type { SlideTemplate } from "@/lib/slideTemplates";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
@@ -1153,6 +1154,7 @@ function PresetsPanel() {
 // Página
 // ----------------------------------------------------------------------------
 export default function SlidesBeta() {
+  usePageTitle("Slides");
   const items = useSlidesFlow((s) => s.items);
   const selectedId = useSlidesFlow((s) => s.selectedId);
   const select = useSlidesFlow((s) => s.select);

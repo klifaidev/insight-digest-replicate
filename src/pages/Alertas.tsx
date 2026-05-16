@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 type FilterTab = "all" | "active" | "resolved" | "dismissed";
 
@@ -51,6 +52,7 @@ const SEVERITY_LABEL: Record<AlertRecord["severity"], string> = {
 };
 
 export default function Alertas() {
+  usePageTitle("Central de alertas");
   const records = useAlertHistory((s) => s.records);
   const resolveAlert = useAlertHistory((s) => s.resolveAlert);
   const dismissAlert = useAlertHistory((s) => s.dismissAlert);

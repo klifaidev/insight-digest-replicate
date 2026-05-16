@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/pricing/EmptyState";
 import { applyFilters, computeCostEvolution } from "@/lib/analytics";
 import { formatBRL, formatPct, formatTon } from "@/lib/format";
 import { usePricing } from "@/store/pricing";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const chartConfig = {
   custoVariavel: { label: "Custo Variável", color: "hsl(var(--warning))" },
@@ -26,6 +27,7 @@ const chartConfig = {
 } as const;
 
 export default function Custos() {
+  usePageTitle("Custos");
   const rows = usePricing((s) => s.rows);
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);

@@ -14,6 +14,7 @@ import { exportTableCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
 import type { BudgetRow } from "@/lib/budget";
 import type { Filters } from "@/lib/types";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 function applyBudgetFilters(rows: BudgetRow[], filters: Filters): BudgetRow[] {
   return rows.filter((r) => {
@@ -27,6 +28,7 @@ function applyBudgetFilters(rows: BudgetRow[], filters: Filters): BudgetRow[] {
 }
 
 export default function Dre() {
+  usePageTitle("DRE");
   const rows = usePricing((s) => s.rows);
   const filters = usePricing((s) => s.filters);
   const budgetRowsAll = useBudget((s) => s.rows);

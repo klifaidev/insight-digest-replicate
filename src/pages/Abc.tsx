@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { exportTableCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
 import { PricingSimulator } from "@/components/pricing/PricingSimulator";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 interface Alert {
   id: string;
@@ -27,6 +28,7 @@ interface Alert {
 }
 
 export default function Abc() {
+  usePageTitle("Portfólio de SKUs");
   const rows = usePricing((s) => s.rows);
   const metric = usePricing((s) => s.metric);
   const filters = usePricing((s) => s.filters);
