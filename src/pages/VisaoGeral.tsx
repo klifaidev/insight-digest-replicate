@@ -119,7 +119,12 @@ export default function VisaoGeral() {
       <>
         <Topbar title="Visão Geral" />
         <div className="px-8 py-6">
-          <EmptyState />
+          <EmptyState
+            title="Visão geral do portfólio"
+            message="Carregue seus CSVs mensais para ver KPIs, evolução histórica e performance por categoria."
+            actionLabel="Carregar dados"
+            actionTo="/upload"
+          />
         </div>
       </>
     );

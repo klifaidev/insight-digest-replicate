@@ -329,7 +329,12 @@ export default function Canais() {
     return (
       <>
         <Topbar title="Canais" />
-        <div className="px-8 py-6"><EmptyState /></div>
+        <div className="px-8 py-6"><EmptyState
+          title="Performance por canal"
+          message="Carregue dados para comparar margem, volume e mix entre seus canais de venda."
+          actionLabel="Carregar dados"
+          actionTo="/upload"
+        /></div>
       </>
     );
 

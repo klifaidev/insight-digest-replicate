@@ -106,7 +106,12 @@ export default function Custos() {
     return (
       <>
         <Topbar title="Custos" />
-        <div className="px-8 py-6"><EmptyState /></div>
+        <div className="px-8 py-6"><EmptyState
+          title="Estrutura de custos"
+          message="Carregue dados para analisar CPV, frete, comissões e demais componentes do custo variável."
+          actionLabel="Carregar dados"
+          actionTo="/upload"
+        /></div>
       </>
     );
   }

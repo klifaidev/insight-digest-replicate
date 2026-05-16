@@ -126,7 +126,12 @@ export default function Abc() {
     return (
       <>
         <Topbar title="Portfólio de SKUs" />
-        <div className="px-8 py-6"><EmptyState /></div>
+        <div className="px-8 py-6"><EmptyState
+          title="Análise de portfólio de SKUs"
+          message="Carregue dados para ver a Matriz BCG adaptada, curva ABC com Pareto e alertas automáticos de portfólio."
+          actionLabel="Carregar dados"
+          actionTo="/upload"
+        /></div>
       </>
     );
 
