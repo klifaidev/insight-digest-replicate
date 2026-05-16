@@ -242,6 +242,21 @@ export default function Upload() {
       <div className="space-y-6 px-8 py-6">
         <MissingMappingsAlert />
 
+        {isDemoData && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-5 py-3 animate-fade-in">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+              <div className="text-sm text-foreground">
+                Você está visualizando <span className="font-semibold">dados de demonstração</span>. Os dados reais ainda não foram carregados.
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleRemoveDemo} className="shrink-0 gap-2 border-warning/40 text-warning hover:bg-warning/15 hover:text-warning">
+              <Trash2 className="h-4 w-4" />
+              Remover dados demo
+            </Button>
+          </div>
+        )}
+
         {/* Demo data — para apresentações */}
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-5 py-4">
           <div className="flex items-start gap-3">
@@ -258,7 +273,7 @@ export default function Upload() {
           </div>
           <Button onClick={handleLoadDemo} className="shrink-0 gap-2">
             <Sparkles className="h-4 w-4" />
-            Carregar dados demo
+            {isDemoData ? "Recarregar demo" : "Carregar dados demo"}
           </Button>
         </div>
 
