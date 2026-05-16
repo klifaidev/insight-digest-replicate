@@ -22,6 +22,36 @@ function triggerDownload(csv: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Exporta uma tabela genérica para CSV (separador ";", BOM, números pt-BR).
+ * - rows: registros tabulares
+ * - columns: ordem + label de cada coluna a exportar (key acessa rows[key])
+ * - fileName: nome do arquivo (com ou sem extensão .csv)
+ */
+export function exportTableCsv(
+  rows: Record<string, unknown>[],
+  columns: { key: string; label: string }[],
+  fileName: string,
+): void {
+  const sep = ";";
+  const lines: string[] = [];
+  lines.push(columns.map((c) => esc(c.label)).join(sep));
+  for (const r of rows) {
+    lines.push(
+      columns
+        .map((c) => {
+          const v = r[c.key];
+          if (v === null || v === undefined || v === "") return "";
+          if (typeof v === "number") return Number.isFinite(v) ? fmt(v) : "";
+          return esc(String(v));
+        })
+        .join(sep),
+    );
+  }
+  const name = /\.csv$/i.test(fileName) ? fileName : `${fileName}.csv`;
+  triggerDownload(lines.join("\n"), name);
+}
+
 export function exportPvmCsv(result: PVMResult, filenameHint = "bridge_pvm") {
   const sep = ";";
   const lines: string[] = [];
