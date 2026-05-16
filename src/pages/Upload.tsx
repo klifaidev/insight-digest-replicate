@@ -17,6 +17,7 @@ import { generateDemoData } from "@/lib/demoData";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useUploadGuard } from "@/store/uploadGuard";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 const EXPECTED_COLS = [
   "Periodo (ex.: 005.2025)",
@@ -118,6 +119,7 @@ function StatusHeroCard({
 }
 
 export default function Upload() {
+  usePageTitle("Upload / Bases");
   const files = usePricing((s) => s.files);
   const removeFile = usePricing((s) => s.removeFile);
   const clearAll = usePricing((s) => s.clearAll);

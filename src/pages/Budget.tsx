@@ -22,6 +22,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 type Dim = "canal" | "categoria" | "subcategoria" | "marca";
 
@@ -219,6 +220,7 @@ function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: numbe
 }
 
 export default function Budget() {
+  usePageTitle("Budget");
   const selectedPeriods = usePricing((s) => s.selectedPeriods);
   const filters = usePricing((s) => s.filters);
   const budgetRows = useBudget((s) => s.rows);

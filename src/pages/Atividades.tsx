@@ -64,11 +64,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 /* ---------------------------------------------------------------- */
 /* PAGE                                                              */
 /* ---------------------------------------------------------------- */
 export default function Atividades() {
+  usePageTitle("Atividades");
   const [state, setState] = useState<KanbanState>(() => loadState());
   const [editingCard, setEditingCard] = useState<{ card?: KanbanCard; columnId: string } | null>(null);
   const [dragCard, setDragCard] = useState<{ cardId: string; fromCol: string } | null>(null);

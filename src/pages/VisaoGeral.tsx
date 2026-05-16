@@ -22,6 +22,7 @@ import {
 import { formatBRL, formatNum, formatPct, formatTon } from "@/lib/format";
 import { useMemo, useState } from "react";
 import {
+import { usePageTitle } from "@/hooks/use-page-title";
   ComposedChart,
   Bar,
   Line,
@@ -68,6 +69,7 @@ function periodoLabel(selected: string[] | null, allPeriods: string[]): string {
 }
 
 export default function VisaoGeral() {
+  usePageTitle("Visão Geral");
   const rows = usePricing((s) => s.rows);
   const metric = usePricing((s) => s.metric);
   const filters = usePricing((s) => s.filters);
