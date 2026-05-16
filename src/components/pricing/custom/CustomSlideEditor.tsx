@@ -102,7 +102,11 @@ import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
 import { PresentationMode } from "./PresentationMode";
 import { InlineTextEditor, InlineTextToolbar } from "./InlineTextEditor";
 import { AssetLibrary } from "./AssetLibrary";
-import { Pencil, Images } from "lucide-react";
+import { Pencil, Images, HelpCircle, Keyboard } from "lucide-react";
+
+// Cross-slide clipboard. Module-level so it survives editor remounts when
+// the user navigates between slides via the side strip.
+let crossSlideClipboard: CustomBlock | null = null;
 
 type Icon = React.ComponentType<{ className?: string }>;
 
