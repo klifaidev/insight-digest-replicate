@@ -12,6 +12,7 @@ import { useHasActiveFilters } from "./ActiveFiltersBar";
 import {
   AlertTriangle,
   BarChart3,
+  BellRing,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -34,6 +35,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
+import { useActiveAlertCount } from "@/store/alertHistory";
 import { useTheme, type Theme } from "@/store/theme";
 import { useMemo, useState } from "react";
 import { GlobalSearch } from "./GlobalSearch";
