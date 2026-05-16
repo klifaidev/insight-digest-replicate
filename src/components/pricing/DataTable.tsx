@@ -66,6 +66,12 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const visible = filtered.slice(0, maxRows);
 
+  // Reset da ordenação quando a fonte de dados muda (nova página / novo rows)
+  useEffect(() => {
+    setSortKey(null);
+    setSortDir("desc");
+  }, [rows]);
+
   const toggleSort = (k: string) => {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else {
