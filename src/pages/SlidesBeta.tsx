@@ -1201,6 +1201,23 @@ export default function SlidesBeta() {
     reorder(String(active.id), String(over.id));
   };
 
+  const handleExportPdf = async () => {
+    if (items.length === 0) return;
+    if (!readyAll) {
+      toast.error("Existem slides incompletos. Configure-os antes de exportar.");
+      return;
+    }
+    setExporting(true);
+    try {
+      const safeName = fileName.endsWith(".pptx") ? fileName : `${fileName}.pptx`;
+      await exportToPdf(items, safeName);
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Falha ao gerar PDF.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleExport = async () => {
     if (items.length === 0) return;
