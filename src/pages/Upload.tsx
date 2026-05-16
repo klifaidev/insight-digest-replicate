@@ -147,6 +147,7 @@ export default function Upload() {
   const removeFile = usePricing((s) => s.removeFile);
   const clearAll = usePricing((s) => s.clearAll);
   const addParsed = usePricing((s) => s.addParsed);
+  const parsing = usePricing((s) => s.parsing);
   const months = useMonthsInfo();
 
   const budgetRows = useBudget((s) => s.rows);
