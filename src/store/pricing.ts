@@ -139,6 +139,7 @@ export const usePricing = create<PricingState>((set, get) => ({
       pvmBase: null,
       pvmComp: null,
       missing: EMPTY_MISSING,
+      isDemoData: false,
     }),
 
   dismissMissing: () => set({ missing: EMPTY_MISSING }),
