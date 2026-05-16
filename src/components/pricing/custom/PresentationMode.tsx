@@ -46,6 +46,7 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   const [idx, setIdx] = useState(initial < 0 ? 0 : initial);
   const [prevIdx, setPrevIdx] = useState<number | null>(null);
   const [animKey, setAnimKey] = useState(0);
+  const [presenterMode, setPresenterMode] = useState(false);
   const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   // Try fullscreen on mount; non-fatal if blocked (overlay still covers viewport).
