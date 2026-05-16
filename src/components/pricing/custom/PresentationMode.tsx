@@ -49,6 +49,12 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   const [animKey, setAnimKey] = useState(0);
   const [presenterMode, setPresenterMode] = useState(false);
   const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [thumbsOpen, setThumbsOpen] = useState(false);
+  const [laser, setLaser] = useState(false);
+  const [laserPos, setLaserPos] = useState<{ x: number; y: number } | null>(null);
+  const [blackout, setBlackout] = useState(false);
+  const startedAtRef = useRef<number>(Date.now());
+  const [elapsed, setElapsed] = useState(0);
 
   // Try fullscreen on mount; non-fatal if blocked (overlay still covers viewport).
   useEffect(() => {
