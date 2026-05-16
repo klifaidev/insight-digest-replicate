@@ -86,23 +86,33 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
     [addParsed, existingMonths, setParsingStart, setParsingEnd],
   );
 
+  const disabled = parsing || busy;
+
   return (
     <div
       onDragOver={(e) => {
+        if (disabled) return;
         e.preventDefault();
         setDrag(true);
       }}
       onDragLeave={() => setDrag(false)}
       onDrop={(e) => {
+        if (disabled) return;
         e.preventDefault();
         setDrag(false);
         if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
       }}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => {
+        if (disabled) return;
+        inputRef.current?.click();
+      }}
+      aria-disabled={disabled}
       className={cn(
-        "group cursor-pointer rounded-2xl border-2 border-dashed border-border/60 bg-secondary/20 transition-all",
-        "hover:border-primary/50 hover:bg-primary/5",
-        drag && "border-primary bg-primary/10 scale-[1.01]",
+        "group relative rounded-2xl border-2 border-dashed border-border/60 bg-secondary/20 transition-all",
+        disabled
+          ? "cursor-not-allowed opacity-70"
+          : "cursor-pointer hover:border-primary/50 hover:bg-primary/5",
+        drag && !disabled && "border-primary bg-primary/10 scale-[1.01]",
         compact ? "p-6" : "p-12",
       )}
     >
