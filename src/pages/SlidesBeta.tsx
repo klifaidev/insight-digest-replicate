@@ -394,7 +394,7 @@ function FlowCard({
     </TooltipTrigger>
     <TooltipContent side="left" align="center" sideOffset={12} className="p-1.5 border border-border/60 bg-card">
       <div className="overflow-hidden rounded-md border border-border/40 bg-white" style={{ width: 200, height: 113 }}>
-        <ScaledPreview item={item} width={200} height={113} />
+        <ScaledPreview item={item} targetWidth={200} />
       </div>
       <div className="mt-1 px-1 text-[10px] font-medium text-muted-foreground tabular-nums">
         Slide {index + 1} · {item.label || meta.title}
