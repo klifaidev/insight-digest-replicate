@@ -74,6 +74,7 @@ export default function VisaoGeral() {
   const selected = usePricing((s) => s.selectedPeriods);
 
   const [perfBy, setPerfBy] = useState<PerfBy>("categoria");
+  const [heatMetric, setHeatMetric] = useState<HeatMetric>(metric);
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const kpis = useMemo(() => computeKPIs(filtered, metric), [filtered, metric]);
