@@ -241,7 +241,8 @@ export function Sidebar() {
                   </Badge>
                 )}
               </NavLink>
-           </ul>
+              </li>
+            </ul>
         </nav>
 
         {/* Histórico recente — oculto quando sidebar está colapsada */}
