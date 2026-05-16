@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload as UploadIcon, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { Upload as UploadIcon, FileSpreadsheet, AlertCircle, Loader2 } from "lucide-react";
 import { parseCsvFile } from "@/lib/csv";
 import { usePricing } from "@/store/pricing";
 import { useExistingPeriods } from "@/store/selectors";
