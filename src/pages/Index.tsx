@@ -450,3 +450,86 @@ function Stat({
     </div>
   );
 }
+
+function FeaturePreview({
+  icon: Icon,
+  title,
+  text,
+  preview,
+}: {
+  icon: typeof BarChart3;
+  title: string;
+  text: string;
+  preview: React.ReactNode;
+}) {
+  return (
+    <GlassCard hoverable className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Icon className="h-5 w-5 text-primary" />
+        <h3 className="text-sm font-medium">{title}</h3>
+      </div>
+      <div className="rounded-xl border border-border/50 bg-background/40 p-3">
+        {preview}
+      </div>
+      <p className="text-xs text-muted-foreground">{text}</p>
+    </GlassCard>
+  );
+}
+
+function PreviewKpis() {
+  const items = [
+    { label: "ROL", val: "R$ 12,4M", tone: "text-primary" },
+    { label: "CM%", val: "32,1%", tone: "text-success" },
+    { label: "Vol.", val: "1,8 kt", tone: "text-warning" },
+    { label: "SKUs", val: "284", tone: "text-accent" },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {items.map((i) => (
+        <div key={i.label} className="rounded-lg bg-card/60 px-2 py-1.5">
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+            {i.label}
+          </div>
+          <div className={cn("text-sm font-light tabular-nums", i.tone)}>{i.val}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PreviewBridge() {
+  const bars = [
+    { h: 70, tone: "bg-primary/70" },
+    { h: 45, tone: "bg-success/70" },
+    { h: 30, tone: "bg-destructive/70" },
+    { h: 55, tone: "bg-warning/70" },
+    { h: 80, tone: "bg-accent/70" },
+  ];
+  return (
+    <div className="flex h-20 items-end justify-between gap-1.5">
+      {bars.map((b, i) => (
+        <div
+          key={i}
+          className={cn("flex-1 rounded-t-sm", b.tone)}
+          style={{ height: `${b.h}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PreviewFilters() {
+  const chips = ["Marca A", "Sul", "Indústria", "Q4", "+3"];
+  return (
+    <div className="flex h-20 flex-wrap content-start gap-1.5">
+      {chips.map((c) => (
+        <span
+          key={c}
+          className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary"
+        >
+          {c}
+        </span>
+      ))}
+    </div>
+  );
+}
