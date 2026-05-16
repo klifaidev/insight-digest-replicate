@@ -259,7 +259,7 @@ export default function VisaoGeral() {
             </p>
             <AbcBar rows={bySku} variant="hero" sortBy="margemPct" minRolForPct={minRolForPct} />
           </GlassCard>
-          <GlassCard glow="red">
+          <GlassCard className="border-l-4 border-destructive">
             <h3 className="mb-1 text-sm font-medium text-destructive">⚠️ Ofensores (Top 5 SKUs por Margem %)</h3>
             <p className="mb-4 text-[11px] text-muted-foreground">
               Menor margem % — apenas SKUs com ROL ≥ {formatBRL(minRolForPct, { compact: true })}
