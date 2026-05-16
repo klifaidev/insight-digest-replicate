@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload as UploadIcon, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { Upload as UploadIcon, FileSpreadsheet, AlertCircle, Loader2 } from "lucide-react";
 import { parseCsvFile } from "@/lib/csv";
 import { usePricing } from "@/store/pricing";
 import { useExistingPeriods } from "@/store/selectors";
@@ -12,11 +12,18 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
   const addParsed = usePricing((s) => s.addParsed);
+  const setParsingStart = usePricing((s) => s.setParsingStart);
+  const setParsingEnd = usePricing((s) => s.setParsingEnd);
+  const parsing = usePricing((s) => s.parsing);
   const existingMonths = useExistingPeriods();
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       setBusy(true);
+      setParsingStart();
+      const toastId = toast.loading("Processando CSV...");
+      let totalRows = 0;
+      let hadError = false;
       try {
         for (const file of Array.from(files)) {
           if (!file.name.toLowerCase().endsWith(".csv")) {
@@ -47,6 +54,7 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
             if (!replace) continue;
           }
           addParsed(parsed.rows, parsed.file, replace, parsed.missing);
+          totalRows += parsed.rows.length;
           const m = parsed.missing;
           const missingTotal = m.skus.length + m.canais.length + m.regioes.length + m.ufs.length;
           toast.success(
@@ -61,32 +69,50 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
         }
       } catch (e) {
         console.error(e);
+        hadError = true;
         toast.error("Falha ao processar arquivo.");
       } finally {
+        toast.dismiss(toastId);
+        if (hadError) {
+          toast.error("Falha no parsing.");
+        } else if (totalRows > 0) {
+          toast.success(`${totalRows.toLocaleString("pt-BR")} linhas carregadas.`);
+        }
         setBusy(false);
+        setParsingEnd();
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [addParsed, existingMonths],
+    [addParsed, existingMonths, setParsingStart, setParsingEnd],
   );
+
+  const disabled = parsing || busy;
 
   return (
     <div
       onDragOver={(e) => {
+        if (disabled) return;
         e.preventDefault();
         setDrag(true);
       }}
       onDragLeave={() => setDrag(false)}
       onDrop={(e) => {
+        if (disabled) return;
         e.preventDefault();
         setDrag(false);
         if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
       }}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => {
+        if (disabled) return;
+        inputRef.current?.click();
+      }}
+      aria-disabled={disabled}
       className={cn(
-        "group cursor-pointer rounded-2xl border-2 border-dashed border-border/60 bg-secondary/20 transition-all",
-        "hover:border-primary/50 hover:bg-primary/5",
-        drag && "border-primary bg-primary/10 scale-[1.01]",
+        "group relative rounded-2xl border-2 border-dashed border-border/60 bg-secondary/20 transition-all",
+        disabled
+          ? "cursor-not-allowed opacity-70"
+          : "cursor-pointer hover:border-primary/50 hover:bg-primary/5",
+        drag && !disabled && "border-primary bg-primary/10 scale-[1.01]",
         compact ? "p-6" : "p-12",
       )}
     >
@@ -98,6 +124,12 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
       />
+      {disabled && (
+        <div className="pointer-events-auto absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/70 backdrop-blur-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Processando arquivo...</span>
+        </div>
+      )}
       <div className="flex flex-col items-center gap-3 text-center">
         <div
           className={cn(

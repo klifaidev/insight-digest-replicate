@@ -13,7 +13,10 @@ interface PricingState {
   pvmMode: "fy" | "month";
   pvmBase: string | null;
   pvmComp: string | null;
+  parsing: boolean;
 
+  setParsingStart: () => void;
+  setParsingEnd: () => void;
   setMetric: (m: Metric) => void;
   setFilter: (k: keyof Filters, v: string[]) => void;
   clearFilters: () => void;
@@ -72,6 +75,10 @@ export const usePricing = create<PricingState>((set, get) => ({
   pvmMode: "fy",
   pvmBase: null,
   pvmComp: null,
+  parsing: false,
+
+  setParsingStart: () => set({ parsing: true }),
+  setParsingEnd: () => set({ parsing: false }),
 
   setMetric: (m) => set({ metric: m }),
   setFilter: (k, v) =>

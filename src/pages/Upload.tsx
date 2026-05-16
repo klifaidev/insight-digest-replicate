@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
 import { useBudget, getBudgetMonthsInfo } from "@/store/budget";
 import { useMonthsInfo } from "@/store/selectors";
-import { Trash2, FileSpreadsheet, Calendar, CheckCircle2, AlertTriangle, Database, Target, Sparkles } from "lucide-react";
+import { Trash2, FileSpreadsheet, Calendar, CheckCircle2, AlertTriangle, Database, Target, Sparkles, Loader2 } from "lucide-react";
 import { monthLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useRef } from "react";
@@ -147,6 +147,7 @@ export default function Upload() {
   const removeFile = usePricing((s) => s.removeFile);
   const clearAll = usePricing((s) => s.clearAll);
   const addParsed = usePricing((s) => s.addParsed);
+  const parsing = usePricing((s) => s.parsing);
   const months = useMonthsInfo();
 
   const budgetRows = useBudget((s) => s.rows);
@@ -283,7 +284,7 @@ export default function Upload() {
         </div>
 
         {/* Upload em fila com botão Aplicar */}
-        <GlassCard>
+        <GlassCard className="relative">
           <header className="mb-3 flex items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">Upload de bases</h3>
@@ -297,6 +298,12 @@ export default function Upload() {
             </div>
           </header>
           <UploadQueue />
+          {parsing && (
+            <div className="pointer-events-auto absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/70 backdrop-blur-sm">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Processando arquivo...</span>
+            </div>
+          )}
         </GlassCard>
 
         {/* Meses + arquivos da base Real */}
