@@ -69,13 +69,23 @@ export function DataTable<T extends Record<string, unknown>>({
     return out;
   }, [rows, query, sortKey, sortDir, searchKeys, columns]);
 
-  const visible = filtered.slice(0, maxRows);
+  const totalPages = pageSize ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
+  const safePage = Math.min(page, totalPages - 1);
+  const visible = pageSize
+    ? filtered.slice(safePage * pageSize, (safePage + 1) * pageSize)
+    : filtered.slice(0, maxRows);
 
   // Reset da ordenação quando a fonte de dados muda (nova página / novo rows)
   useEffect(() => {
     setSortKey(null);
     setSortDir("desc");
+    setPage(0);
   }, [rows]);
+
+  // Reset de página quando a busca muda
+  useEffect(() => {
+    setPage(0);
+  }, [query]);
 
   const toggleSort = (k: string) => {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
