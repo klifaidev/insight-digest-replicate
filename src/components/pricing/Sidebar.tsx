@@ -39,7 +39,7 @@ const dashItems = [
 
 const workItems = [
   { to: "/atividades", label: "Atividades", icon: KanbanSquare },
-  { to: "/slides", label: "Slides (Beta)", icon: Presentation },
+  { to: "/slides", label: "Slides", icon: Presentation },
 ];
 
 export function Sidebar() {

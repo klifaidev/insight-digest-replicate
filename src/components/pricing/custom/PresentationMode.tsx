@@ -13,8 +13,9 @@
 // Exit: Escape, ✕ button, or document.exitFullscreen.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, ChevronLeft, ChevronRight, Filter as FunnelIcon, Download, Eye, EyeOff } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Filter as FunnelIcon, Download, Eye, EyeOff, Image as ImageIcon, Timer } from "lucide-react";
 import { exportToPdf } from "@/lib/exportPdf";
+import { ScaledPreview } from "@/components/pricing/SlidePreview";
 import { Button } from "@/components/ui/button";
 import { useSlidesFlow } from "@/store/slidesFlow";
 import { CANVAS_W, CANVAS_H, FOOTER_H, type CustomSlideConfig, type CustomBlock } from "@/lib/customSlide";
@@ -48,6 +49,12 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   const [animKey, setAnimKey] = useState(0);
   const [presenterMode, setPresenterMode] = useState(false);
   const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [thumbsOpen, setThumbsOpen] = useState(false);
+  const [laser, setLaser] = useState(false);
+  const [laserPos, setLaserPos] = useState<{ x: number; y: number } | null>(null);
+  const [blackout, setBlackout] = useState(false);
+  const startedAtRef = useRef<number>(Date.now());
+  const [elapsed, setElapsed] = useState(0);
 
   // Try fullscreen on mount; non-fatal if blocked (overlay still covers viewport).
   useEffect(() => {
@@ -80,14 +87,37 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
     return () => clearTimeout(t);
   }, [prevIdx, animKey]);
 
+  // Presenter timer — increments every second while presenting.
+  useEffect(() => {
+    startedAtRef.current = Date.now();
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Track mouse for the laser pointer overlay.
+  useEffect(() => {
+    if (!laser) return;
+    const onMove = (e: MouseEvent) => setLaserPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, [laser]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Only navigation keys are active. Cmd+Z etc. suppressed.
+      // Blackout intercepts everything except Esc → exit blackout.
+      if (blackout) {
+        e.preventDefault();
+        setBlackout(false);
+        return;
+      }
       if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
       if (e.key === "ArrowLeft") { e.preventDefault(); goto(idx - 1); return; }
       if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); goto(idx + 1); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); goto(0); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); goto(slides.length - 1); return; }
+      if (e.key === "t" || e.key === "T") { e.preventDefault(); setThumbsOpen((v) => !v); return; }
+      if (e.key === "l" || e.key === "L") { e.preventDefault(); setLaser((v) => !v); return; }
+      if (e.key === "b" || e.key === "B") { e.preventDefault(); setBlackout(true); return; }
       if ((e.metaKey || e.ctrlKey) && (e.key === "z" || e.key === "Z" || e.key === "y" || e.key === "Y")) {
         e.preventDefault();
         e.stopPropagation();
@@ -95,11 +125,13 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [idx, slides.length, onClose, transition]);
+  }, [idx, slides.length, onClose, transition, blackout]);
 
   const slide = slides[idx];
   const prevSlide = prevIdx !== null ? slides[prevIdx] : null;
   const factor = Math.min(screen.w / CANVAS_W, screen.h / CANVAS_H) * 0.95;
+  const progress = slides.length > 1 ? ((idx + 1) / slides.length) * 100 : 100;
+  const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
 
   return (
     <div
@@ -117,6 +149,18 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
     >
       {/* Keyframes for transitions + block enter animations */}
       <style>{TRANSITION_CSS}</style>
+
+      {/* Progress bar (top) */}
+      <div data-export-hide="true" style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: 2,
+        background: "rgba(255,255,255,0.08)", zIndex: 20,
+      }}>
+        <div style={{
+          width: `${progress}%`, height: "100%",
+          background: "hsl(var(--primary))",
+          transition: "width 200ms ease-out",
+        }} />
+      </div>
       <SlideFilterProvider slideKey={slide?.id}>
         <div
           style={{
@@ -197,6 +241,62 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
           Notas
         </button>
 
+        {/* Laser pointer toggle */}
+        <button
+          onClick={() => setLaser((v) => !v)}
+          title={laser ? "Laser ligado (L)" : "Ativar laser pointer (L)"}
+          data-export-hide="true"
+          style={{
+            position: "absolute", top: 16, left: 232,
+            height: 36, padding: "0 12px", borderRadius: 18,
+            background: laser ? "rgba(220, 38, 38, 0.6)" : "rgba(255,255,255,0.1)",
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", gap: 6,
+            cursor: "pointer", zIndex: 10, fontSize: 12,
+          }}
+        >
+          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: "#ef4444" }} />
+          Laser
+        </button>
+
+        {/* Thumbnails strip toggle */}
+        <button
+          onClick={() => setThumbsOpen((v) => !v)}
+          title={thumbsOpen ? "Ocultar miniaturas (T)" : "Mostrar miniaturas (T)"}
+          data-export-hide="true"
+          style={{
+            position: "absolute", top: 16, left: 312,
+            height: 36, padding: "0 12px", borderRadius: 18,
+            background: thumbsOpen ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.1)",
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", gap: 6,
+            cursor: "pointer", zIndex: 10, fontSize: 12,
+          }}
+        >
+          <ImageIcon className="h-4 w-4" />
+          Miniaturas
+        </button>
+
+        {/* Presenter timer (only when presenter mode is on) */}
+        {presenterMode && (
+          <div
+            data-export-hide="true"
+            style={{
+              position: "absolute", top: 60, left: 16,
+              padding: "6px 12px", borderRadius: 8,
+              background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)",
+              color: "#fff", fontSize: 13, fontVariantNumeric: "tabular-nums",
+              display: "flex", alignItems: "center", gap: 6,
+              zIndex: 10,
+            }}
+          >
+            <Timer className="h-3.5 w-3.5 opacity-70" />
+            <span>{mmss}</span>
+          </div>
+        )}
+
         {/* Top-right close */}
         <button
           onClick={onClose}
@@ -234,7 +334,81 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
         )}
         {/* Clear filters bar */}
         <ClearFiltersFloater />
+
+        {/* Thumbnail strip (bottom) */}
+        {thumbsOpen && (
+          <div
+            data-export-hide="true"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute", left: 0, right: 0, bottom: 0,
+              padding: "12px 16px 14px",
+              background: "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))",
+              display: "flex", justifyContent: "center", gap: 8,
+              overflowX: "auto", zIndex: 15,
+            }}
+          >
+            {slides.map((s, i) => {
+              const active = i === idx;
+              return (
+                <button
+                  key={s.id}
+                  onClick={(e) => { e.stopPropagation(); goto(i); }}
+                  title={`Slide ${i + 1}`}
+                  style={{
+                    flex: "0 0 auto",
+                    width: 144, height: 81,
+                    borderRadius: 4, overflow: "hidden",
+                    background: "#fff",
+                    border: active ? "2px solid hsl(var(--primary))" : "2px solid rgba(255,255,255,0.15)",
+                    cursor: "pointer", padding: 0,
+                    boxShadow: active ? "0 0 0 2px rgba(255,255,255,0.2)" : "none",
+                    position: "relative",
+                  }}
+                >
+                  <ScaledPreview item={s as never} targetWidth={140} />
+                  <span style={{
+                    position: "absolute", bottom: 2, left: 4,
+                    fontSize: 9, fontWeight: 600, color: "#fff",
+                    background: "rgba(0,0,0,0.6)", padding: "1px 4px", borderRadius: 2,
+                    fontVariantNumeric: "tabular-nums",
+                  }}>{i + 1}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Laser pointer dot */}
+        {laser && laserPos && (
+          <div
+            data-export-hide="true"
+            style={{
+              position: "fixed",
+              left: laserPos.x - 8, top: laserPos.y - 8,
+              width: 16, height: 16, borderRadius: 8,
+              background: "radial-gradient(circle, rgba(239,68,68,0.95) 0%, rgba(239,68,68,0.65) 40%, rgba(239,68,68,0) 70%)",
+              boxShadow: "0 0 16px rgba(239,68,68,0.7)",
+              pointerEvents: "none", zIndex: 9998,
+            }}
+          />
+        )}
+
+        {/* Blackout overlay */}
+        {blackout && (
+          <div
+            data-export-hide="true"
+            onClick={() => setBlackout(false)}
+            style={{
+              position: "fixed", inset: 0, background: "#000",
+              zIndex: 9997, cursor: "pointer",
+            }}
+          />
+        )}
       </SlideFilterProvider>
+
+      {/* Global cursor override when laser is on */}
+      {laser && <style>{`* { cursor: none !important; }`}</style>}
     </div>
   );
 }

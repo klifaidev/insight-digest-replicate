@@ -323,6 +323,9 @@ function FlowCard({
   };
 
   return (
+    <TooltipProvider delayDuration={500}>
+    <Tooltip>
+    <TooltipTrigger asChild>
     <div
       ref={setNodeRef}
       style={style}
@@ -388,6 +391,17 @@ function FlowCard({
         </Button>
       </div>
     </div>
+    </TooltipTrigger>
+    <TooltipContent side="left" align="center" sideOffset={12} className="p-1.5 border border-border/60 bg-card">
+      <div className="overflow-hidden rounded-md border border-border/40 bg-white" style={{ width: 200, height: 113 }}>
+        <ScaledPreview item={item} targetWidth={200} />
+      </div>
+      <div className="mt-1 px-1 text-[10px] font-medium text-muted-foreground tabular-nums">
+        Slide {index + 1} · {item.label || meta.title}
+      </div>
+    </TooltipContent>
+    </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -1146,6 +1160,7 @@ export default function SlidesBeta() {
   const updateItem = useSlidesFlow((s) => s.updateItem);
   const removeItem = useSlidesFlow((s) => s.removeItem);
   const duplicateItem = useSlidesFlow((s) => s.duplicateItem);
+  const duplicateDeck = useSlidesFlow((s) => s.duplicateDeck);
   const reorder = useSlidesFlow((s) => s.reorder);
   const clearItems = useSlidesFlow((s) => s.clearItems);
 
@@ -1280,7 +1295,7 @@ export default function SlidesBeta() {
   return (
     <>
       <Topbar
-        title="Slides (Beta)"
+        title="Slides"
         subtitle="Monte uma apresentação combinando slides com filtros independentes"
       />
       <DndContext
@@ -1345,9 +1360,14 @@ export default function SlidesBeta() {
           <div className="flex items-center justify-between gap-2 border-b border-border/40 bg-card/30 px-4 py-2.5 backdrop-blur-xl">
             <div className="flex items-center gap-2.5">
               <h2 className="text-sm font-semibold tracking-tight">Esteira</h2>
-              <Badge variant="secondary" className="h-5 px-2 text-[10px] tabular-nums">
-                {items.length}
+              <Badge variant="secondary" className="h-5 px-2 text-[10px] font-semibold tabular-nums">
+                {items.length} {items.length === 1 ? "slide" : "slides"}
               </Badge>
+              {items.length > 0 && (
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 tabular-nums">
+                  ~{Math.max(1, Math.round((items.length * 30) / 60))} min
+                </span>
+              )}
               {!readyAll && items.length > 0 && (
                 <Badge variant="outline" className="h-5 border-warning/40 px-2 text-[10px] text-warning">
                   Incompleto
@@ -1370,6 +1390,23 @@ export default function SlidesBeta() {
                   <TooltipContent>Galeria de templates</TooltipContent>
                 </Tooltip>
                 <SavePresetDialog />
+                {items.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
+                        onClick={() => {
+                          duplicateDeck();
+                          toast.success(`Deck duplicado (${items.length} slides)`);
+                        }}
+                        aria-label="Duplicar deck"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Duplicar deck inteiro</TooltipContent>
+                  </Tooltip>
+                )}
                 {items.length > 0 && (
                   <Tooltip>
                     <TooltipTrigger asChild>
