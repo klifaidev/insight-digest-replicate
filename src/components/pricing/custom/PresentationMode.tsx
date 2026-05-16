@@ -13,7 +13,8 @@
 // Exit: Escape, ✕ button, or document.exitFullscreen.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, ChevronLeft, ChevronRight, Filter as FunnelIcon } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Filter as FunnelIcon, Download } from "lucide-react";
+import { exportToPdf } from "@/lib/exportPdf";
 import { Button } from "@/components/ui/button";
 import { useSlidesFlow } from "@/store/slidesFlow";
 import { CANVAS_W, CANVAS_H, FOOTER_H, type CustomSlideConfig, type CustomBlock } from "@/lib/customSlide";
