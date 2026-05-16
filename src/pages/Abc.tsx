@@ -8,7 +8,10 @@ import { usePricing } from "@/store/pricing";
 import { aggregateBy, applyFilters, getKpiComparisonContext } from "@/lib/analytics";
 import { formatBRL, formatPct } from "@/lib/format";
 import { useMemo } from "react";
-import { AlertTriangle, TrendingDown, TrendingUp, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, TrendingDown, TrendingUp, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { exportTableCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
 
 interface Alert {
