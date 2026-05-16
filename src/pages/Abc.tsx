@@ -232,6 +232,19 @@ export default function Abc() {
             </ul>
           )}
         </GlassCard>
+
+        <GlassCard>
+          <header className="mb-4">
+            <h3 className="text-sm font-medium">Simulador de Pricing</h3>
+            <p className="text-xs text-muted-foreground">
+              Ajuste preço, custo e volume de um SKU e veja o impacto projetado na {metricLabel} total em tempo real.
+            </p>
+          </header>
+          <PricingSimulator rows={filtered} metric={metric} />
+          <p className="mt-4 text-[11px] italic text-muted-foreground">
+            Simulação baseada nos dados históricos carregados. Não considera elasticidade de demanda ou restrições de mercado.
+          </p>
+        </GlassCard>
       </div>
     </>
   );
