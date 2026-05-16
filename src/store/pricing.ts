@@ -14,9 +14,11 @@ interface PricingState {
   pvmBase: string | null;
   pvmComp: string | null;
   parsing: boolean;
+  isDemoData: boolean;
 
   setParsingStart: () => void;
   setParsingEnd: () => void;
+  setDemoMode: (v: boolean) => void;
   setMetric: (m: Metric) => void;
   setFilter: (k: keyof Filters, v: string[]) => void;
   clearFilters: () => void;
