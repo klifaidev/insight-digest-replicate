@@ -43,6 +43,8 @@ export interface BridgePvmSlideConfig {
   comp: string | null;
   /** Filtros específicos deste slide (não afetam outros slides) */
   filters: Filters;
+  /** Notas do apresentador (não exportadas para PPTX). */
+  speakerNotes?: string;
 }
 
 export interface BudgetEvoSlideConfig {
@@ -50,12 +52,16 @@ export interface BudgetEvoSlideConfig {
   start: string | null;
   end: string | null;
   filters: Filters;
+  /** Notas do apresentador (não exportadas para PPTX). */
+  speakerNotes?: string;
 }
 
 export interface CoverSlideConfig {
   title: string;
   subtitle?: string;
   variant: "cover" | "divider";
+  /** Notas do apresentador (não exportadas para PPTX). */
+  speakerNotes?: string;
 }
 
 export type SlideItem =
