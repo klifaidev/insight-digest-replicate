@@ -99,7 +99,7 @@ export function FilterGrid() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-shortcut-target="filter-grid">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">Filtros</h3>
         {hasAny && (
