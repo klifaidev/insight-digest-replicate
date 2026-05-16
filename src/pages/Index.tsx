@@ -217,7 +217,7 @@ export default function Index() {
             {/* Atalhos rápidos */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <ShortcutCard
-                to="/bridge"
+                to="/bridge-pvm"
                 icon={TrendingUp}
                 title="Bridge PVM"
                 desc="O que explica a variação de margem entre dois períodos?"
