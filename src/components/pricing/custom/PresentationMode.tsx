@@ -87,14 +87,37 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
     return () => clearTimeout(t);
   }, [prevIdx, animKey]);
 
+  // Presenter timer — increments every second while presenting.
+  useEffect(() => {
+    startedAtRef.current = Date.now();
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Track mouse for the laser pointer overlay.
+  useEffect(() => {
+    if (!laser) return;
+    const onMove = (e: MouseEvent) => setLaserPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, [laser]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Only navigation keys are active. Cmd+Z etc. suppressed.
+      // Blackout intercepts everything except Esc → exit blackout.
+      if (blackout) {
+        e.preventDefault();
+        setBlackout(false);
+        return;
+      }
       if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
       if (e.key === "ArrowLeft") { e.preventDefault(); goto(idx - 1); return; }
       if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); goto(idx + 1); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); goto(0); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); goto(slides.length - 1); return; }
+      if (e.key === "t" || e.key === "T") { e.preventDefault(); setThumbsOpen((v) => !v); return; }
+      if (e.key === "l" || e.key === "L") { e.preventDefault(); setLaser((v) => !v); return; }
+      if (e.key === "b" || e.key === "B") { e.preventDefault(); setBlackout(true); return; }
       if ((e.metaKey || e.ctrlKey) && (e.key === "z" || e.key === "Z" || e.key === "y" || e.key === "Y")) {
         e.preventDefault();
         e.stopPropagation();
@@ -102,7 +125,7 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [idx, slides.length, onClose, transition]);
+  }, [idx, slides.length, onClose, transition, blackout]);
 
   const slide = slides[idx];
   const prevSlide = prevIdx !== null ? slides[prevIdx] : null;
