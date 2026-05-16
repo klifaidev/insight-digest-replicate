@@ -144,6 +144,7 @@ export function Sidebar() {
 
         {/* Nav */}
         <nav className={`flex-1 overflow-y-auto ${collapsed ? "md:px-2" : "px-3"}`}>
+          <FavoritesSection collapsed={collapsed} onNavigate={closeMobile} />
           <SectionLabel collapsed={collapsed}>Dashboards</SectionLabel>
           <ul className="space-y-0.5">
             {dashItems.map((item) => (
