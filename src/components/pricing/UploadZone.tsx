@@ -12,6 +12,9 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
   const addParsed = usePricing((s) => s.addParsed);
+  const setParsingStart = usePricing((s) => s.setParsingStart);
+  const setParsingEnd = usePricing((s) => s.setParsingEnd);
+  const parsing = usePricing((s) => s.parsing);
   const existingMonths = useExistingPeriods();
 
   const handleFiles = useCallback(
