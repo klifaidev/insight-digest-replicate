@@ -165,14 +165,8 @@ export default function BridgePvm() {
 
         {result && (
           <>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-              <KpiCard label="Δ Volume" value={formatBRL(result.volume, { compact: true })} accent={result.volume >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Preço" value={formatBRL(result.price, { compact: true })} accent={result.price >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Custo Var." value={formatBRL(result.cost, { compact: true })} accent={result.cost >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Frete" value={formatBRL(result.freight, { compact: true })} accent={result.freight >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Comissão" value={formatBRL(result.commission, { compact: true })} accent={result.commission >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Outros" value={formatBRL(result.others, { compact: true })} accent={result.others >= 0 ? "green" : "red"} />
-            </div>
+            <EffectKpis result={result} />
+
 
             <GlassCard glow="blue">
               <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
