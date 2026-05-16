@@ -889,7 +889,7 @@ function FullscreenCustomEditor({
 // ----------------------------------------------------------------------------
 // Painel direito (inspector) — depende do slide selecionado
 // ----------------------------------------------------------------------------
-function Inspector({ item }: { item: SlideItem | null }) {
+function Inspector({ item, onOpenFullscreen }: { item: SlideItem | null; onOpenFullscreen: () => void }) {
   const updateItem = useSlidesFlow((s) => s.updateItem);
   const pricing = usePricing((s) => s.rows);
   const budget = useBudget((s) => s.rows);
