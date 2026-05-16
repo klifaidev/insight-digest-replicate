@@ -7,7 +7,7 @@
 //  3. Pode salvar a esteira como Pré-definição (localStorage)
 //  4. Exporta tudo num único PPTX preservando a ordem
 // ============================================================================
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   PointerSensor,
