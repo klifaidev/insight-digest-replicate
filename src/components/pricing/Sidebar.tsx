@@ -278,6 +278,8 @@ export function Sidebar() {
           {!collapsed && <span>Colapsar</span>}
         </button>
       </aside>
+
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </>
   );
 }
