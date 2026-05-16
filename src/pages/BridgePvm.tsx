@@ -523,7 +523,7 @@ function buildPvmReading(result: PVMResult): React.ReactNode[] {
 function PvmReadingCard({ result }: { result: PVMResult }) {
   const sentences = useMemo(() => buildPvmReading(result), [result]);
   return (
-    <GlassCard glow="blue">
+    <GlassCard>
       <div className="mb-4 flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
           <BookOpen className="h-4 w-4" />
