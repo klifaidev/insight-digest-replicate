@@ -149,7 +149,43 @@ export default function Abc() {
         <GlassCard>
           <div className="mb-4">
             <h3 className="text-sm font-medium">Curva ABC (Pareto)</h3>
-            <p className="text-xs text-muted-foreground">Classes A (≤80% ROL acumulado) · B (80–95%) · C (&gt;95%)</p>
+        <GlassCard>
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-medium">Curva ABC (Pareto)</h3>
+              <p className="text-xs text-muted-foreground">Classes A (≤80% ROL acumulado) · B (80–95%) · C (&gt;95%)</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                const classified = classifyAbc(bySku).map((r) => ({
+                  sku: r.key,
+                  rol: r.rol,
+                  cumulPct: r.cumulPct,
+                  classe: r.classe,
+                  margemPct: r.margemPct,
+                  volumeKg: r.volumeKg,
+                }));
+                exportTableCsv(
+                  classified as unknown as Record<string, unknown>[],
+                  [
+                    { key: "sku", label: "SKU" },
+                    { key: "rol", label: "ROL" },
+                    { key: "cumulPct", label: "ROL Acumulado %" },
+                    { key: "classe", label: "Classe" },
+                    { key: "margemPct", label: "Margem %" },
+                    { key: "volumeKg", label: "Volume (kg)" },
+                  ],
+                  "curva_abc",
+                );
+                toast.success("Arquivo exportado.");
+              }}
+            >
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </Button>
           </div>
           <AbcPareto rows={bySku} />
         </GlassCard>
