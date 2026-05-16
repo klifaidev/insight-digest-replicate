@@ -420,3 +420,26 @@ function exitAnim(t: string): string | undefined {
     default: return undefined;
   }
 }
+
+function SpeakerNotesBar({ notes }: { notes: string }) {
+  return (
+    <div
+      data-export-hide="true"
+      data-html2canvas-ignore="true"
+      style={{
+        position: "absolute", left: 16, right: 16, bottom: 60,
+        maxHeight: "22vh", overflowY: "auto",
+        padding: "12px 16px", borderRadius: 8,
+        background: "rgba(0,0,0,0.72)", color: "#fff",
+        border: "1px solid rgba(255,255,255,0.12)",
+        fontSize: 14, lineHeight: 1.5,
+        zIndex: 9,
+        whiteSpace: "pre-wrap",
+      }}
+    >
+      {notes.trim()
+        ? notes
+        : <span style={{ opacity: 0.5, fontStyle: "italic" }}>Sem anotações para este slide.</span>}
+    </div>
+  );
+}
