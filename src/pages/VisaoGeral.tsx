@@ -22,7 +22,6 @@ import {
 import { formatBRL, formatNum, formatPct, formatTon } from "@/lib/format";
 import { useMemo, useState } from "react";
 import {
-import { usePageTitle } from "@/hooks/use-page-title";
   ComposedChart,
   Bar,
   Line,
@@ -33,6 +32,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 type PerfBy = "categoria" | "subcategoria" | "sku";
 type HeatMetric = "cm" | "mb";
