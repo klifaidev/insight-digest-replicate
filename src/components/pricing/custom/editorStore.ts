@@ -147,6 +147,10 @@ export function setBackgroundImageAction(src: string | undefined) {
   mutate("Alterar slide", (c) => ({ ...c, backgroundImage: src }));
 }
 
+export function setSpeakerNotesAction(notes: string) {
+  mutate("Alterar slide", (c) => ({ ...c, speakerNotes: notes }));
+}
+
 export function addBlockAction(kind: CustomBlockKind): string | null {
   const cur = baseStore.getState().config;
   if (!cur) return null;

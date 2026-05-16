@@ -13,7 +13,7 @@
 // Exit: Escape, ✕ button, or document.exitFullscreen.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, ChevronLeft, ChevronRight, Filter as FunnelIcon, Download } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Filter as FunnelIcon, Download, Eye, EyeOff } from "lucide-react";
 import { exportToPdf } from "@/lib/exportPdf";
 import { Button } from "@/components/ui/button";
 import { useSlidesFlow } from "@/store/slidesFlow";
@@ -46,6 +46,7 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   const [idx, setIdx] = useState(initial < 0 ? 0 : initial);
   const [prevIdx, setPrevIdx] = useState<number | null>(null);
   const [animKey, setAnimKey] = useState(0);
+  const [presenterMode, setPresenterMode] = useState(false);
   const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   // Try fullscreen on mount; non-fatal if blocked (overlay still covers viewport).
@@ -176,6 +177,26 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
           Baixar PDF
         </button>
 
+        {/* Top-left (next to PDF): presenter mode toggle */}
+        <button
+          onClick={() => setPresenterMode((v) => !v)}
+          aria-label={presenterMode ? "Ocultar notas do apresentador" : "Mostrar notas do apresentador"}
+          title={presenterMode ? "Modo apresentador (ativado)" : "Modo apresentador"}
+          data-export-hide="true"
+          style={{
+            position: "absolute", top: 16, left: 152,
+            height: 36, padding: "0 12px", borderRadius: 18,
+            background: presenterMode ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.1)",
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", gap: 6,
+            cursor: "pointer", zIndex: 10, fontSize: 12,
+          }}
+        >
+          {presenterMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          Notas
+        </button>
+
         {/* Top-right close */}
         <button
           onClick={onClose}
@@ -207,6 +228,10 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
         <NavArrow side="left"  disabled={idx === 0}                  onClick={() => goto(idx - 1)} />
         <NavArrow side="right" disabled={idx === slides.length - 1}  onClick={() => goto(idx + 1)} />
 
+        {/* Speaker notes bar (presenter mode only). Hidden from PDF capture. */}
+        {presenterMode && slide && (
+          <SpeakerNotesBar notes={(slide as DeckSlide).config && ((slide as DeckSlide).config as { speakerNotes?: string }).speakerNotes || ""} />
+        )}
         {/* Clear filters bar */}
         <ClearFiltersFloater />
       </SlideFilterProvider>
@@ -394,4 +419,27 @@ function exitAnim(t: string): string | undefined {
     case "zoom":       return "slideExitZoom 300ms ease-out both";
     default: return undefined;
   }
+}
+
+function SpeakerNotesBar({ notes }: { notes: string }) {
+  return (
+    <div
+      data-export-hide="true"
+      data-html2canvas-ignore="true"
+      style={{
+        position: "absolute", left: 16, right: 16, bottom: 60,
+        maxHeight: "22vh", overflowY: "auto",
+        padding: "12px 16px", borderRadius: 8,
+        background: "rgba(0,0,0,0.72)", color: "#fff",
+        border: "1px solid rgba(255,255,255,0.12)",
+        fontSize: 14, lineHeight: 1.5,
+        zIndex: 9,
+        whiteSpace: "pre-wrap",
+      }}
+    >
+      {notes.trim()
+        ? notes
+        : <span style={{ opacity: 0.5, fontStyle: "italic" }}>Sem anotações para este slide.</span>}
+    </div>
+  );
 }

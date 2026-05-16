@@ -50,7 +50,7 @@ import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 import { toast } from "sonner";
 import {
   ArrowRight, BookOpen, Bookmark, ChevronLeft, ChevronRight, Copy, Download, FileText, Filter as FilterIcon,
-  GitBranch, GripVertical, Layers, LayoutTemplate, Plus, RotateCcw, Save, Sparkles, Target, Trash2, X,
+  GitBranch, GripVertical, Layers, LayoutTemplate, Plus, RotateCcw, Save, Sparkles, StickyNote, Target, Trash2, X,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -669,6 +669,7 @@ function StripThumbnail({
   };
   const meta = metaOf(item.kind);
   const Icon = ICON_MAP[meta.icon];
+  const hasNotes = !!((item.config as { speakerNotes?: string }).speakerNotes ?? "").trim();
   return (
     <div
       ref={setNodeRef}
@@ -681,6 +682,14 @@ function StripThumbnail({
         active ? "border-primary ring-2 ring-primary/40" : "border-border/40 hover:border-border/80",
       )}
     >
+      {hasNotes && (
+        <div
+          className="absolute right-1 top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-primary/90 text-primary-foreground shadow-sm"
+          title="Possui anotações do apresentador"
+        >
+          <StickyNote className="h-2.5 w-2.5" />
+        </div>
+      )}
       <div className="flex items-center gap-1.5 px-1.5 pt-1.5 pb-0.5">
         <span className="text-[9px] font-semibold tabular-nums text-muted-foreground">
           {String(index + 1).padStart(2, "0")}
@@ -970,8 +979,37 @@ function Inspector({ item, onOpenFullscreen }: { item: SlideItem | null; onOpenF
             />
           </>
         )}
+
+        <Separator />
+        <SpeakerNotesInspector item={item} onChange={(notes) => updateItem(item.id, (it) => ({
+          ...it,
+          config: { ...(it.config as object), speakerNotes: notes },
+        } as SlideItem))} />
       </div>
     </ScrollArea>
+  );
+}
+
+function SpeakerNotesInspector({ item, onChange }: { item: SlideItem; onChange: (v: string) => void }) {
+  const MAX = 500;
+  const value = ((item.config as { speakerNotes?: string }).speakerNotes ?? "");
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Anotações do apresentador
+        </Label>
+        <span className="text-[10px] tabular-nums text-muted-foreground">{value.length}/{MAX}</span>
+      </div>
+      <Textarea
+        rows={4}
+        value={value.slice(0, MAX)}
+        onChange={(e) => onChange(e.target.value.slice(0, MAX))}
+        placeholder="Adicione notas para o apresentador..."
+        className="resize-none text-xs"
+        maxLength={MAX}
+      />
+    </div>
   );
 }
 
