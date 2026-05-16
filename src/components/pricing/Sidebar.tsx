@@ -241,9 +241,11 @@ export function Sidebar() {
                   </Badge>
                 )}
               </NavLink>
-            </li>
-          </ul>
+           </ul>
         </nav>
+
+        {/* Histórico recente — oculto quando sidebar está colapsada */}
+        {!collapsed && <RecentHistory onNavigate={closeMobile} />}
 
         {/* Metric toggle (oculto quando colapsado em desktop) */}
         <div
