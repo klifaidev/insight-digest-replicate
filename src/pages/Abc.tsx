@@ -144,7 +144,7 @@ export default function Abc() {
     <>
       <Topbar title="Portfólio de SKUs" subtitle="Matriz estratégica, curva ABC e alertas automáticos" />
       <div className="space-y-6 px-8 py-6">
-        <GlassCard glow="blue">
+        <GlassCard glow="blue" className="animate-fade-up">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium">Matriz de portfólio</h3>
