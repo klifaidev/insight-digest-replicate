@@ -11,8 +11,10 @@ import { useHasActiveFilters } from "./ActiveFiltersBar";
 import {
   AlertTriangle,
   BarChart3,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Coins,
   Database,
   FileSpreadsheet,
