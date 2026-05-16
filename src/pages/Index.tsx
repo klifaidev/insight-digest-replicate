@@ -148,6 +148,18 @@ export default function Index() {
               </div>
             )}
 
+            {isDemoData && (
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 animate-fade-in">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+                <div className="flex-1 text-xs text-foreground">
+                  Você está visualizando <span className="font-semibold">dados de demonstração</span>. Os dados reais ainda não foram carregados.
+                </div>
+                <Link to="/upload" className="text-xs font-medium text-warning underline-offset-2 hover:underline">
+                  Gerenciar bases →
+                </Link>
+              </div>
+            )}
+
             {/* KPIs */}
             <GlassCard className="grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
               <Stat
