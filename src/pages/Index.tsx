@@ -39,7 +39,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAlertHistory } from "@/store/alertHistory";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { generateDemoData } from "@/lib/demoData";
-import { useBudget as useBudgetStore } from "@/store/budget";
 import { toast } from "sonner";
 
 export default function Index() {
