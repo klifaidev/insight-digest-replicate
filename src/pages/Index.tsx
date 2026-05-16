@@ -55,10 +55,22 @@ export default function Index() {
     return { ...cmp, label: ctx.label };
   }, [rows, filters, selected, filtered, metric]);
 
-  const alerts = useMemo(
-    () => generateAlerts(rows, budgetRows, metric).slice(0, 5),
+  const allAlerts = useMemo(
+    () => generateAlerts(rows, budgetRows, metric),
     [rows, budgetRows, metric],
   );
+  const alerts = useMemo(() => allAlerts.slice(0, 5), [allAlerts]);
+
+  const syncAlerts = useAlertHistory((s) => s.syncAlerts);
+  const lastMonth = months.length ? months[months.length - 1] : null;
+  useEffect(() => {
+    if (rows.length === 0) return;
+    const snapshot = lastMonth
+      ? `${monthLabel(lastMonth.mes, lastMonth.ano)} · ${lastMonth.fy}`
+      : "";
+    syncAlerts(allAlerts, snapshot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allAlerts, rows.length]);
 
   const lastMonth = months.length ? months[months.length - 1] : null;
   const empty = rows.length === 0;
