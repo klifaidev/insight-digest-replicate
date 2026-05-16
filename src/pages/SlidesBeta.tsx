@@ -1400,7 +1400,7 @@ export default function SlidesBeta() {
             {inspectorOpen ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
           </button>
           {inspectorOpen ? (
-            <Inspector item={selected} />
+            <Inspector item={selected} onOpenFullscreen={() => setFullscreenOpen(true)} />
           ) : (
             <div className="flex h-full items-center justify-center px-1 text-[10px] font-medium uppercase tracking-[0.25em] text-muted-foreground/70 [writing-mode:vertical-rl]">
               Prévia & Filtros
@@ -1429,6 +1429,7 @@ export default function SlidesBeta() {
         ctx={{ months, budgetMonths }}
         onSelect={applyTemplate}
       />
+      <FullscreenCustomEditor open={fullscreenOpen} onOpenChange={setFullscreenOpen} />
     </>
   );
 }
