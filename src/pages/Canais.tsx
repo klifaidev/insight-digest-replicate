@@ -459,9 +459,34 @@ export default function Canais() {
 
         {/* ---------- Ranking table ---------- */}
         <GlassCard>
-          <div className="mb-3">
-            <h3 className="text-sm font-medium">Ranking de canais</h3>
-            <p className="text-xs text-muted-foreground">Período atual com Δ vs. anterior · sparkline dos últimos 6 meses</p>
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-medium">Ranking de canais</h3>
+              <p className="text-xs text-muted-foreground">Período atual com Δ vs. anterior · sparkline dos últimos 6 meses</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                exportTableCsv(
+                  rankingRows as unknown as Record<string, unknown>[],
+                  [
+                    { key: "key", label: "Canal" },
+                    { key: "rol", label: "ROL" },
+                    { key: "margemPct", label: `${metricLabel} %` },
+                    { key: "volumeKg", label: "Volume (kg)" },
+                    { key: "rolPorKg", label: "ROL/kg" },
+                    { key: "trendClass", label: "Tendência" },
+                  ],
+                  "ranking_canais",
+                );
+                toast.success("Arquivo exportado.");
+              }}
+            >
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </Button>
           </div>
           <DataTable
             rows={rankingRows as unknown as Record<string, unknown>[]}
