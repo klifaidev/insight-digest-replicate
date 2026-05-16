@@ -195,7 +195,7 @@ export default function Abc() {
           <AbcPareto rows={bySku} />
         </GlassCard>
 
-        <GlassCard>
+        <GlassCard className="animate-fade-up animation-delay-300">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium">Alertas de portfólio</h3>
