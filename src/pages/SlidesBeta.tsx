@@ -1347,6 +1347,8 @@ export default function SlidesBeta() {
                   </Tooltip>
                 )}
                 <div className="mx-1 h-5 w-px bg-border/50" />
+                <TransitionSelect />
+                <div className="mx-1 h-5 w-px bg-border/50" />
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
