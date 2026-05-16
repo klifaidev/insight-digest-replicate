@@ -7,7 +7,7 @@
 //  3. Pode salvar a esteira como Pré-definição (localStorage)
 //  4. Exporta tudo num único PPTX preservando a ordem
 // ============================================================================
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -66,7 +66,7 @@ import { exportSlideFlow } from "@/lib/exportPpt";
 import { cn } from "@/lib/utils";
 import type { Filters, FilterKey, PricingRow } from "@/lib/types";
 import type { BudgetRow } from "@/lib/budget";
-import { SlidePreview } from "@/components/pricing/SlidePreview";
+import { SlidePreview, ScaledPreview } from "@/components/pricing/SlidePreview";
 import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor";
 import { TemplateGallery } from "@/components/pricing/custom/TemplateGallery";
 import type { SlideTemplate } from "@/lib/slideTemplates";
@@ -628,57 +628,267 @@ function CoverConfigPanel({
 }
 
 // ----------------------------------------------------------------------------
-// Editor do Slide Personalizado em modo "tela cheia" (overlay sobre a esteira)
+// Trigger no inspector — abre o editor fullscreen ao nível da página.
 // ----------------------------------------------------------------------------
-function CustomSlideFullscreenEditor({
-  slideId,
-  config,
-  onChange,
-}: {
-  slideId: string;
-  config: Extract<SlideItem, { kind: "custom" }>["config"];
-  onChange: (cfg: Extract<SlideItem, { kind: "custom" }>["config"]) => void;
-}) {
-  const [open, setOpen] = useState(false);
+function CustomSlideFullscreenTrigger({ onOpen }: { onOpen: () => void }) {
   return (
-    <>
-      <div className="space-y-2">
-        <div className="rounded-lg border border-border/40 bg-card/40 p-3 text-[12px] text-muted-foreground">
-          O editor de slide personalizado abre em tela cheia para garantir o
-          espaço necessário ao canvas 16:9.
-        </div>
-        <Button onClick={() => setOpen(true)} className="w-full gap-2" size="sm">
-          <LayoutTemplate className="h-4 w-4" />
-          Abrir editor em tela cheia
-        </Button>
+    <div className="space-y-2">
+      <div className="rounded-lg border border-border/40 bg-card/40 p-3 text-[12px] text-muted-foreground">
+        O editor de slide personalizado abre em tela cheia, com strip lateral
+        para navegar entre os slides do deck.
       </div>
+      <Button onClick={onOpen} className="w-full gap-2" size="sm">
+        <LayoutTemplate className="h-4 w-4" />
+        Abrir editor em tela cheia
+      </Button>
+    </div>
+  );
+}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          className="flex h-[100vh] w-[100vw] max-w-none flex-col gap-3 rounded-none border-0 p-4 sm:rounded-none"
-          style={{ height: "100vh", maxHeight: "100vh" }}
-        >
-          <DialogHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <DialogTitle>Editor — Slide Personalizado</DialogTitle>
-              <DialogDescription>
-                Arraste e redimensione os blocos. As alterações são salvas automaticamente.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          <div className="min-h-0 flex-1">
-            <CustomSlideEditor slideId={slideId} config={config} onChange={onChange} />
+// ----------------------------------------------------------------------------
+// Strip lateral de slides — thumbnails empilhados verticalmente, ordenáveis.
+// ----------------------------------------------------------------------------
+function StripThumbnail({
+  item, index, active, onClick,
+}: {
+  item: SlideItem;
+  index: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  const meta = metaOf(item.kind);
+  const Icon = ICON_MAP[meta.icon];
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      className={cn(
+        "group relative cursor-pointer rounded-md border bg-card transition-colors",
+        active ? "border-primary ring-2 ring-primary/40" : "border-border/40 hover:border-border/80",
+      )}
+    >
+      <div className="flex items-center gap-1.5 px-1.5 pt-1.5 pb-0.5">
+        <span className="text-[9px] font-semibold tabular-nums text-muted-foreground">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <Icon className="h-2.5 w-2.5 text-muted-foreground" />
+        <span className="truncate text-[9px] text-muted-foreground">{meta.title}</span>
+      </div>
+      <div className="thumb hidden min-[1200px]:block px-1 pb-1">
+        <div className="pointer-events-none">
+          <ScaledPreview item={item} targetWidth={104} />
+        </div>
+      </div>
+      <div className="truncate px-1.5 pb-1.5 text-[10px] font-medium" title={item.label ?? meta.title}>
+        {item.label ?? meta.title}
+      </div>
+    </div>
+  );
+}
+
+function FullscreenCustomEditor({
+  open, onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const items = useSlidesFlow((s) => s.items);
+  const selectedId = useSlidesFlow((s) => s.selectedId);
+  const select = useSlidesFlow((s) => s.select);
+  const updateItem = useSlidesFlow((s) => s.updateItem);
+  const addItem = useSlidesFlow((s) => s.addItem);
+  const removeItem = useSlidesFlow((s) => s.removeItem);
+  const reorder = useSlidesFlow((s) => s.reorder);
+
+  const current = items.find((i) => i.id === selectedId) ?? null;
+  const idx = current ? items.findIndex((i) => i.id === current.id) : -1;
+  const isCustom = current?.kind === "custom";
+
+  // Se o slide selecionado deixou de ser custom, fecha o editor.
+  useEffect(() => {
+    if (open && current && !isCustom) onOpenChange(false);
+  }, [open, current, isCustom, onOpenChange]);
+
+  // Navegação sequencial (apenas slides custom).
+  const goRel = (offset: number) => {
+    if (idx < 0) return;
+    const dir = offset > 0 ? 1 : -1;
+    for (let i = idx + dir; i >= 0 && i < items.length; i += dir) {
+      if (items[i].kind === "custom") { select(items[i].id); return; }
+    }
+  };
+  const hasPrev = idx > 0 && items.slice(0, idx).some((i) => i.kind === "custom");
+  const hasNext = idx >= 0 && items.slice(idx + 1).some((i) => i.kind === "custom");
+
+  // Atalhos Ctrl/Cmd + ← / →. Capturamos antes do editor para evitar nudge.
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === "ArrowLeft") { e.preventDefault(); e.stopPropagation(); goRel(-1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); goRel(1); }
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [open, idx, items]);
+
+  const stripSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const onStripDragEnd = (e: DragEndEvent) => {
+    if (!e.over || e.active.id === e.over.id) return;
+    reorder(String(e.active.id), String(e.over.id));
+  };
+
+  const handleAddBlank = () => {
+    addItem("custom");
+    const st = useSlidesFlow.getState();
+    const created = st.items[st.items.length - 1];
+    if (!created) return;
+    // Move para logo após o slide atual, se houver.
+    if (current && idx >= 0 && idx < items.length - 1) {
+      const target = items[idx + 1];
+      if (target) reorder(created.id, target.id);
+    }
+    select(created.id);
+  };
+
+  const handleRemoveCurrent = () => {
+    if (!current) return;
+    const hasContent = current.kind === "custom" && current.config.blocks.length > 0;
+    if (hasContent && !confirm(`Remover "${current.label ?? "slide"}"? Os blocos serão perdidos.`)) return;
+    const nextSel = items[idx + 1]?.id ?? items[idx - 1]?.id ?? null;
+    removeItem(current.id);
+    if (nextSel) {
+      const after = useSlidesFlow.getState().items.find((i) => i.id === nextSel);
+      select(nextSel);
+      if (after?.kind !== "custom") onOpenChange(false);
+    } else {
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="flex h-[100vh] w-[100vw] max-w-none flex-col gap-3 rounded-none border-0 p-3 sm:rounded-none"
+        style={{ height: "100vh", maxHeight: "100vh" }}
+      >
+        <DialogHeader className="flex flex-row items-center justify-between gap-3 space-y-0 px-1">
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => goRel(-1)} disabled={!hasPrev}>
+              <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => goRel(1)} disabled={!hasNext}>
+              Próximo <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+            <span className="hidden text-[10px] text-muted-foreground/70 lg:inline">
+              Ctrl + ← / →
+            </span>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+          <div className="flex flex-1 flex-col items-center gap-0.5">
+            <DialogTitle className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {idx >= 0 ? `Slide ${idx + 1} de ${items.length}` : "Editor de slide"}
+            </DialogTitle>
+            {current && (
+              <Input
+                value={current.label ?? ""}
+                onChange={(e) =>
+                  updateItem(current.id, (it) => ({ ...it, label: e.target.value } as SlideItem))
+                }
+                placeholder="Nome do slide"
+                className="h-8 w-72 border-transparent bg-transparent text-center text-sm font-medium hover:border-border/60 focus-visible:bg-card"
+              />
+            )}
+          </div>
+          <DialogDescription className="sr-only">
+            Editor de slide personalizado com strip lateral de navegação.
+          </DialogDescription>
+          <div className="w-[200px]" />
+        </DialogHeader>
+
+        <div className="flex min-h-0 flex-1 gap-3">
+          {/* Strip lateral */}
+          <aside className="flex w-[120px] shrink-0 flex-col overflow-hidden rounded-lg border border-border/40 bg-card/30">
+            <div className="border-b border-border/40 px-2 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Slides ({items.length})
+            </div>
+            <ScrollArea className="flex-1">
+              <DndContext sensors={stripSensors} collisionDetection={closestCenter} onDragEnd={onStripDragEnd}>
+                <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                  <div className="flex flex-col gap-1.5 p-1.5">
+                    {items.map((it, i) => (
+                      <StripThumbnail
+                        key={it.id}
+                        item={it}
+                        index={i}
+                        active={it.id === current?.id}
+                        onClick={() => {
+                          if (it.id === current?.id) return;
+                          select(it.id);
+                          if (it.kind !== "custom") onOpenChange(false);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </ScrollArea>
+            <div className="flex gap-1 border-t border-border/40 p-1.5">
+              <Button
+                variant="ghost" size="sm" className="h-7 flex-1 px-1"
+                onClick={handleAddBlank}
+                title="Adicionar slide em branco"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost" size="sm" className="h-7 flex-1 px-1 text-destructive hover:text-destructive"
+                onClick={handleRemoveCurrent}
+                disabled={!current}
+                title="Remover slide atual"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </aside>
+
+          {/* Canvas do editor */}
+          <div className="min-w-0 flex-1">
+            {current && isCustom ? (
+              <CustomSlideEditor
+                key={current.id}
+                slideId={current.id}
+                config={(current as Extract<SlideItem, { kind: "custom" }>).config}
+                onChange={(cfg) =>
+                  updateItem(current.id, (it) =>
+                    it.kind === "custom" ? ({ ...it, config: cfg } as SlideItem) : it,
+                  )
+                }
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                Selecione um slide personalizado na strip ao lado.
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // ----------------------------------------------------------------------------
 // Painel direito (inspector) — depende do slide selecionado
 // ----------------------------------------------------------------------------
-function Inspector({ item }: { item: SlideItem | null }) {
+function Inspector({ item, onOpenFullscreen }: { item: SlideItem | null; onOpenFullscreen: () => void }) {
   const updateItem = useSlidesFlow((s) => s.updateItem);
   const pricing = usePricing((s) => s.rows);
   const budget = useBudget((s) => s.rows);
@@ -738,11 +948,7 @@ function Inspector({ item }: { item: SlideItem | null }) {
           <CoverConfigPanel item={item} onChange={(next) => updateItem(item.id, () => next)} />
         )}
         {item.kind === "custom" && (
-          <CustomSlideFullscreenEditor
-            slideId={item.id}
-            config={item.config}
-            onChange={(cfg) => updateItem(item.id, (it) => (it.kind === "custom" ? { ...it, config: cfg } : it))}
-          />
+          <CustomSlideFullscreenTrigger onOpen={onOpenFullscreen} />
         )}
 
         {meta.supportsFilters && (item.kind === "bridge_pvm" || item.kind === "budget_evo") && (
@@ -936,6 +1142,7 @@ export default function SlidesBeta() {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [dragging, setDragging] = useState<{ source: "catalog"; kind: SlideKind } | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
   const applyTemplate = (tpl: SlideTemplate) => {
     const built = tpl.build({ months, budgetMonths });
@@ -1192,7 +1399,7 @@ export default function SlidesBeta() {
             {inspectorOpen ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
           </button>
           {inspectorOpen ? (
-            <Inspector item={selected} />
+            <Inspector item={selected} onOpenFullscreen={() => setFullscreenOpen(true)} />
           ) : (
             <div className="flex h-full items-center justify-center px-1 text-[10px] font-medium uppercase tracking-[0.25em] text-muted-foreground/70 [writing-mode:vertical-rl]">
               Prévia & Filtros
@@ -1221,6 +1428,7 @@ export default function SlidesBeta() {
         ctx={{ months, budgetMonths }}
         onSelect={applyTemplate}
       />
+      <FullscreenCustomEditor open={fullscreenOpen} onOpenChange={setFullscreenOpen} />
     </>
   );
 }

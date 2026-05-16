@@ -593,7 +593,7 @@ function PreviewContent({ item }: { item: SlideItem }) {
 const PREVIEW_W_INSPECTOR = 260;
 const PREVIEW_W_DIALOG = 800;
 
-function ScaledPreview({ item, targetWidth }: { item: SlideItem; targetWidth?: number }) {
+export function ScaledPreview({ item, targetWidth }: { item: SlideItem; targetWidth?: number }) {
   const previewW = targetWidth ?? PREVIEW_W_INSPECTOR;
 
   if (item.kind !== "custom") {
