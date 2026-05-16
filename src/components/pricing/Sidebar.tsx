@@ -198,19 +198,31 @@ export function Sidebar() {
                   onClick={closeMobile}
                   title={collapsed ? item.label : undefined}
                   aria-label={item.label}
-                  className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-foreground/80 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-primary/60 ${
+                  className={`flex items-center justify-between gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-foreground/80 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-primary/60 ${
                     collapsed ? "md:justify-center md:px-2" : ""
                   }`}
                   activeClassName="bg-sidebar-accent text-sidebar-foreground !text-primary font-medium shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]"
                 >
-                  <item.icon className="h-4 w-4" />
-                  <span
-                    className={`transition-opacity duration-150 ${
-                      collapsed ? "md:hidden" : ""
-                    }`}
-                  >
-                    {item.label}
+                  <span className="flex items-center gap-2.5">
+                    <span className="relative inline-flex">
+                      <item.icon className="h-4 w-4" />
+                      {item.alertBadge && activeAlertCount > 0 && collapsed && (
+                        <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive shadow-[0_0_4px_hsl(var(--destructive))]" />
+                      )}
+                    </span>
+                    <span
+                      className={`transition-opacity duration-150 ${
+                        collapsed ? "md:hidden" : ""
+                      }`}
+                    >
+                      {item.label}
+                    </span>
                   </span>
+                  {item.alertBadge && activeAlertCount > 0 && !collapsed && (
+                    <Badge className="h-5 min-w-[20px] justify-center bg-destructive px-1.5 text-[10px] font-semibold text-destructive-foreground hover:bg-destructive">
+                      {activeAlertCount}
+                    </Badge>
+                  )}
                 </NavLink>
               </li>
             ))}
