@@ -238,6 +238,9 @@ export function Sidebar() {
           </div>
         </div>
 
+        {/* Theme toggle */}
+        <ThemeToggle collapsed={collapsed} />
+
         {/* Toggle collapse — só desktop */}
         <button
           onClick={toggleCollapsed}
@@ -250,6 +253,46 @@ export function Sidebar() {
         </button>
       </aside>
     </>
+  );
+}
+
+function ThemeToggle({ collapsed }: { collapsed: boolean }) {
+  const theme = useTheme((s) => s.theme);
+  const setTheme = useTheme((s) => s.setTheme);
+  const opts: { value: Theme; icon: typeof Sun; label: string }[] = [
+    { value: "light", icon: Sun, label: "Claro" },
+    { value: "system", icon: Monitor, label: "Sistema" },
+    { value: "dark", icon: Moon, label: "Escuro" },
+  ];
+  return (
+    <div
+      className={`mx-3 mb-2 flex items-center gap-1 rounded-lg border border-border/50 bg-sidebar-accent/30 p-1 ${
+        collapsed ? "md:flex-col" : ""
+      }`}
+    >
+      {opts.map((o) => {
+        const Icon = o.icon;
+        const active = theme === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => setTheme(o.value)}
+            aria-label={o.label}
+            aria-pressed={active}
+            title={o.label}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
+              active
+                ? "bg-primary/15 text-primary"
+                : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            <span className={collapsed ? "md:hidden" : ""}>{o.label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
