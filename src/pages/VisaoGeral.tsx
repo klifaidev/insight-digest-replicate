@@ -34,6 +34,10 @@ import {
 } from "recharts";
 
 type PerfBy = "categoria" | "subcategoria" | "sku";
+type HeatMetric = "cm" | "mb";
+
+// FY runs April–March; column order:
+const FY_MONTH_ORDER = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
 
 const MES_NOMES = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -70,6 +74,7 @@ export default function VisaoGeral() {
   const selected = usePricing((s) => s.selectedPeriods);
 
   const [perfBy, setPerfBy] = useState<PerfBy>("categoria");
+  const [heatMetric, setHeatMetric] = useState<HeatMetric>(metric);
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const kpis = useMemo(() => computeKPIs(filtered, metric), [filtered, metric]);
@@ -113,6 +118,79 @@ export default function VisaoGeral() {
 
   // Threshold para ranking de margem %: 1% do ROL total (filtra ruído de SKUs minúsculos)
   const minRolForPct = useMemo(() => kpis.rol * 0.01, [kpis.rol]);
+
+  // ===== Heatmap de sazonalidade =====
+  const heatmap = useMemo(() => {
+    const acc = new Map<string, Map<number, { margem: number; rol: number }>>();
+    const fySet = new Set<string>();
+    const fyNumMap = new Map<string, number>();
+    for (const r of filtered) {
+      const margem = heatMetric === "cm" ? r.contribMarginal : r.margemBruta;
+      const rol = r.rol;
+      if (!Number.isFinite(margem) || !Number.isFinite(rol)) continue;
+      fySet.add(r.fy);
+      fyNumMap.set(r.fy, r.fyNum);
+      let byMonth = acc.get(r.fy);
+      if (!byMonth) {
+        byMonth = new Map();
+        acc.set(r.fy, byMonth);
+      }
+      const cell = byMonth.get(r.mes) ?? { margem: 0, rol: 0 };
+      cell.margem += margem;
+      cell.rol += rol;
+      byMonth.set(r.mes, cell);
+    }
+    const fys = Array.from(fySet).sort((a, b) => (fyNumMap.get(a) ?? 0) - (fyNumMap.get(b) ?? 0));
+    const matrix: { fy: string; cells: (number | null)[] }[] = fys.map((fy) => {
+      const byMonth = acc.get(fy)!;
+      const cells = FY_MONTH_ORDER.map((m) => {
+        const c = byMonth.get(m);
+        if (!c || c.rol === 0) return null;
+        return c.margem / c.rol;
+      });
+      return { fy, cells };
+    });
+    const allVals = matrix.flatMap((r) => r.cells.filter((v): v is number => v !== null));
+    const min = allVals.length ? Math.min(...allVals) : 0;
+    const max = allVals.length ? Math.max(...allVals) : 0;
+
+    // Avg per month across all FYs (weighted by rol)
+    const monthAvg = new Map<number, { margem: number; rol: number }>();
+    for (const byMonth of acc.values()) {
+      for (const [m, c] of byMonth.entries()) {
+        const cur = monthAvg.get(m) ?? { margem: 0, rol: 0 };
+        cur.margem += c.margem;
+        cur.rol += c.rol;
+        monthAvg.set(m, cur);
+      }
+    }
+    const monthlyAverages = FY_MONTH_ORDER.map((m) => ({
+      mes: m,
+      pct: monthAvg.has(m) && monthAvg.get(m)!.rol > 0 ? monthAvg.get(m)!.margem / monthAvg.get(m)!.rol : null,
+    })).filter((x) => x.pct !== null) as { mes: number; pct: number }[];
+
+    let best: { mes: number; pct: number } | null = null;
+    let worst: { mes: number; pct: number } | null = null;
+    for (const m of monthlyAverages) {
+      if (!best || m.pct > best.pct) best = m;
+      if (!worst || m.pct < worst.pct) worst = m;
+    }
+    return { matrix, min, max, best, worst, hasData: allVals.length > 0 };
+  }, [filtered, heatMetric]);
+
+  function heatColor(v: number | null): { bg: string; color: string } {
+    if (v === null) return { bg: "hsl(var(--muted) / 0.4)", color: "hsl(var(--muted-foreground))" };
+    const range = heatmap.max - heatmap.min;
+    const t = range > 0 ? (v - heatmap.min) / range : 0.5;
+    // interpolate hue 0 (red) → 158 (green); s 84→64; l 65→52
+    const h = 0 + (158 - 0) * t;
+    const s = 84 + (64 - 84) * t;
+    const l = 65 + (52 - 65) * t;
+    const bg = `hsl(${h.toFixed(0)} ${s.toFixed(0)}% ${l.toFixed(0)}%)`;
+    // text: white when l is low, dark otherwise
+    const color = l < 58 ? "hsl(0 0% 100%)" : "hsl(220 30% 12%)";
+    return { bg, color };
+  }
 
   if (rows.length === 0) {
     return (
@@ -248,6 +326,79 @@ export default function VisaoGeral() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
+          )}
+        </GlassCard>
+
+        <GlassCard>
+          <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-medium">Sazonalidade — Margem % por mês × ano fiscal</h2>
+              <p className="text-xs text-muted-foreground">
+                Identifique padrões sazonais. Cores relativas ao mínimo e máximo do conjunto filtrado.
+              </p>
+            </div>
+            <ToggleGroup
+              type="single"
+              value={heatMetric}
+              onValueChange={(v) => v && setHeatMetric(v as HeatMetric)}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="cm">CM%</ToggleGroupItem>
+              <ToggleGroupItem value="mb">MB%</ToggleGroupItem>
+            </ToggleGroup>
+          </header>
+
+          {!heatmap.hasData ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              Sem dados suficientes para gerar o heatmap.
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <div
+                  className="grid gap-1 min-w-[640px]"
+                  style={{ gridTemplateColumns: `90px repeat(12, minmax(48px, 1fr))` }}
+                >
+                  <div />
+                  {FY_MONTH_ORDER.map((m) => (
+                    <div key={m} className="text-center text-[11px] font-medium text-muted-foreground py-1">
+                      {MES_NOMES[m - 1]}
+                    </div>
+                  ))}
+                  {heatmap.matrix.map((row) => (
+                    <div key={row.fy} className="contents">
+                      <div className="flex items-center text-xs font-medium text-muted-foreground pr-2">
+                        {row.fy}
+                      </div>
+                      {row.cells.map((v, idx) => {
+                        const { bg, color } = heatColor(v);
+                        return (
+                          <div
+                            key={idx}
+                            className="h-12 rounded-md flex items-center justify-center text-xs font-medium tabular-nums"
+                            style={{ background: bg, color }}
+                            title={`${row.fy} · ${MES_NOMES[FY_MONTH_ORDER[idx] - 1]}: ${v === null ? "sem dados" : formatPct(v)}`}
+                          >
+                            {v === null ? "—" : formatPct(v)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {heatmap.best && heatmap.worst && heatmap.best.mes !== heatmap.worst.mes && (
+                <div className="mt-4 rounded-lg border border-border/40 bg-muted/30 px-4 py-3 text-sm">
+                  <span className="font-medium">Padrão detectado: </span>
+                  Historicamente, <span className="font-semibold text-success">{MES_NOMES[heatmap.best.mes - 1]}</span>{" "}
+                  é o melhor mês (média {formatPct(heatmap.best.pct)}) e{" "}
+                  <span className="font-semibold text-destructive">{MES_NOMES[heatmap.worst.mes - 1]}</span>{" "}
+                  é o mais fraco (média {formatPct(heatmap.worst.pct)}).
+                </div>
+              )}
+            </>
           )}
         </GlassCard>
 
