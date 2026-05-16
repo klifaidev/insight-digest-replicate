@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { useSidebarState } from "@/store/sidebar";
 import { cn } from "@/lib/utils";
+import { getFreshness } from "@/lib/freshness";
 import { InnovationToggle } from "./InnovationToggle";
-import { Menu, Sparkles, CalendarRange } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Menu, Sparkles, CalendarRange } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface TopbarProps {
   title: string;
