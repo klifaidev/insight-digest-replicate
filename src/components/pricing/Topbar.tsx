@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { getFreshness } from "@/lib/freshness";
 import { InnovationToggle } from "./InnovationToggle";
 import { BookmarkButton } from "./BookmarkButton";
+import { ShareButton } from "./ShareButton";
 import { AlertTriangle, Menu, Sparkles, CalendarRange } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
