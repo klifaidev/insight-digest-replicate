@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { useSidebarState } from "@/store/sidebar";
 import { cn } from "@/lib/utils";
+import { getFreshness } from "@/lib/freshness";
 import { InnovationToggle } from "./InnovationToggle";
-import { Menu, Sparkles, CalendarRange } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Menu, Sparkles, CalendarRange } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface TopbarProps {
   title: string;
@@ -42,6 +44,9 @@ export function Topbar({ title, subtitle }: TopbarProps) {
 
   const inovActive = usePricing((s) => s.filters.inovacao?.[0] === "Inovação");
   const setMobileOpen = useSidebarState((s) => s.setMobileOpen);
+
+  const freshness = useMemo(() => getFreshness(months), [months]);
+  const isStale = freshness.status === "stale";
 
   // Breadcrumb de período
   const periodBadge = (() => {
@@ -83,13 +88,42 @@ export function Topbar({ title, subtitle }: TopbarProps) {
 
         <div className="flex items-center gap-3">
           {periodBadge && (
-            <span
-              className="hidden items-center gap-1.5 rounded-full border border-border/60 bg-card/40 px-3 py-1 text-[11px] font-medium text-muted-foreground sm:inline-flex"
-              title="Período ativo no app"
-            >
-              <CalendarRange className="h-3 w-3 text-primary" />
-              {periodBadge}
-            </span>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={cn(
+                      "hidden items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium sm:inline-flex",
+                      isStale
+                        ? "border-warning/40 bg-warning/10 text-warning"
+                        : "border-border/60 bg-card/40 text-muted-foreground",
+                    )}
+                  >
+                    {isStale ? (
+                      <AlertTriangle className="h-3 w-3 text-warning" />
+                    ) : (
+                      <CalendarRange className="h-3 w-3 text-primary" />
+                    )}
+                    {periodBadge}
+                    {isStale && (
+                      <span
+                        aria-hidden
+                        className="ml-0.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-warning"
+                      />
+                    )}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isStale ? (
+                    <>
+                      Último dado: {freshness.lastLabel}. Esperado: {freshness.expectedLabel}.
+                    </>
+                  ) : (
+                    "Período ativo no app"
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           <InnovationToggle />
         </div>
