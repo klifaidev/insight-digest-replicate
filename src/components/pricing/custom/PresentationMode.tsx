@@ -149,6 +149,18 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
     >
       {/* Keyframes for transitions + block enter animations */}
       <style>{TRANSITION_CSS}</style>
+
+      {/* Progress bar (top) */}
+      <div data-export-hide="true" style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: 2,
+        background: "rgba(255,255,255,0.08)", zIndex: 20,
+      }}>
+        <div style={{
+          width: `${progress}%`, height: "100%",
+          background: "hsl(var(--primary))",
+          transition: "width 200ms ease-out",
+        }} />
+      </div>
       <SlideFilterProvider slideKey={slide?.id}>
         <div
           style={{
