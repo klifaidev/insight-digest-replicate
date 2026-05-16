@@ -6,6 +6,7 @@ import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { useSidebarState } from "@/store/sidebar";
 import { useHistory } from "@/store/history";
+import { useBookmarks } from "@/store/bookmarks";
 import { PAGE_LABELS } from "@/lib/pageMeta";
 import { useHasActiveFilters } from "./ActiveFiltersBar";
 import {
@@ -26,6 +27,7 @@ import {
   Network,
   Presentation,
   Search,
+  Star,
   Sun,
   TableProperties,
   Target,
@@ -144,6 +146,7 @@ export function Sidebar() {
 
         {/* Nav */}
         <nav className={`flex-1 overflow-y-auto ${collapsed ? "md:px-2" : "px-3"}`}>
+          <FavoritesSection collapsed={collapsed} onNavigate={closeMobile} />
           <SectionLabel collapsed={collapsed}>Dashboards</SectionLabel>
           <ul className="space-y-0.5">
             {dashItems.map((item) => (
@@ -435,6 +438,93 @@ function RecentHistory({ onNavigate }: { onNavigate: () => void }) {
             Limpar histórico
           </button>
         </>
+      )}
+    </div>
+  );
+}
+
+function FavoritesSection({
+  collapsed,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  onNavigate: () => void;
+}) {
+  const bookmarks = useBookmarks((s) => s.bookmarks);
+  const removeBookmark = useBookmarks((s) => s.removeBookmark);
+  const setFilter = usePricing((s) => s.setFilter);
+  const clearFilters = usePricing((s) => s.clearFilters);
+  const setSelectedPeriods = usePricing((s) => s.setSelectedPeriods);
+  const navigate = useNavigate();
+  const [showAll, setShowAll] = useState(false);
+
+  if (bookmarks.length === 0) return null;
+
+  const MAX = 8;
+  const visible = showAll ? bookmarks : bookmarks.slice(0, MAX);
+  const hasMore = bookmarks.length > MAX;
+
+  const apply = (b: typeof bookmarks[number]) => {
+    clearFilters();
+    for (const [k, v] of Object.entries(b.filters)) {
+      if (v && v.length > 0) setFilter(k as Parameters<typeof setFilter>[0], v as string[]);
+    }
+    setSelectedPeriods(b.selectedPeriods);
+    navigate(b.page);
+    onNavigate();
+  };
+
+  return (
+    <div className="mb-3">
+      <SectionLabel collapsed={collapsed}>Favoritos</SectionLabel>
+      <ul className="space-y-0.5">
+        {visible.map((b) => {
+          const Icon = PAGE_LABELS[b.page]?.icon ?? Star;
+          return (
+            <li key={b.id}>
+              <div
+                className={`group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent ${
+                  collapsed ? "md:justify-center md:px-2" : ""
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => apply(b)}
+                  title={b.name}
+                  aria-label={b.name}
+                  className={`flex min-w-0 flex-1 items-center gap-2 text-left outline-none focus-visible:text-foreground ${
+                    collapsed ? "md:justify-center" : ""
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                  <span className={`truncate ${collapsed ? "md:hidden" : ""}`}>{b.name}</span>
+                </button>
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeBookmark(b.id);
+                    }}
+                    aria-label="Remover favorito"
+                    className="hidden h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground group-hover:flex"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {hasMore && !collapsed && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="mt-1 w-full rounded-md px-2.5 py-1 text-[10px] text-muted-foreground/70 hover:bg-sidebar-accent hover:text-foreground"
+        >
+          {showAll ? "Mostrar menos" : `Ver todos (${bookmarks.length})`}
+        </button>
       )}
     </div>
   );
