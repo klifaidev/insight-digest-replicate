@@ -329,7 +329,79 @@ export default function VisaoGeral() {
           )}
         </GlassCard>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <GlassCard>
+          <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-medium">Sazonalidade — Margem % por mês × ano fiscal</h2>
+              <p className="text-xs text-muted-foreground">
+                Identifique padrões sazonais. Cores relativas ao mínimo e máximo do conjunto filtrado.
+              </p>
+            </div>
+            <ToggleGroup
+              type="single"
+              value={heatMetric}
+              onValueChange={(v) => v && setHeatMetric(v as HeatMetric)}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="cm">CM%</ToggleGroupItem>
+              <ToggleGroupItem value="mb">MB%</ToggleGroupItem>
+            </ToggleGroup>
+          </header>
+
+          {!heatmap.hasData ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              Sem dados suficientes para gerar o heatmap.
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <div
+                  className="grid gap-1 min-w-[640px]"
+                  style={{ gridTemplateColumns: `90px repeat(12, minmax(48px, 1fr))` }}
+                >
+                  <div />
+                  {FY_MONTH_ORDER.map((m) => (
+                    <div key={m} className="text-center text-[11px] font-medium text-muted-foreground py-1">
+                      {MES_NOMES[m - 1]}
+                    </div>
+                  ))}
+                  {heatmap.matrix.map((row) => (
+                    <div key={row.fy} className="contents">
+                      <div className="flex items-center text-xs font-medium text-muted-foreground pr-2">
+                        {row.fy}
+                      </div>
+                      {row.cells.map((v, idx) => {
+                        const { bg, color } = heatColor(v);
+                        return (
+                          <div
+                            key={idx}
+                            className="h-12 rounded-md flex items-center justify-center text-xs font-medium tabular-nums"
+                            style={{ background: bg, color }}
+                            title={`${row.fy} · ${MES_NOMES[FY_MONTH_ORDER[idx] - 1]}: ${v === null ? "sem dados" : formatPct(v)}`}
+                          >
+                            {v === null ? "—" : formatPct(v)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {heatmap.best && heatmap.worst && heatmap.best.mes !== heatmap.worst.mes && (
+                <div className="mt-4 rounded-lg border border-border/40 bg-muted/30 px-4 py-3 text-sm">
+                  <span className="font-medium">Padrão detectado: </span>
+                  Historicamente, <span className="font-semibold text-success">{MES_NOMES[heatmap.best.mes - 1]}</span>{" "}
+                  é o melhor mês (média {formatPct(heatmap.best.pct)}) e{" "}
+                  <span className="font-semibold text-destructive">{MES_NOMES[heatmap.worst.mes - 1]}</span>{" "}
+                  é o mais fraco (média {formatPct(heatmap.worst.pct)}).
+                </div>
+              )}
+            </>
+          )}
+        </GlassCard>
+
           <GlassCard glow="green">
             <h3 className="mb-1 text-sm font-medium text-success">🏆 Heróis (Top 5 SKUs por Margem %)</h3>
             <p className="mb-4 text-[11px] text-muted-foreground">
