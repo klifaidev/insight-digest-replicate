@@ -277,3 +277,11 @@
 /* Utilitário: esconde scrollbar mantendo o scroll funcional */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* ===== Hierarquia tipográfica padronizada ===== */
+@layer components {
+  .heading-page { font-size: 1.5rem; font-weight: 300; letter-spacing: -0.02em; }
+  .heading-section { font-size: 1rem; font-weight: 500; letter-spacing: -0.01em; }
+  .heading-subsection { font-size: 0.875rem; font-weight: 500; }
+  .label-caps { font-size: 0.6875rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.14em; }
+}
