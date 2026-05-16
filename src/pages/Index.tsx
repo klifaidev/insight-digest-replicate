@@ -237,6 +237,13 @@ export default function Index() {
                   ))}
                 </div>
               )}
+              <Link
+                to="/alertas"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                Ver histórico completo
+                <ArrowRight className="h-3 w-3" />
+              </Link>
             </GlassCard>
 
             {/* Atalhos rápidos */}
