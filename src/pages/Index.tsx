@@ -34,7 +34,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlertHistory } from "@/store/alertHistory";
 import { usePageTitle } from "@/hooks/use-page-title";
