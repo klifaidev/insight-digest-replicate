@@ -481,7 +481,12 @@ export default function Budget() {
       <>
         <Topbar title="Budget" subtitle="Real vs Orçamento" />
         <div className="px-8 py-6">
-          <EmptyState message="Envie a base Budget (XLSX) na aba Upload / Bases para começar — ela contém tanto as linhas Real quanto as Budget." />
+          <EmptyState
+            title="Sem dados de budget"
+            message="Carregue a planilha de Budget para comparar resultado real vs. orçado e ver a projeção de fechamento do ano."
+            actionLabel="Ir para Upload"
+            actionTo="/upload"
+          />
         </div>
       </>
     );

@@ -43,7 +43,12 @@ export default function Dre() {
     return (
       <>
         <Topbar title="DRE" subtitle="Consolidado por período com filtros ativos" />
-        <div className="px-8 py-6"><EmptyState /></div>
+        <div className="px-8 py-6"><EmptyState
+          title="DRE gerencial"
+          message="Carregue dados mensais para montar o DRE com ROL, CPV, margem bruta e contribuição."
+          actionLabel="Ir para Upload"
+          actionTo="/upload"
+        /></div>
       </>
     );
   }

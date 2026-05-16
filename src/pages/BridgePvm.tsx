@@ -90,7 +90,12 @@ export default function BridgePvm() {
     return (
       <>
         <Topbar title="Bridge PVM" />
-        <div className="px-8 py-6"><EmptyState /></div>
+        <div className="px-8 py-6"><EmptyState
+          title="Configure os períodos para comparar"
+          message="Carregue ao menos dois meses de dados para calcular a decomposição de variação de margem por Volume, Preço e Custo."
+          actionLabel="Ir para Upload"
+          actionTo="/upload"
+        /></div>
       </>
     );
   }
