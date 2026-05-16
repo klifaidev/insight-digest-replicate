@@ -13,10 +13,13 @@ export interface SlidesPreset {
   updatedAt: number;
 }
 
+export type SlideTransition = "none" | "fade" | "slide-left" | "slide-up" | "zoom";
+
 interface SlidesFlowState {
   items: SlideItem[];
   presets: SlidesPreset[];
   selectedId: string | null;
+  transition: SlideTransition;
 
   // Itens
   addItem: (kind: SlideKind) => void;
@@ -26,6 +29,7 @@ interface SlidesFlowState {
   reorder: (sourceId: string, targetId: string) => void;
   clearItems: () => void;
   select: (id: string | null) => void;
+  setTransition: (t: SlideTransition) => void;
 
   // Presets
   savePreset: (name: string, description?: string) => SlidesPreset;
