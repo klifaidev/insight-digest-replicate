@@ -146,7 +146,7 @@ export const useSlidesFlow = create<SlidesFlowState>()(
     {
       name: "pricing.slidesFlow.v1",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ items: s.items, presets: s.presets }),
+      partialize: (s) => ({ items: s.items, presets: s.presets, transition: s.transition }),
     },
   ),
 );
