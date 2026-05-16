@@ -149,6 +149,9 @@ export function setBackgroundImageAction(src: string | undefined) {
 
 export function setSpeakerNotesAction(notes: string) {
   mutate("Editar notas", (c) => ({ ...c, speakerNotes: notes }));
+}
+
+export function addBlockAction(kind: CustomBlockKind): string | null {
   const cur = baseStore.getState().config;
   if (!cur) return null;
   const zTop = cur.blocks.reduce((m, b) => Math.max(m, b.z), 0);
