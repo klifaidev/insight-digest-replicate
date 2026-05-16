@@ -26,7 +26,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ArrowDown, ArrowUp, Crown, Lightbulb, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Crown, Download, Lightbulb, TrendingDown, TrendingUp } from "lucide-react";
+import { toast } from "sonner";
+import { exportTableCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
 
 type ChartMetric = "margemPct" | "rol" | "volumeKg";
