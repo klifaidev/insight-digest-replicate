@@ -93,6 +93,7 @@ import {
   alignBlocksAction, groupBlocksAction, ungroupBlocksAction,
   resizeGroupAction,
   copyChartStyleAction, pasteChartStyleAction, useCopiedStyle,
+  insertBlockAction,
   type AlignKind,
 } from "./editorStore";
 import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
