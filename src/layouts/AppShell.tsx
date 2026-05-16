@@ -36,6 +36,7 @@ export default function AppShell() {
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <ActiveFiltersBar />
+        <NoResultsBanner />
         <Outlet />
       </main>
     </div>
