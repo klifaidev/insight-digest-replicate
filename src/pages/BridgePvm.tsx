@@ -51,6 +51,8 @@ export default function BridgePvm() {
   const pvmComp = usePricing((s) => s.pvmComp);
   const setPvm = usePricing((s) => s.setPvm);
   const setPvmMode = usePricing((s) => s.setPvmMode);
+  const selectedPeriods = usePricing((s) => s.selectedPeriods);
+  const [showFilterNote, setShowFilterNote] = useState(true);
   const [exportingPpt, setExportingPpt] = useState(false);
 
   const options = useMemo(
