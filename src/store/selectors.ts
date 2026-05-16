@@ -2,6 +2,18 @@ import { useMemo } from "react";
 import { usePricing } from "./pricing";
 import type { MonthInfo, PricingRow } from "@/lib/types";
 import { monthLabel } from "@/lib/format";
+import { applyFilters } from "@/lib/analytics";
+
+/** Indica se, dados os filtros + períodos atuais, restam linhas a serem analisadas. */
+export function useHasFilteredData(): boolean {
+  const rows = usePricing((s) => s.rows);
+  const filters = usePricing((s) => s.filters);
+  const selected = usePricing((s) => s.selectedPeriods);
+  return useMemo(
+    () => applyFilters(rows, filters, selected).length > 0,
+    [rows, filters, selected],
+  );
+}
 
 export function useMonthsInfo(): MonthInfo[] {
   const rows = usePricing((s) => s.rows);
