@@ -93,6 +93,7 @@ import {
   alignBlocksAction, groupBlocksAction, ungroupBlocksAction,
   resizeGroupAction,
   copyChartStyleAction, pasteChartStyleAction, useCopiedStyle,
+  insertBlockAction,
   type AlignKind,
 } from "./editorStore";
 import { useEditorPrefs, snapToGrid, type GridSize } from "./editorPrefs";
@@ -101,7 +102,11 @@ import { computeSnap, boundsOf, groupBounds } from "./canvas/alignmentGuides";
 import { PresentationMode } from "./PresentationMode";
 import { InlineTextEditor, InlineTextToolbar } from "./InlineTextEditor";
 import { AssetLibrary } from "./AssetLibrary";
-import { Pencil, Images } from "lucide-react";
+import { Pencil, Images, HelpCircle, Keyboard } from "lucide-react";
+
+// Cross-slide clipboard. Module-level so it survives editor remounts when
+// the user navigates between slides via the side strip.
+let crossSlideClipboard: CustomBlock | null = null;
 
 type Icon = React.ComponentType<{ className?: string }>;
 
@@ -157,6 +162,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const prefs = useEditorPrefs();
   const copiedStyle = useCopiedStyle();
   const [presentOpen, setPresentOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const [fitScale, setFitScale] = useState(1);
   const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
@@ -266,6 +272,56 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
     return [id];
   }, [config.blocks, config.groups, groupEditMemberId, selectedIds]);
 
+  // Helpers for clipboard + alignment shortcuts.
+  const copySelectionToClipboard = useCallback((cut: boolean) => {
+    if (selectedIds.length === 0) return;
+    const blk = config.blocks.find((b) => b.id === selectedIds[0]);
+    if (!blk) return;
+    crossSlideClipboard = JSON.parse(JSON.stringify(blk)) as CustomBlock;
+    if (cut) {
+      if (selectedIds.length === 1) removeBlock(selectedIds[0]);
+      else deleteBlocksAction(selectedIds);
+      toast.success("Bloco cortado");
+    } else {
+      toast.success("Bloco copiado");
+    }
+  }, [selectedIds, config.blocks]);
+
+  const pasteFromClipboard = useCallback(() => {
+    if (!crossSlideClipboard) return;
+    const src = crossSlideClipboard;
+    const clone = JSON.parse(JSON.stringify(src)) as CustomBlock;
+    clone.id = crypto.randomUUID();
+    clone.locked = false;
+    let x = src.x + 20;
+    let y = src.y + 20;
+    if (x + src.w > CANVAS_W || y + src.h > CANVAS_H) {
+      x = Math.max(0, Math.round((CANVAS_W - src.w) / 2));
+      y = Math.max(0, Math.round((CANVAS_H - src.h) / 2));
+    }
+    clone.x = x;
+    clone.y = y;
+    const newId = insertBlockAction(clone, "Adicionar bloco");
+    if (newId) {
+      setSelection([newId]);
+      toast.success("Bloco colado");
+    }
+  }, []);
+
+  const centerSelectedH = useCallback(() => {
+    if (selectedIds.length !== 1) return;
+    const b = config.blocks.find((x) => x.id === selectedIds[0]);
+    if (!b) return;
+    patchBlockAction(b.id, { x: Math.round((CANVAS_W - b.w) / 2) } as Partial<CustomBlock>, "Mover bloco");
+  }, [selectedIds, config.blocks]);
+
+  const centerSelectedV = useCallback(() => {
+    if (selectedIds.length !== 1) return;
+    const b = config.blocks.find((x) => x.id === selectedIds[0]);
+    if (!b) return;
+    patchBlockAction(b.id, { y: Math.round((CANVAS_H - b.h) / 2) } as Partial<CustomBlock>, "Mover bloco");
+  }, [selectedIds, config.blocks]);
+
   // Atalhos de teclado
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -277,6 +333,9 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         if (k === "z" && !e.shiftKey) { e.preventDefault(); undoAction(); return; }
         if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); redoAction(); return; }
         if (k === "a") { e.preventDefault(); selectAllOnSlide(); return; }
+        if (k === "c" && !e.shiftKey) { e.preventDefault(); copySelectionToClipboard(false); return; }
+        if (k === "x" && !e.shiftKey) { e.preventDefault(); copySelectionToClipboard(true); return; }
+        if (k === "v" && !e.shiftKey) { e.preventDefault(); pasteFromClipboard(); return; }
         if (k === "g" && !e.shiftKey) {
           e.preventDefault();
           if (selectedIds.length >= 2) { groupBlocksAction(selectedIds); toast.success("Blocos agrupados"); }
@@ -287,11 +346,19 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
           if (selectedIds.length > 0) { ungroupBlocksAction(selectedIds); toast.success("Grupo desfeito"); }
           return;
         }
+        if (e.shiftKey && k === "h") { e.preventDefault(); centerSelectedH(); return; }
+        if (e.shiftKey && k === "v") { e.preventDefault(); centerSelectedV(); return; }
       }
       // F5 / Cmd+Shift+P → presentation mode (works even with no selection).
       if (!inField && (e.key === "F5" || ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p"))) {
         e.preventDefault();
         setPresentOpen(true);
+        return;
+      }
+      // "?" → open shortcuts dialog.
+      if (!inField && (e.key === "?" || (e.shiftKey && e.key === "/"))) {
+        e.preventDefault();
+        setShortcutsOpen(true);
         return;
       }
       if (inField) return;
@@ -314,13 +381,15 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         else duplicateBlocksAction(selectedIds);
         return;
       }
-      if (selectedIds.length === 1) {
-        if ((e.metaKey || e.ctrlKey) && e.key === "]") { e.preventDefault(); bringForward(selectedIds[0]); return; }
-        if ((e.metaKey || e.ctrlKey) && e.key === "[") { e.preventDefault(); sendBack(selectedIds[0]); return; }
+      if (selectedIds.length === 1 && (e.metaKey || e.ctrlKey)) {
+        if (e.shiftKey && e.key === "]") { e.preventDefault(); bringToFrontAction(selectedIds[0]); return; }
+        if (e.shiftKey && e.key === "[") { e.preventDefault(); sendToBackAction(selectedIds[0]); return; }
+        if (e.key === "]") { e.preventDefault(); bringForward(selectedIds[0]); return; }
+        if (e.key === "[") { e.preventDefault(); sendBack(selectedIds[0]); return; }
       }
 
-      // Arrow nudge — works for single or multi.
-      const step = e.shiftKey ? 40 : 4;
+      // Arrow nudge — works for single or multi. Shift = 40px, normal = 10px.
+      const step = e.shiftKey ? 40 : 10;
       const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
       const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
       if (dx !== 0 || dy !== 0) {
@@ -334,7 +403,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedIds, groupEditMemberId, config.blocks]);
+  }, [selectedIds, groupEditMemberId, config.blocks, copySelectionToClipboard, pasteFromClipboard, centerSelectedH, centerSelectedV]);
 
   // Smart guides — compute lines + snap target for the dragging block.
   // Snap is applied by react-rnd via onDrag's returned coords; we mutate
@@ -997,6 +1066,12 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             title="Apresentar (F5)">
             <Play className="h-3 w-3" /> Apresentar
           </Button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={() => setShortcutsOpen(true)}
+            title="Atalhos de teclado (?)">
+            <HelpCircle className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         <SpeakerNotesBar
@@ -1139,6 +1214,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         onClose={() => setPresentOpen(false)}
       />
     )}
+    <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </SlideFilterProvider>
   );
 }
@@ -2412,5 +2488,93 @@ function SpeakerNotesBar({ value, onChange }: { value: string; onChange: (v: str
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ShortcutsDialog — painel de referência rápida dos atalhos do editor.
+function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const mod = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+  const sections: { title: string; items: [string, string][] }[] = [
+    {
+      title: "Edição",
+      items: [
+        [`${mod} + Z`, "Desfazer"],
+        [`${mod} + Y  ·  ${mod} + Shift + Z`, "Refazer"],
+        [`${mod} + D`, "Duplicar bloco selecionado"],
+        ["Delete  ·  Backspace", "Excluir bloco selecionado"],
+        [`${mod} + A`, "Selecionar todos os blocos"],
+        ["Esc", "Desselecionar / sair da edição inline"],
+      ],
+    },
+    {
+      title: "Área de transferência",
+      items: [
+        [`${mod} + C`, "Copiar bloco"],
+        [`${mod} + V`, "Colar bloco (mantém ao mudar de slide)"],
+        [`${mod} + X`, "Cortar bloco"],
+      ],
+    },
+    {
+      title: "Camadas",
+      items: [
+        [`${mod} + ]`, "Trazer para frente"],
+        [`${mod} + [`, "Enviar para trás"],
+        [`${mod} + Shift + ]`, "Trazer para a frente de tudo"],
+        [`${mod} + Shift + [`, "Enviar para o fundo"],
+      ],
+    },
+    {
+      title: "Alinhamento",
+      items: [
+        [`${mod} + Shift + H`, "Centralizar horizontalmente"],
+        [`${mod} + Shift + V`, "Centralizar verticalmente"],
+      ],
+    },
+    {
+      title: "Mover",
+      items: [
+        ["← → ↑ ↓", "Mover 10 px"],
+        ["Shift + setas", "Mover 40 px"],
+      ],
+    },
+    {
+      title: "Apresentação & ajuda",
+      items: [
+        ["F5", "Iniciar apresentação"],
+        [`${mod} + Shift + P`, "Iniciar apresentação"],
+        ["?", "Abrir este painel"],
+      ],
+    },
+  ];
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Keyboard className="h-4 w-4" /> Atalhos de teclado
+          </DialogTitle>
+        </DialogHeader>
+        <div className="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
+          {sections.map((sec) => (
+            <div key={sec.title} className="rounded-md border border-border/40 bg-card/40 p-3">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {sec.title}
+              </div>
+              <ul className="space-y-1.5">
+                {sec.items.map(([k, desc]) => (
+                  <li key={k} className="flex items-start justify-between gap-3 text-[12px]">
+                    <span className="text-foreground/90">{desc}</span>
+                    <kbd className="shrink-0 rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                      {k}
+                    </kbd>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
