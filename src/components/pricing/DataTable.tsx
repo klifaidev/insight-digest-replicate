@@ -20,6 +20,7 @@ interface DataTableProps<T> {
   searchable?: boolean;
   searchKeys?: (keyof T & string)[];
   maxRows?: number;
+  pageSize?: number;
   emptyMessage?: string;
 }
 
@@ -29,9 +30,12 @@ export function DataTable<T extends Record<string, unknown>>({
   searchable,
   searchKeys,
   maxRows = 300,
+  pageSize,
   emptyMessage = "Sem dados para exibir.",
 }: DataTableProps<T>) {
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageInput, setPageInput] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
