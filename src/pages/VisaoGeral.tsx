@@ -6,6 +6,10 @@ import { DataTable } from "@/components/pricing/DataTable";
 import { EmptyState } from "@/components/pricing/EmptyState";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { toast } from "sonner";
+import { exportTableCsv } from "@/lib/exportCsv";
 import { usePricing } from "@/store/pricing";
 import {
   aggregateBy,
@@ -262,17 +266,42 @@ export default function VisaoGeral() {
         <GlassCard>
           <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-medium">Performance por {perfLabel}</h3>
-            <ToggleGroup
-              type="single"
-              value={perfBy}
-              onValueChange={(v) => v && setPerfBy(v as PerfBy)}
-              variant="outline"
-              size="sm"
-            >
-              <ToggleGroupItem value="categoria">Categoria</ToggleGroupItem>
-              <ToggleGroupItem value="subcategoria">Subcategoria</ToggleGroupItem>
-              <ToggleGroupItem value="sku">SKU</ToggleGroupItem>
-            </ToggleGroup>
+            <div className="flex flex-wrap items-center gap-2">
+              <ToggleGroup
+                type="single"
+                value={perfBy}
+                onValueChange={(v) => v && setPerfBy(v as PerfBy)}
+                variant="outline"
+                size="sm"
+              >
+                <ToggleGroupItem value="categoria">Categoria</ToggleGroupItem>
+                <ToggleGroupItem value="subcategoria">Subcategoria</ToggleGroupItem>
+                <ToggleGroupItem value="sku">SKU</ToggleGroupItem>
+              </ToggleGroup>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  exportTableCsv(
+                    byPerf as unknown as Record<string, unknown>[],
+                    [
+                      { key: "key", label: perfLabel },
+                      { key: "rol", label: "ROL" },
+                      { key: "margem", label: metric === "cm" ? "CM" : "MB" },
+                      { key: "margemPct", label: "Margem %" },
+                      { key: "volumeKg", label: "Volume (kg)" },
+                      { key: "rolPorKg", label: "ROL/kg" },
+                    ],
+                    `performance_${perfBy}`,
+                  );
+                  toast.success("Arquivo exportado.");
+                }}
+              >
+                <Download className="h-4 w-4" />
+                Exportar CSV
+              </Button>
+            </div>
           </header>
           <DataTable
             rows={byPerf as unknown as Record<string, unknown>[]}
