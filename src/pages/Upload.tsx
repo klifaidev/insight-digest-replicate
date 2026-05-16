@@ -10,6 +10,7 @@ import { useBudget, getBudgetMonthsInfo } from "@/store/budget";
 import { useMonthsInfo } from "@/store/selectors";
 import { Trash2, FileSpreadsheet, Calendar, CheckCircle2, AlertTriangle, Database, Target, Sparkles, Loader2 } from "lucide-react";
 import { monthLabel } from "@/lib/format";
+import { getFreshness, type FreshnessStatus } from "@/lib/freshness";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useRef } from "react";
 import { generateDemoData } from "@/lib/demoData";
