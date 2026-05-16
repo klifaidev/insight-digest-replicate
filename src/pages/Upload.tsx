@@ -284,7 +284,7 @@ export default function Upload() {
         </div>
 
         {/* Upload em fila com botão Aplicar */}
-        <GlassCard>
+        <GlassCard className="relative">
           <header className="mb-3 flex items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">Upload de bases</h3>
@@ -298,6 +298,12 @@ export default function Upload() {
             </div>
           </header>
           <UploadQueue />
+          {parsing && (
+            <div className="pointer-events-auto absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/70 backdrop-blur-sm">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Processando arquivo...</span>
+            </div>
+          )}
         </GlassCard>
 
         {/* Meses + arquivos da base Real */}
