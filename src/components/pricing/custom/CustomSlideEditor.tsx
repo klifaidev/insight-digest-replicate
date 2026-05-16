@@ -1066,6 +1066,12 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             title="Apresentar (F5)">
             <Play className="h-3 w-3" /> Apresentar
           </Button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={() => setShortcutsOpen(true)}
+            title="Atalhos de teclado (?)">
+            <HelpCircle className="h-3.5 w-3.5" />
+          </Button>
         </div>
 
         <SpeakerNotesBar
