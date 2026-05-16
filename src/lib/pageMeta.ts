@@ -1,0 +1,36 @@
+import {
+  BarChart3,
+  Coins,
+  FileSpreadsheet,
+  Home,
+  KanbanSquare,
+  LineChart,
+  Network,
+  Presentation,
+  TableProperties,
+  Target,
+  TrendingUp,
+  type LucideIcon,
+} from "lucide-react";
+
+export interface PageMeta {
+  label: string;
+  icon: LucideIcon;
+}
+
+export const PAGE_LABELS: Record<string, PageMeta> = {
+  "/": { label: "Início", icon: Home },
+  "/visao-geral": { label: "Visão Geral", icon: BarChart3 },
+  "/bridge-pvm": { label: "Bridge PVM", icon: TrendingUp },
+  "/dre": { label: "DRE", icon: FileSpreadsheet },
+  "/canais": { label: "Canais", icon: Network },
+  "/custos": { label: "Custos", icon: Coins },
+  "/abc": { label: "Portfólio de SKUs", icon: LineChart },
+  "/budget": { label: "Budget", icon: Target },
+  "/detalhe": { label: "Tabela Dinâmica", icon: TableProperties },
+  "/slides": { label: "Slides", icon: Presentation },
+  "/atividades": { label: "Atividades", icon: KanbanSquare },
+};
+
+// Páginas não registradas no histórico de análises
+export const NON_HISTORY_PATHS = new Set<string>(["/upload", "/atividades"]);

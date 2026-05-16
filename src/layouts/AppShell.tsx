@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/pricing/Sidebar";
@@ -8,6 +8,9 @@ import { ShortcutsHelp } from "@/components/pricing/ShortcutsHelp";
 import { useSidebarState } from "@/store/sidebar";
 import { useTheme, applyTheme } from "@/store/theme";
 import { usePricing } from "@/store/pricing";
+import { useHistory } from "@/store/history";
+import { useMonthsInfo } from "@/store/selectors";
+import { PAGE_LABELS, NON_HISTORY_PATHS } from "@/lib/pageMeta";
 
 const NAV_MAP: Record<string, { path: string; label: string }> = {
   h: { path: "/", label: "Home" },
@@ -33,7 +36,44 @@ export default function AppShell() {
   const theme = useTheme((s) => s.theme);
   const navigate = useNavigate();
   const clearFilters = usePricing((s) => s.clearFilters);
+  const filters = usePricing((s) => s.filters);
+  const selectedPeriods = usePricing((s) => s.selectedPeriods);
+  const months = useMonthsInfo();
+  const addEntry = useHistory((s) => s.addEntry);
+  const location = useLocation();
   const [helpOpen, setHelpOpen] = useState(false);
+
+  // Registra a página visitada no histórico (debounced para capturar filtros já aplicados)
+  useEffect(() => {
+    const meta = PAGE_LABELS[location.pathname];
+    if (!meta || NON_HISTORY_PATHS.has(location.pathname)) return;
+    const handle = window.setTimeout(() => {
+      const parts: string[] = [];
+      const filterEntries = Object.entries(filters).filter(([, v]) => v && v.length > 0);
+      for (const [key, vals] of filterEntries.slice(0, 2)) {
+        const list = vals as string[];
+        const shown = list.length === 1 ? list[0] : `${list[0]} +${list.length - 1}`;
+        parts.push(`${key}: ${shown}`);
+      }
+      if (selectedPeriods && selectedPeriods.length > 0) {
+        const labels = selectedPeriods
+          .map((p) => months.find((m) => m.periodo === p)?.label ?? p)
+          .slice(0, 2);
+        const periodTxt =
+          selectedPeriods.length > 2 ? `${labels.join(", ")} +${selectedPeriods.length - 2}` : labels.join(", ");
+        parts.push(periodTxt);
+      }
+      const summary = parts.length > 0 ? parts.join(" · ") : "Sem filtros";
+      addEntry({
+        page: location.pathname,
+        pageLabel: meta.label,
+        filters,
+        selectedPeriods,
+        summary,
+      });
+    }, 600);
+    return () => window.clearTimeout(handle);
+  }, [location.pathname, filters, selectedPeriods, months, addEntry]);
 
   // Aplica tema (classe `light` / `dark` no <html>) e reage a mudanças do sistema quando "system"
   useEffect(() => {
