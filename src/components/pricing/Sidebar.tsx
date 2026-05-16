@@ -16,13 +16,17 @@ import {
   Home,
   KanbanSquare,
   LineChart,
+  Monitor,
+  Moon,
   Network,
   Presentation,
+  Sun,
   TableProperties,
   Target,
   TrendingUp,
   X,
 } from "lucide-react";
+import { useTheme, type Theme } from "@/store/theme";
 import { useMemo } from "react";
 
 const dashItems = [
