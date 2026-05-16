@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  BellRing,
   Coins,
   FileSpreadsheet,
   Home,
@@ -30,7 +31,8 @@ export const PAGE_LABELS: Record<string, PageMeta> = {
   "/detalhe": { label: "Tabela Dinâmica", icon: TableProperties },
   "/slides": { label: "Slides", icon: Presentation },
   "/atividades": { label: "Atividades", icon: KanbanSquare },
+  "/alertas": { label: "Central de alertas", icon: BellRing },
 };
 
 // Páginas não registradas no histórico de análises
-export const NON_HISTORY_PATHS = new Set<string>(["/upload", "/atividades"]);
+export const NON_HISTORY_PATHS = new Set<string>(["/upload", "/atividades", "/alertas"]);

@@ -15,6 +15,7 @@ import Abc from "./pages/Abc.tsx";
 import Detalhe from "./pages/Detalhe.tsx";
 import Upload from "./pages/Upload.tsx";
 import Atividades from "./pages/Atividades.tsx";
+import Alertas from "./pages/Alertas.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const App = () => (
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/abc" element={<Abc />} />
           <Route path="/detalhe" element={<Detalhe />} />
           <Route path="/atividades" element={<Atividades />} />
+          <Route path="/alertas" element={<Alertas />} />
           <Route path="/slides" element={<SlidesBeta />} />
           <Route path="/upload" element={<Upload />} />
         </Route>

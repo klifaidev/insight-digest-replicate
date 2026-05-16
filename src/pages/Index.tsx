@@ -31,8 +31,9 @@ import {
   Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAlertHistory } from "@/store/alertHistory";
 
 export default function Index() {
   const rows = usePricing((s) => s.rows);
@@ -54,12 +55,23 @@ export default function Index() {
     return { ...cmp, label: ctx.label };
   }, [rows, filters, selected, filtered, metric]);
 
-  const alerts = useMemo(
-    () => generateAlerts(rows, budgetRows, metric).slice(0, 5),
+  const allAlerts = useMemo(
+    () => generateAlerts(rows, budgetRows, metric),
     [rows, budgetRows, metric],
   );
+  const alerts = useMemo(() => allAlerts.slice(0, 5), [allAlerts]);
 
+  const syncAlerts = useAlertHistory((s) => s.syncAlerts);
   const lastMonth = months.length ? months[months.length - 1] : null;
+  useEffect(() => {
+    if (rows.length === 0) return;
+    const snapshot = lastMonth
+      ? `${monthLabel(lastMonth.mes, lastMonth.ano)} · ${lastMonth.fy}`
+      : "";
+    syncAlerts(allAlerts, snapshot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allAlerts, rows.length]);
+
   const empty = rows.length === 0;
 
   return (
@@ -225,6 +237,13 @@ export default function Index() {
                   ))}
                 </div>
               )}
+              <Link
+                to="/alertas"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                Ver histórico completo
+                <ArrowRight className="h-3 w-3" />
+              </Link>
             </GlassCard>
 
             {/* Atalhos rápidos */}
