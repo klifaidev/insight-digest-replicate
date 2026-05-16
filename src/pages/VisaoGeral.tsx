@@ -233,6 +233,7 @@ export default function VisaoGeral() {
             deltaLabel={comparison?.label}
           />
           <KpiCard
+            className="animation-delay-100"
             label={metric === "cm" ? "Contrib. Marginal" : "Margem Bruta"}
             value={formatBRL(kpis.margem, { compact: true })}
             subValue={formatPct(kpis.margemPct)}
@@ -242,6 +243,7 @@ export default function VisaoGeral() {
             deltaLabel={comparison?.label}
           />
           <KpiCard
+            className="animation-delay-200"
             label="Volume"
             value={formatTon(kpis.volumeKg)}
             subValue={`${formatNum(kpis.volumeKg)} t`}
@@ -250,6 +252,7 @@ export default function VisaoGeral() {
             deltaLabel={comparison?.label}
           />
           <KpiCard
+            className="animation-delay-300"
             label="SKUs ativos"
             value={formatNum(kpis.skus)}
             accent="violet"
