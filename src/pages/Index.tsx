@@ -31,8 +31,9 @@ import {
   Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAlertHistory } from "@/store/alertHistory";
 
 export default function Index() {
   const rows = usePricing((s) => s.rows);
