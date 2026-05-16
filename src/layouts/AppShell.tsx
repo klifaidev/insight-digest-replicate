@@ -11,6 +11,7 @@ import { usePricing } from "@/store/pricing";
 import { useHistory } from "@/store/history";
 import { useMonthsInfo } from "@/store/selectors";
 import { PAGE_LABELS, NON_HISTORY_PATHS } from "@/lib/pageMeta";
+import { hasShareParams, parseShareParams } from "@/lib/shareUrl";
 
 const NAV_MAP: Record<string, { path: string; label: string }> = {
   h: { path: "/", label: "Home" },
