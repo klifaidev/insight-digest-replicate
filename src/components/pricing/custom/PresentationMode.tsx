@@ -228,6 +228,10 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
         <NavArrow side="left"  disabled={idx === 0}                  onClick={() => goto(idx - 1)} />
         <NavArrow side="right" disabled={idx === slides.length - 1}  onClick={() => goto(idx + 1)} />
 
+        {/* Speaker notes bar (presenter mode only). Hidden from PDF capture. */}
+        {presenterMode && slide && (
+          <SpeakerNotesBar notes={(slide as DeckSlide).config && ((slide as DeckSlide).config as { speakerNotes?: string }).speakerNotes || ""} />
+        )}
         {/* Clear filters bar */}
         <ClearFiltersFloater />
       </SlideFilterProvider>
