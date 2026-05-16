@@ -10,10 +10,11 @@ import { exportPvmCsv } from "@/lib/exportCsv";
 import { exportBridgePvmPpt } from "@/lib/exportPpt";
 import { formatBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowRight, BookOpen, Calendar, CalendarDays, Download, Info, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowRight, BookOpen, Calendar, CalendarDays, Download, Info, TrendingDown, TrendingUp, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -50,6 +51,8 @@ export default function BridgePvm() {
   const pvmComp = usePricing((s) => s.pvmComp);
   const setPvm = usePricing((s) => s.setPvm);
   const setPvmMode = usePricing((s) => s.setPvmMode);
+  const selectedPeriods = usePricing((s) => s.selectedPeriods);
+  const [showFilterNote, setShowFilterNote] = useState(true);
   const [exportingPpt, setExportingPpt] = useState(false);
 
   const options = useMemo(
@@ -146,7 +149,8 @@ export default function BridgePvm() {
           ) : (
             <div className="flex flex-wrap items-end gap-3">
               <PeriodSelect
-                label={pvmMode === "fy" ? "Base (FY)" : "Mês base"}
+                label={pvmMode === "fy" ? "Base (FY)" : "Período base"}
+                tooltip="Período independente dos filtros de mês do Topbar."
                 value={pvmBase}
                 onChange={(v) => setPvm(v, pvmComp)}
                 options={options}
@@ -155,7 +159,8 @@ export default function BridgePvm() {
                 <ArrowRight className="h-5 w-5" />
               </div>
               <PeriodSelect
-                label={pvmMode === "fy" ? "Comparação (FY)" : "Mês de comparação"}
+                label={pvmMode === "fy" ? "Comparação (FY)" : "Período de comparação"}
+                tooltip="Período independente dos filtros de mês do Topbar."
                 value={pvmComp}
                 onChange={(v) => setPvm(pvmBase, v)}
                 options={options}
@@ -167,6 +172,25 @@ export default function BridgePvm() {
             </div>
           )}
         </GlassCard>
+
+        {selectedPeriods !== null && showFilterNote && (
+          <Alert className="relative border-primary/30 bg-primary/5 text-foreground">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertDescription className="pr-8 text-sm">
+              Os filtros de período do Topbar não afetam o Bridge PVM. A comparação usa exclusivamente os
+              períodos "Base" e "Comparação" selecionados acima. Os demais filtros (Marca, Canal etc.)
+              continuam sendo aplicados.
+            </AlertDescription>
+            <button
+              type="button"
+              onClick={() => setShowFilterNote(false)}
+              aria-label="Fechar aviso"
+              className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </Alert>
+        )}
 
         {result && (
           <>
@@ -239,12 +263,14 @@ export default function BridgePvm() {
 
 function PeriodSelect({
   label,
+  tooltip,
   value,
   onChange,
   options,
   excludeValue,
 }: {
   label: string;
+  tooltip?: string;
   value: string | null;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
@@ -252,7 +278,10 @@ function PeriodSelect({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <label
+        className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+        title={tooltip}
+      >
         {label}
       </label>
       <Select value={value ?? undefined} onValueChange={onChange}>
