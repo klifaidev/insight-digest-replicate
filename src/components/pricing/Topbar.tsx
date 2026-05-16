@@ -88,13 +88,42 @@ export function Topbar({ title, subtitle }: TopbarProps) {
 
         <div className="flex items-center gap-3">
           {periodBadge && (
-            <span
-              className="hidden items-center gap-1.5 rounded-full border border-border/60 bg-card/40 px-3 py-1 text-[11px] font-medium text-muted-foreground sm:inline-flex"
-              title="Período ativo no app"
-            >
-              <CalendarRange className="h-3 w-3 text-primary" />
-              {periodBadge}
-            </span>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={cn(
+                      "hidden items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium sm:inline-flex",
+                      isStale
+                        ? "border-warning/40 bg-warning/10 text-warning"
+                        : "border-border/60 bg-card/40 text-muted-foreground",
+                    )}
+                  >
+                    {isStale ? (
+                      <AlertTriangle className="h-3 w-3 text-warning" />
+                    ) : (
+                      <CalendarRange className="h-3 w-3 text-primary" />
+                    )}
+                    {periodBadge}
+                    {isStale && (
+                      <span
+                        aria-hidden
+                        className="ml-0.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-warning"
+                      />
+                    )}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isStale ? (
+                    <>
+                      Último dado: {freshness.lastLabel}. Esperado: {freshness.expectedLabel}.
+                    </>
+                  ) : (
+                    "Período ativo no app"
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           <InnovationToggle />
         </div>
