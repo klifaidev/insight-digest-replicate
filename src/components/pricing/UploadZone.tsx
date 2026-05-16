@@ -124,6 +124,12 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
       />
+      {disabled && (
+        <div className="pointer-events-auto absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/70 backdrop-blur-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Processando arquivo...</span>
+        </div>
+      )}
       <div className="flex flex-col items-center gap-3 text-center">
         <div
           className={cn(
