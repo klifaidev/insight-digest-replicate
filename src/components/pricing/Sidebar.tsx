@@ -59,6 +59,7 @@ export function Sidebar() {
   const toggleCollapsed = useSidebarState((s) => s.toggleCollapsed);
   const mobileOpen = useSidebarState((s) => s.mobileOpen);
   const setMobileOpen = useSidebarState((s) => s.setMobileOpen);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const cm = useMemo(() => metric === "cm", [metric]);
   const missingCount = useMemo(
