@@ -63,6 +63,11 @@ import {
   type SlideItem, type SlideKind,
 } from "@/lib/slidesFlow";
 import { exportSlideFlow } from "@/lib/exportPpt";
+import { exportToPdf } from "@/lib/exportPdf";
+import { ChevronDown } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { Filters, FilterKey, PricingRow } from "@/lib/types";
 import type { BudgetRow } from "@/lib/budget";
