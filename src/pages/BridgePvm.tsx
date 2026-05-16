@@ -295,7 +295,7 @@ function EffectRankingCard({
   return (
     <GlassCard className="space-y-4">
       <header>
-        <h2 className="heading-section">{title}</h2>
+        <h2 className="text-lg font-medium">{title}</h2>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
       </header>
 

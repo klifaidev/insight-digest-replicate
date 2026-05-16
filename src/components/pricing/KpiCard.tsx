@@ -35,7 +35,7 @@ export function KpiCard({ label, value, subValue, delta, deltaLabel, glow = "non
   return (
     <GlassCard glow={glow} hoverable className="relative overflow-hidden animate-fade-up">
       <div className="flex flex-col gap-3">
-        <span className="label-caps text-muted-foreground">
+        <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           {label}
         </span>
         <div className={cn("break-words text-3xl font-light leading-tight tabular-nums", accentColor[accent])}>
