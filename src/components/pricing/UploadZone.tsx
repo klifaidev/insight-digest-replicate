@@ -20,6 +20,10 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       setBusy(true);
+      setParsingStart();
+      const toastId = toast.loading("Processando CSV...");
+      let totalRows = 0;
+      let hadError = false;
       try {
         for (const file of Array.from(files)) {
           if (!file.name.toLowerCase().endsWith(".csv")) {
@@ -50,6 +54,7 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
             if (!replace) continue;
           }
           addParsed(parsed.rows, parsed.file, replace, parsed.missing);
+          totalRows += parsed.rows.length;
           const m = parsed.missing;
           const missingTotal = m.skus.length + m.canais.length + m.regioes.length + m.ufs.length;
           toast.success(
@@ -64,13 +69,21 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
         }
       } catch (e) {
         console.error(e);
+        hadError = true;
         toast.error("Falha ao processar arquivo.");
       } finally {
+        toast.dismiss(toastId);
+        if (hadError) {
+          toast.error("Falha no parsing.");
+        } else if (totalRows > 0) {
+          toast.success(`${totalRows.toLocaleString("pt-BR")} linhas carregadas.`);
+        }
         setBusy(false);
+        setParsingEnd();
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [addParsed, existingMonths],
+    [addParsed, existingMonths, setParsingStart, setParsingEnd],
   );
 
   return (
