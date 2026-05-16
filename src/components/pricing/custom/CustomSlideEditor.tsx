@@ -2377,3 +2377,40 @@ function PalettePopover({
     </Popover>
   );
 }
+
+// ----------------------------------------------------------------------------
+// SpeakerNotesBar — colapsável no rodapé do editor de canvas.
+// ----------------------------------------------------------------------------
+function SpeakerNotesBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const MAX = 500;
+  const trimmed = value.slice(0, MAX);
+  return (
+    <div className="shrink-0 rounded-lg border border-border/40 bg-card/40">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-secondary/40"
+      >
+        <StickyNote className="h-3.5 w-3.5" />
+        Anotações do apresentador
+        {value.trim() && <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[9px]">{value.length}</Badge>}
+        <ChevronUp className={cn("ml-auto h-3 w-3 transition-transform", !open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="relative px-3 pb-2">
+          <Textarea
+            value={trimmed}
+            onChange={(e) => onChange(e.target.value.slice(0, MAX))}
+            placeholder="Adicione notas para o apresentador..."
+            className="h-[80px] resize-none text-xs"
+            maxLength={MAX}
+          />
+          <span className="pointer-events-none absolute bottom-3 right-5 text-[10px] tabular-nums text-muted-foreground">
+            {trimmed.length}/{MAX}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
