@@ -1280,7 +1280,7 @@ export default function SlidesBeta() {
   return (
     <>
       <Topbar
-        title="Slides (Beta)"
+        title="Slides"
         subtitle="Monte uma apresentação combinando slides com filtros independentes"
       />
       <DndContext
