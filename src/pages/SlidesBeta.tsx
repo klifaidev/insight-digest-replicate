@@ -1146,6 +1146,7 @@ export default function SlidesBeta() {
   const updateItem = useSlidesFlow((s) => s.updateItem);
   const removeItem = useSlidesFlow((s) => s.removeItem);
   const duplicateItem = useSlidesFlow((s) => s.duplicateItem);
+  const duplicateDeck = useSlidesFlow((s) => s.duplicateDeck);
   const reorder = useSlidesFlow((s) => s.reorder);
   const clearItems = useSlidesFlow((s) => s.clearItems);
 
