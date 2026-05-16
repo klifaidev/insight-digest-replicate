@@ -636,15 +636,23 @@ function EffectKpis({ result }: { result: PVMResult }) {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        {order.map((k) => {
+        {order.map((k, i) => {
           const value = result[k];
           const meta = EFFECT_TOOLTIPS[k];
           const share = totalAbs > 0 ? (Math.abs(value) / totalAbs) * 100 : 0;
+          const delayClass =
+            i === 0 ? "" :
+            i === 1 ? "animation-delay-100" :
+            i === 2 ? "animation-delay-200" :
+            i === 3 ? "animation-delay-300" :
+            i === 4 ? "animation-delay-300" :
+            "animation-delay-300";
           return (
             <Tooltip key={k}>
               <TooltipTrigger asChild>
                 <div className="cursor-help">
                   <KpiCard
+                    className={delayClass}
                     label={meta.label}
                     value={formatBRL(value, { compact: true })}
                     subValue={`% do total: ${share.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`}
