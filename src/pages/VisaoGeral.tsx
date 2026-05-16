@@ -402,6 +402,7 @@ export default function VisaoGeral() {
           )}
         </GlassCard>
 
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <GlassCard glow="green">
             <h3 className="mb-1 text-sm font-medium text-success">🏆 Heróis (Top 5 SKUs por Margem %)</h3>
             <p className="mb-4 text-[11px] text-muted-foreground">
