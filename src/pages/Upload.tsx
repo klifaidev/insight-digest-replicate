@@ -148,6 +148,8 @@ export default function Upload() {
   const clearAll = usePricing((s) => s.clearAll);
   const addParsed = usePricing((s) => s.addParsed);
   const parsing = usePricing((s) => s.parsing);
+  const isDemoData = usePricing((s) => s.isDemoData);
+  const setDemoMode = usePricing((s) => s.setDemoMode);
   const months = useMonthsInfo();
 
   const budgetRows = useBudget((s) => s.rows);
@@ -166,9 +168,17 @@ export default function Upload() {
     const demo = generateDemoData();
     addParsed(demo.realRows, demo.realFile, true, { skus: [], canais: [], regioes: [], ufs: [] });
     addBudget(demo.budgetRows, demo.budgetFile, true);
+    setDemoMode(true);
     toast.success("Dados de demonstração carregados", {
       description: `${demo.realRows.length.toLocaleString("pt-BR")} linhas Real · ${demo.budgetRows.length.toLocaleString("pt-BR")} linhas Budget · ${demo.realFile.months.length} meses`,
     });
+  };
+
+  const handleRemoveDemo = () => {
+    clearAll();
+    clearBudget();
+    setDemoMode(false);
+    toast.success("Dados de demonstração removidos");
   };
 
   // Guard: avisar se sair sem aplicar
