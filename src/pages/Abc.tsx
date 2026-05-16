@@ -147,9 +147,6 @@ export default function Abc() {
         </GlassCard>
 
         <GlassCard>
-          <div className="mb-4">
-            <h3 className="text-sm font-medium">Curva ABC (Pareto)</h3>
-        <GlassCard>
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-medium">Curva ABC (Pareto)</h3>
