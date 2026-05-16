@@ -970,8 +970,37 @@ function Inspector({ item, onOpenFullscreen }: { item: SlideItem | null; onOpenF
             />
           </>
         )}
+
+        <Separator />
+        <SpeakerNotesInspector item={item} onChange={(notes) => updateItem(item.id, (it) => ({
+          ...it,
+          config: { ...(it.config as object), speakerNotes: notes },
+        } as SlideItem))} />
       </div>
     </ScrollArea>
+  );
+}
+
+function SpeakerNotesInspector({ item, onChange }: { item: SlideItem; onChange: (v: string) => void }) {
+  const MAX = 500;
+  const value = ((item.config as { speakerNotes?: string }).speakerNotes ?? "");
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Anotações do apresentador
+        </Label>
+        <span className="text-[10px] tabular-nums text-muted-foreground">{value.length}/{MAX}</span>
+      </div>
+      <Textarea
+        rows={4}
+        value={value.slice(0, MAX)}
+        onChange={(e) => onChange(e.target.value.slice(0, MAX))}
+        placeholder="Adicione notas para o apresentador..."
+        className="resize-none text-xs"
+        maxLength={MAX}
+      />
+    </div>
   );
 }
 
