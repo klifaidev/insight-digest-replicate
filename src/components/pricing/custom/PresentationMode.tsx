@@ -241,6 +241,62 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
           Notas
         </button>
 
+        {/* Laser pointer toggle */}
+        <button
+          onClick={() => setLaser((v) => !v)}
+          title={laser ? "Laser ligado (L)" : "Ativar laser pointer (L)"}
+          data-export-hide="true"
+          style={{
+            position: "absolute", top: 16, left: 232,
+            height: 36, padding: "0 12px", borderRadius: 18,
+            background: laser ? "rgba(220, 38, 38, 0.6)" : "rgba(255,255,255,0.1)",
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", gap: 6,
+            cursor: "pointer", zIndex: 10, fontSize: 12,
+          }}
+        >
+          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: "#ef4444" }} />
+          Laser
+        </button>
+
+        {/* Thumbnails strip toggle */}
+        <button
+          onClick={() => setThumbsOpen((v) => !v)}
+          title={thumbsOpen ? "Ocultar miniaturas (T)" : "Mostrar miniaturas (T)"}
+          data-export-hide="true"
+          style={{
+            position: "absolute", top: 16, left: 312,
+            height: 36, padding: "0 12px", borderRadius: 18,
+            background: thumbsOpen ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.1)",
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", gap: 6,
+            cursor: "pointer", zIndex: 10, fontSize: 12,
+          }}
+        >
+          <ImageIcon className="h-4 w-4" />
+          Miniaturas
+        </button>
+
+        {/* Presenter timer (only when presenter mode is on) */}
+        {presenterMode && (
+          <div
+            data-export-hide="true"
+            style={{
+              position: "absolute", top: 60, left: 16,
+              padding: "6px 12px", borderRadius: 8,
+              background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)",
+              color: "#fff", fontSize: 13, fontVariantNumeric: "tabular-nums",
+              display: "flex", alignItems: "center", gap: 6,
+              zIndex: 10,
+            }}
+          >
+            <Timer className="h-3.5 w-3.5 opacity-70" />
+            <span>{mmss}</span>
+          </div>
+        )}
+
         {/* Top-right close */}
         <button
           onClick={onClose}
