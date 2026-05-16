@@ -1210,6 +1210,21 @@ function BlockSpecificEditor({ block, onChange }: {
                 onCheckedChange={(v) => onChange({ bold: v } as never)} />
             </div>
           )}
+          <div>
+            <Label className="text-[10px] uppercase text-muted-foreground">Animação de entrada</Label>
+            <Select
+              value={(block as { enterAnimation?: string }).enterAnimation ?? "none"}
+              onValueChange={(v) => onChange({ enterAnimation: v } as never)}
+            >
+              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                <SelectItem value="fade">Fade</SelectItem>
+                <SelectItem value="slide-up">Subir</SelectItem>
+                <SelectItem value="pop">Pop</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       );
     }

@@ -33,6 +33,7 @@ interface Props {
 
 export function PresentationMode({ currentSlideId, currentConfig, onClose }: Props) {
   const items = useSlidesFlow((s) => s.items);
+  const transition = useSlidesFlow((s) => s.transition);
   // If editor was opened standalone (no items in deck), present just the live slide.
   const standaloneList = useMemo(() => {
     if (items.length > 0) return null;
@@ -43,7 +44,8 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   const slides = standaloneList ?? items;
   const initial = Math.max(0, slides.findIndex((s) => s.id === currentSlideId));
   const [idx, setIdx] = useState(initial < 0 ? 0 : initial);
-  const [fade, setFade] = useState(true);
+  const [prevIdx, setPrevIdx] = useState<number | null>(null);
+  const [animKey, setAnimKey] = useState(0);
   const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   // Try fullscreen on mount; non-fatal if blocked (overlay still covers viewport).
@@ -59,13 +61,23 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
   }, []);
 
   const goto = (n: number) => {
-    if (n < 0 || n >= slides.length) return;
-    setFade(false);
-    requestAnimationFrame(() => {
+    if (n < 0 || n >= slides.length || n === idx) return;
+    if (transition === "none") {
       setIdx(n);
-      requestAnimationFrame(() => setFade(true));
-    });
+      setAnimKey((k) => k + 1);
+      return;
+    }
+    setPrevIdx(idx);
+    setIdx(n);
+    setAnimKey((k) => k + 1);
   };
+
+  // Clear previous slide after transition duration (longest is 350ms).
+  useEffect(() => {
+    if (prevIdx === null) return;
+    const t = setTimeout(() => setPrevIdx(null), 400);
+    return () => clearTimeout(t);
+  }, [prevIdx, animKey]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -82,9 +94,10 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [idx, slides.length, onClose]);
+  }, [idx, slides.length, onClose, transition]);
 
   const slide = slides[idx];
+  const prevSlide = prevIdx !== null ? slides[prevIdx] : null;
   const factor = Math.min(screen.w / CANVAS_W, screen.h / CANVAS_H) * 0.95;
 
   return (
@@ -101,22 +114,43 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
         else if (x > w * 0.8) goto(idx + 1);
       }}
     >
+      {/* Keyframes for transitions + block enter animations */}
+      <style>{TRANSITION_CSS}</style>
       <SlideFilterProvider slideKey={slide?.id}>
         <div
           style={{
             position: "absolute", inset: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
-            opacity: fade ? 1 : 0,
-            transition: "opacity 150ms",
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          {prevSlide && (
+            <div
+              key={`prev-${animKey}`}
+              style={{
+                position: "absolute", display: "flex", alignItems: "center", justifyContent: "center",
+                inset: 0, animation: exitAnim(transition),
+              }}
+            >
+              <SlideRenderArea slide={prevSlide} factor={factor} animateBlocks={false} />
+            </div>
+          )}
           {slide && (
-            <SlideRenderArea
-              slide={slide}
-              liveConfig={slide.id === currentSlideId ? currentConfig : undefined}
-              factor={factor}
-            />
+            <div
+              key={`cur-${animKey}`}
+              style={{
+                position: "absolute", display: "flex", alignItems: "center", justifyContent: "center",
+                inset: 0, animation: enterAnim(transition),
+              }}
+            >
+              <SlideRenderArea
+                slide={slide}
+                liveConfig={slide.id === currentSlideId ? currentConfig : undefined}
+                factor={factor}
+                animateBlocks
+                animKey={animKey}
+              />
+            </div>
           )}
         </div>
 
@@ -233,8 +267,8 @@ function ClearFiltersFloater() {
 type DeckSlide = { id: string; kind: string; config?: unknown };
 
 function SlideRenderArea({
-  slide, liveConfig, factor,
-}: { slide: DeckSlide; liveConfig?: CustomSlideConfig; factor: number }) {
+  slide, liveConfig, factor, animateBlocks = false, animKey = 0,
+}: { slide: DeckSlide; liveConfig?: CustomSlideConfig; factor: number; animateBlocks?: boolean; animKey?: number }) {
   const w = CANVAS_W * factor;
   const h = CANVAS_H * factor;
 
@@ -243,7 +277,7 @@ function SlideRenderArea({
       const cfg = liveConfig ?? (slide.config as CustomSlideConfig | undefined);
       if (!cfg) return null;
       return (
-        <CustomCanvasReadOnly config={cfg} />
+        <CustomCanvasReadOnly config={cfg} animateBlocks={animateBlocks} animKey={animKey} />
       );
     }
     // Non-custom: fall back to SlidePreview (no scaling needed — it's responsive).
@@ -274,8 +308,11 @@ function SlideRenderArea({
   );
 }
 
-export function CustomCanvasReadOnly({ config }: { config: CustomSlideConfig }) {
+export function CustomCanvasReadOnly({
+  config, animateBlocks = false, animKey = 0,
+}: { config: CustomSlideConfig; animateBlocks?: boolean; animKey?: number }) {
   const ref = useRef<HTMLDivElement>(null);
+  const sorted = [...config.blocks].sort((a, b) => a.z - b.z);
   return (
     <div
       ref={ref}
@@ -285,20 +322,29 @@ export function CustomCanvasReadOnly({ config }: { config: CustomSlideConfig }) 
         position: "relative", overflow: "hidden",
       }}
     >
-      {[...config.blocks].sort((a, b) => a.z - b.z).map((blk: CustomBlock) => (
-        <div
-          key={blk.id}
-          style={{
-            position: "absolute",
-            left: blk.x, top: blk.y, width: blk.w, height: blk.h,
-            zIndex: blk.z,
-            // Charts handle pointer-events for cross-filter clicks; others passive.
-            pointerEvents: blk.kind === "chart" ? "auto" : "none",
-          }}
-        >
-          <BlockRenderer block={blk} />
-        </div>
-      ))}
+      {sorted.map((blk: CustomBlock, i) => {
+        const anim = animateBlocks ? (blk.enterAnimation ?? "none") : "none";
+        const delay = i * 80;
+        const animation =
+          anim === "fade" ? `blkFade 320ms ease-out ${delay}ms both` :
+          anim === "slide-up" ? `blkSlideUp 350ms ease-out ${delay}ms both` :
+          anim === "pop" ? `blkPop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms both` :
+          undefined;
+        return (
+          <div
+            key={`${blk.id}-${animKey}`}
+            style={{
+              position: "absolute",
+              left: blk.x, top: blk.y, width: blk.w, height: blk.h,
+              zIndex: blk.z,
+              pointerEvents: blk.kind === "chart" ? "auto" : "none",
+              animation,
+            }}
+          >
+            <BlockRenderer block={blk} />
+          </div>
+        );
+      })}
       {config.showHaraldFooter && (
         <img
           src={haraldFooterPng}
@@ -312,4 +358,40 @@ export function CustomCanvasReadOnly({ config }: { config: CustomSlideConfig }) 
       )}
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Transition CSS + helpers
+// ---------------------------------------------------------------------------
+const TRANSITION_CSS = `
+@keyframes slideEnterFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideExitFade  { from { opacity: 1; } to { opacity: 0; } }
+@keyframes slideEnterLeft { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes slideExitLeft  { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@keyframes slideEnterUp   { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes slideExitUp    { from { transform: translateY(0); } to { transform: translateY(-100%); } }
+@keyframes slideEnterZoom { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes slideExitZoom  { from { transform: scale(1); opacity: 1; } to { transform: scale(1.1); opacity: 0; } }
+@keyframes blkFade    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes blkSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes blkPop     { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+`;
+
+function enterAnim(t: string): string | undefined {
+  switch (t) {
+    case "fade":       return "slideEnterFade 300ms ease-out both";
+    case "slide-left": return "slideEnterLeft 350ms ease-out both";
+    case "slide-up":   return "slideEnterUp 350ms ease-out both";
+    case "zoom":       return "slideEnterZoom 300ms ease-out both";
+    default: return undefined;
+  }
+}
+function exitAnim(t: string): string | undefined {
+  switch (t) {
+    case "fade":       return "slideExitFade 300ms ease-out both";
+    case "slide-left": return "slideExitLeft 350ms ease-out both";
+    case "slide-up":   return "slideExitUp 350ms ease-out both";
+    case "zoom":       return "slideExitZoom 300ms ease-out both";
+    default: return undefined;
+  }
 }

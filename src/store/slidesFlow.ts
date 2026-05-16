@@ -13,10 +13,13 @@ export interface SlidesPreset {
   updatedAt: number;
 }
 
+export type SlideTransition = "none" | "fade" | "slide-left" | "slide-up" | "zoom";
+
 interface SlidesFlowState {
   items: SlideItem[];
   presets: SlidesPreset[];
   selectedId: string | null;
+  transition: SlideTransition;
 
   // Itens
   addItem: (kind: SlideKind) => void;
@@ -26,6 +29,7 @@ interface SlidesFlowState {
   reorder: (sourceId: string, targetId: string) => void;
   clearItems: () => void;
   select: (id: string | null) => void;
+  setTransition: (t: SlideTransition) => void;
 
   // Presets
   savePreset: (name: string, description?: string) => SlidesPreset;
@@ -41,6 +45,9 @@ export const useSlidesFlow = create<SlidesFlowState>()(
       items: [],
       presets: [],
       selectedId: null,
+      transition: "fade",
+
+      setTransition: (t) => set({ transition: t }),
 
       addItem: (kind) =>
         set((s) => {
@@ -139,7 +146,7 @@ export const useSlidesFlow = create<SlidesFlowState>()(
     {
       name: "pricing.slidesFlow.v1",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ items: s.items, presets: s.presets }),
+      partialize: (s) => ({ items: s.items, presets: s.presets, transition: s.transition }),
     },
   ),
 );
