@@ -12,7 +12,8 @@ import { formatBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowRight, BookOpen, Calendar, CalendarDays, Download, TrendingDown, TrendingUp } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowRight, BookOpen, Calendar, CalendarDays, Download, Info, TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -164,14 +165,8 @@ export default function BridgePvm() {
 
         {result && (
           <>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-              <KpiCard label="Δ Volume" value={formatBRL(result.volume, { compact: true })} accent={result.volume >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Preço" value={formatBRL(result.price, { compact: true })} accent={result.price >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Custo Var." value={formatBRL(result.cost, { compact: true })} accent={result.cost >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Frete" value={formatBRL(result.freight, { compact: true })} accent={result.freight >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Comissão" value={formatBRL(result.commission, { compact: true })} accent={result.commission >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Outros" value={formatBRL(result.others, { compact: true })} accent={result.others >= 0 ? "green" : "red"} />
-            </div>
+            <EffectKpis result={result} />
+
 
             <GlassCard glow="blue">
               <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -544,5 +539,94 @@ function PvmReadingCard({ result }: { result: PVMResult }) {
         ))}
       </ol>
     </GlassCard>
+  );
+}
+
+// ---------- KpiCards de efeito com tooltip + % do total ----------
+
+const EFFECT_TOOLTIPS: Record<
+  "volume" | "price" | "cost" | "freight" | "commission" | "others",
+  { label: string; description: string }
+> = {
+  volume: {
+    label: "Δ Volume",
+    description:
+      "Impacto na margem causado pela variação de volume vendido entre os dois períodos. Positivo = vendeu mais; negativo = vendeu menos.",
+  },
+  price: {
+    label: "Δ Preço",
+    description:
+      "Impacto causado pela variação no preço médio de realização (ROL/kg). Positivo = preço médio subiu; negativo = preço médio caiu.",
+  },
+  cost: {
+    label: "Δ Custo Var.",
+    description:
+      "Impacto causado pela variação no custo variável unitário (CV/kg). Positivo = custo caiu (ganho); negativo = custo subiu (pressão).",
+  },
+  freight: {
+    label: "Δ Frete",
+    description:
+      "Variação no custo de frete unitário entre os períodos. Positivo = frete caiu; negativo = frete subiu.",
+  },
+  commission: {
+    label: "Δ Comissão",
+    description:
+      "Variação na comissão comercial unitária. Positivo = comissão caiu; negativo = comissão subiu.",
+  },
+  others: {
+    label: "Δ Outros",
+    description:
+      "Efeitos residuais de mix e outros componentes não capturados nos demais efeitos.",
+  },
+};
+
+function EffectKpis({ result }: { result: PVMResult }) {
+  const order: Array<keyof typeof EFFECT_TOOLTIPS> = [
+    "volume",
+    "price",
+    "cost",
+    "freight",
+    "commission",
+    "others",
+  ];
+  const totalAbs =
+    Math.abs(result.volume) +
+    Math.abs(result.price) +
+    Math.abs(result.cost) +
+    Math.abs(result.freight) +
+    Math.abs(result.commission) +
+    Math.abs(result.others);
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        {order.map((k) => {
+          const value = result[k];
+          const meta = EFFECT_TOOLTIPS[k];
+          const share = totalAbs > 0 ? (Math.abs(value) / totalAbs) * 100 : 0;
+          return (
+            <Tooltip key={k}>
+              <TooltipTrigger asChild>
+                <div className="cursor-help">
+                  <KpiCard
+                    label={meta.label}
+                    value={formatBRL(value, { compact: true })}
+                    subValue={`% do total: ${share.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`}
+                    accent={value >= 0 ? "green" : "red"}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+                <div className="mb-1 flex items-center gap-1 font-medium">
+                  <Info className="h-3 w-3" />
+                  {meta.label}
+                </div>
+                {meta.description}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 }
