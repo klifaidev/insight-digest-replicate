@@ -352,3 +352,90 @@ function SectionLabel({
     </div>
   );
 }
+
+function relativeTime(ts: number): string {
+  const diff = Math.max(0, Date.now() - ts);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.floor(h / 24);
+  return `há ${d} d`;
+}
+
+function RecentHistory({ onNavigate }: { onNavigate: () => void }) {
+  const entries = useHistory((s) => s.entries);
+  const clearHistory = useHistory((s) => s.clearHistory);
+  const setFilter = usePricing((s) => s.setFilter);
+  const clearFilters = usePricing((s) => s.clearFilters);
+  const setSelectedPeriods = usePricing((s) => s.setSelectedPeriods);
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(true);
+
+  const recent = entries.slice(0, 5);
+  if (recent.length === 0) return null;
+
+  const handleClick = (e: typeof entries[number]) => {
+    clearFilters();
+    for (const [k, v] of Object.entries(e.filters)) {
+      if (v && v.length > 0) setFilter(k as Parameters<typeof setFilter>[0], v as string[]);
+    }
+    setSelectedPeriods(e.selectedPeriods);
+    navigate(e.page);
+    onNavigate();
+  };
+
+  return (
+    <div className="mx-3 mb-2 rounded-xl border border-border/50 bg-sidebar-accent/30 p-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-1 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
+      >
+        <span className="flex items-center gap-1.5">
+          <Clock className="h-3 w-3" />
+          Histórico recente
+        </span>
+        <ChevronDown className={`h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`} />
+      </button>
+      {open && (
+        <>
+          <ul className="mt-1 space-y-0.5">
+            {recent.map((e) => {
+              const Icon = PAGE_LABELS[e.page]?.icon ?? Clock;
+              return (
+                <li key={e.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleClick(e)}
+                    className="flex w-full items-start gap-2 rounded-md px-1.5 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
+                    title={`${e.pageLabel} — ${e.summary}`}
+                  >
+                    <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[12px] font-medium text-sidebar-foreground">
+                        {e.pageLabel}
+                      </div>
+                      <div className="truncate text-[10px] text-muted-foreground">{e.summary}</div>
+                    </div>
+                    <span className="shrink-0 text-[9px] text-muted-foreground/70">
+                      {relativeTime(e.visitedAt)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button
+            type="button"
+            onClick={clearHistory}
+            className="mt-1 w-full rounded-md px-1.5 py-1 text-[10px] text-muted-foreground/70 hover:bg-sidebar-accent hover:text-foreground"
+          >
+            Limpar histórico
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
