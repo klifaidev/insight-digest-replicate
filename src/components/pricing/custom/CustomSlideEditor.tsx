@@ -998,6 +998,11 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
             <Play className="h-3 w-3" /> Apresentar
           </Button>
         </div>
+
+        <SpeakerNotesBar
+          value={config.speakerNotes ?? ""}
+          onChange={(v) => setSpeakerNotesAction(v)}
+        />
       </div>
 
       {/* ====== Inspector ====== */}
