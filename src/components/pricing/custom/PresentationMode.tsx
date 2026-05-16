@@ -177,6 +177,26 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
           Baixar PDF
         </button>
 
+        {/* Top-left (next to PDF): presenter mode toggle */}
+        <button
+          onClick={() => setPresenterMode((v) => !v)}
+          aria-label={presenterMode ? "Ocultar notas do apresentador" : "Mostrar notas do apresentador"}
+          title={presenterMode ? "Modo apresentador (ativado)" : "Modo apresentador"}
+          data-export-hide="true"
+          style={{
+            position: "absolute", top: 16, left: 152,
+            height: 36, padding: "0 12px", borderRadius: 18,
+            background: presenterMode ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.1)",
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", gap: 6,
+            cursor: "pointer", zIndex: 10, fontSize: 12,
+          }}
+        >
+          {presenterMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          Notas
+        </button>
+
         {/* Top-right close */}
         <button
           onClick={onClose}
