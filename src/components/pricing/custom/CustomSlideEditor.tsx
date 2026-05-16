@@ -1214,6 +1214,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
         onClose={() => setPresentOpen(false)}
       />
     )}
+    <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </SlideFilterProvider>
   );
 }
