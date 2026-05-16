@@ -45,6 +45,9 @@ export function Topbar({ title, subtitle }: TopbarProps) {
   const inovActive = usePricing((s) => s.filters.inovacao?.[0] === "Inovação");
   const setMobileOpen = useSidebarState((s) => s.setMobileOpen);
 
+  const freshness = useMemo(() => getFreshness(months), [months]);
+  const isStale = freshness.status === "stale";
+
   // Breadcrumb de período
   const periodBadge = (() => {
     if (months.length === 0) return null;
