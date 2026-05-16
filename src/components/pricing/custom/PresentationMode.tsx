@@ -120,6 +120,28 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
           )}
         </div>
 
+        {/* Top-left: download PDF */}
+        <button
+          onClick={async () => {
+            const list = items.length > 0 ? items : (slide ? [slide as unknown as import("@/lib/slidesFlow").SlideItem] : []);
+            if (list.length === 0) return;
+            await exportToPdf(list as import("@/lib/slidesFlow").SlideItem[], "apresentacao.pdf");
+          }}
+          aria-label="Baixar PDF"
+          title="Baixar PDF"
+          style={{
+            position: "absolute", top: 16, left: 16,
+            height: 36, padding: "0 12px", borderRadius: 18,
+            background: "rgba(255,255,255,0.1)", color: "#fff",
+            border: "1px solid rgba(255,255,255,0.2)",
+            display: "flex", alignItems: "center", gap: 6,
+            cursor: "pointer", zIndex: 10, fontSize: 12,
+          }}
+        >
+          <Download className="h-4 w-4" />
+          Baixar PDF
+        </button>
+
         {/* Top-right close */}
         <button
           onClick={onClose}
