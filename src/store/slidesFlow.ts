@@ -95,6 +95,17 @@ export const useSlidesFlow = create<SlidesFlowState>()(
         }),
 
       clearItems: () => set({ items: [], selectedId: null }),
+
+      duplicateDeck: () =>
+        set((s) => {
+          if (s.items.length === 0) return {};
+          const clones = s.items.map((i) => {
+            const c = JSON.parse(JSON.stringify(i)) as SlideItem;
+            c.id = newId();
+            return c;
+          });
+          return { items: [...s.items, ...clones], selectedId: clones[0]?.id ?? s.selectedId };
+        }),
       select: (id) => set({ selectedId: id }),
 
       savePreset: (name, description) => {
