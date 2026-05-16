@@ -6,6 +6,7 @@ import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { useSidebarState } from "@/store/sidebar";
 import { useHistory } from "@/store/history";
+import { useBookmarks } from "@/store/bookmarks";
 import { PAGE_LABELS } from "@/lib/pageMeta";
 import { useHasActiveFilters } from "./ActiveFiltersBar";
 import {
