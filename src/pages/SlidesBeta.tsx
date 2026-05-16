@@ -1369,14 +1369,36 @@ export default function SlidesBeta() {
                     />
                   </PopoverContent>
                 </Popover>
-                <Button
-                  size="sm" className="h-8 gap-2 shadow-[0_4px_12px_-4px_hsl(var(--primary)/0.5)]"
-                  disabled={items.length === 0 || exporting || !readyAll}
-                  onClick={handleExport}
-                >
-                  <Download className="h-4 w-4" />
-                  {exporting ? "Gerando..." : "Exportar"}
-                </Button>
+                <div className="inline-flex items-center rounded-md shadow-[0_4px_12px_-4px_hsl(var(--primary)/0.5)]">
+                  <Button
+                    size="sm" className="h-8 gap-2 rounded-r-none"
+                    disabled={items.length === 0 || exporting || !readyAll}
+                    onClick={handleExport}
+                  >
+                    <Download className="h-4 w-4" />
+                    {exporting ? "Gerando..." : "Exportar PPTX"}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-l-none border-l border-primary-foreground/20 px-2"
+                        disabled={items.length === 0 || exporting || !readyAll}
+                        aria-label="Mais formatos de exportação"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleExport} disabled={exporting}>
+                        <Download className="mr-2 h-4 w-4" /> Exportar PPTX
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleExportPdf} disabled={exporting}>
+                        <FileText className="mr-2 h-4 w-4" /> Exportar PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </TooltipProvider>
           </div>
