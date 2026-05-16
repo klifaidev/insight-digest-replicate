@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { exportTableCsv } from "@/lib/exportCsv";
 import { cn } from "@/lib/utils";
+import { PricingSimulator } from "@/components/pricing/PricingSimulator";
 
 interface Alert {
   id: string;
