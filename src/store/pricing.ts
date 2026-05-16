@@ -13,7 +13,10 @@ interface PricingState {
   pvmMode: "fy" | "month";
   pvmBase: string | null;
   pvmComp: string | null;
+  parsing: boolean;
 
+  setParsingStart: () => void;
+  setParsingEnd: () => void;
   setMetric: (m: Metric) => void;
   setFilter: (k: keyof Filters, v: string[]) => void;
   clearFilters: () => void;
