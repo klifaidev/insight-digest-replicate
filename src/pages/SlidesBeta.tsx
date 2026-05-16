@@ -1143,6 +1143,7 @@ export default function SlidesBeta() {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [dragging, setDragging] = useState<{ source: "catalog"; kind: SlideKind } | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
   const applyTemplate = (tpl: SlideTemplate) => {
     const built = tpl.build({ months, budgetMonths });
