@@ -310,6 +310,7 @@ export default function VisaoGeral() {
           </header>
           <DataTable
             rows={byPerf as unknown as Record<string, unknown>[]}
+            pageSize={50}
             columns={[
               { key: "key", label: perfLabel, align: "left", format: (v) => <span className="font-medium">{String(v)}</span> },
               { key: "rol", label: "ROL", align: "right", format: (v) => formatBRL(Number(v), { compact: true }) },
