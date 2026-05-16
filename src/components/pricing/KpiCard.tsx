@@ -10,6 +10,7 @@ interface KpiCardProps {
   deltaLabel?: string; // e.g. "vs. mês anterior"
   glow?: "blue" | "green" | "red" | "none";
   accent?: "blue" | "green" | "red" | "amber" | "violet";
+  className?: string;
 }
 
 const accentColor: Record<NonNullable<KpiCardProps["accent"]>, string> = {
@@ -28,12 +29,12 @@ function formatDeltaPct(d: number): string {
   })}%`;
 }
 
-export function KpiCard({ label, value, subValue, delta, deltaLabel, glow = "none", accent = "blue" }: KpiCardProps) {
+export function KpiCard({ label, value, subValue, delta, deltaLabel, glow = "none", accent = "blue", className }: KpiCardProps) {
   const hasDelta = typeof delta === "number" && isFinite(delta);
   const dir = hasDelta ? (delta! > 0 ? "up" : delta! < 0 ? "down" : "flat") : null;
 
   return (
-    <GlassCard glow={glow} hoverable className="relative overflow-hidden animate-fade-up">
+    <GlassCard glow={glow} hoverable className={cn("relative overflow-hidden animate-fade-up", className)}>
       <div className="flex flex-col gap-3">
         <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           {label}

@@ -51,10 +51,11 @@ export function ActiveFiltersBar() {
 
   const hasAny = activeFilters.length > 0 || periodChip !== null;
 
+  if (!hasAny) return null;
+
   return (
     <div
-      className="overflow-hidden border-b border-border/40 bg-background/40 backdrop-blur-xl transition-[height,opacity] duration-150 ease-out"
-      style={{ height: hasAny ? 36 : 0, opacity: hasAny ? 1 : 0 }}
+      className="overflow-hidden border-b border-border/40 bg-background/40 backdrop-blur-xl animate-fade-in"
       aria-hidden={!hasAny}
     >
       <div className="flex h-9 items-center gap-1.5 overflow-x-auto whitespace-nowrap px-8">
