@@ -149,7 +149,8 @@ export default function BridgePvm() {
           ) : (
             <div className="flex flex-wrap items-end gap-3">
               <PeriodSelect
-                label={pvmMode === "fy" ? "Base (FY)" : "Mês base"}
+                label={pvmMode === "fy" ? "Base (FY)" : "Período base"}
+                tooltip="Período independente dos filtros de mês do Topbar."
                 value={pvmBase}
                 onChange={(v) => setPvm(v, pvmComp)}
                 options={options}
@@ -158,7 +159,8 @@ export default function BridgePvm() {
                 <ArrowRight className="h-5 w-5" />
               </div>
               <PeriodSelect
-                label={pvmMode === "fy" ? "Comparação (FY)" : "Mês de comparação"}
+                label={pvmMode === "fy" ? "Comparação (FY)" : "Período de comparação"}
+                tooltip="Período independente dos filtros de mês do Topbar."
                 value={pvmComp}
                 onChange={(v) => setPvm(pvmBase, v)}
                 options={options}
@@ -170,6 +172,25 @@ export default function BridgePvm() {
             </div>
           )}
         </GlassCard>
+
+        {selectedPeriods !== null && showFilterNote && (
+          <Alert className="relative border-primary/30 bg-primary/5 text-foreground">
+            <Info className="h-4 w-4 text-primary" />
+            <AlertDescription className="pr-8 text-sm">
+              Os filtros de período do Topbar não afetam o Bridge PVM. A comparação usa exclusivamente os
+              períodos "Base" e "Comparação" selecionados acima. Os demais filtros (Marca, Canal etc.)
+              continuam sendo aplicados.
+            </AlertDescription>
+            <button
+              type="button"
+              onClick={() => setShowFilterNote(false)}
+              aria-label="Fechar aviso"
+              className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </Alert>
+        )}
 
         {result && (
           <>
