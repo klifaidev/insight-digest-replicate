@@ -85,6 +85,7 @@ import {
   setShowHaraldFooter as setShowHaraldFooterAction,
   setBackground as setBackgroundAction,
   setThemeAction,
+  setSpeakerNotesAction,
   useSelection, selectBlock, setSelection, clearSelection,
   selectAllOnSlide, enterGroupEdit, exitGroupEdit,
   deleteBlocksAction, duplicateBlocksAction,
