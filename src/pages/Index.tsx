@@ -39,6 +39,7 @@ export default function Index() {
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
   const metric = usePricing((s) => s.metric);
+  const isDemoData = usePricing((s) => s.isDemoData);
   const budgetRows = useBudget((s) => s.rows);
   const months = useMonthsInfo();
   const navigate = useNavigate();
