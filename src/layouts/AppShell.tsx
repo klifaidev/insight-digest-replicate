@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/pricing/Sidebar";
@@ -8,6 +8,9 @@ import { ShortcutsHelp } from "@/components/pricing/ShortcutsHelp";
 import { useSidebarState } from "@/store/sidebar";
 import { useTheme, applyTheme } from "@/store/theme";
 import { usePricing } from "@/store/pricing";
+import { useHistory } from "@/store/history";
+import { useMonthsInfo } from "@/store/selectors";
+import { PAGE_LABELS, NON_HISTORY_PATHS } from "@/lib/pageMeta";
 
 const NAV_MAP: Record<string, { path: string; label: string }> = {
   h: { path: "/", label: "Home" },
