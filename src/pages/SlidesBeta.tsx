@@ -1345,9 +1345,14 @@ export default function SlidesBeta() {
           <div className="flex items-center justify-between gap-2 border-b border-border/40 bg-card/30 px-4 py-2.5 backdrop-blur-xl">
             <div className="flex items-center gap-2.5">
               <h2 className="text-sm font-semibold tracking-tight">Esteira</h2>
-              <Badge variant="secondary" className="h-5 px-2 text-[10px] tabular-nums">
-                {items.length}
+              <Badge variant="secondary" className="h-5 px-2 text-[10px] font-semibold tabular-nums">
+                {items.length} {items.length === 1 ? "slide" : "slides"}
               </Badge>
+              {items.length > 0 && (
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 tabular-nums">
+                  ~{Math.max(1, Math.round((items.length * 30) / 60))} min
+                </span>
+              )}
               {!readyAll && items.length > 0 && (
                 <Badge variant="outline" className="h-5 border-warning/40 px-2 text-[10px] text-warning">
                   Incompleto
