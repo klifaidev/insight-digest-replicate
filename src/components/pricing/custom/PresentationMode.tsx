@@ -334,7 +334,81 @@ export function PresentationMode({ currentSlideId, currentConfig, onClose }: Pro
         )}
         {/* Clear filters bar */}
         <ClearFiltersFloater />
+
+        {/* Thumbnail strip (bottom) */}
+        {thumbsOpen && (
+          <div
+            data-export-hide="true"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute", left: 0, right: 0, bottom: 0,
+              padding: "12px 16px 14px",
+              background: "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))",
+              display: "flex", justifyContent: "center", gap: 8,
+              overflowX: "auto", zIndex: 15,
+            }}
+          >
+            {slides.map((s, i) => {
+              const active = i === idx;
+              return (
+                <button
+                  key={s.id}
+                  onClick={(e) => { e.stopPropagation(); goto(i); }}
+                  title={`Slide ${i + 1}`}
+                  style={{
+                    flex: "0 0 auto",
+                    width: 144, height: 81,
+                    borderRadius: 4, overflow: "hidden",
+                    background: "#fff",
+                    border: active ? "2px solid hsl(var(--primary))" : "2px solid rgba(255,255,255,0.15)",
+                    cursor: "pointer", padding: 0,
+                    boxShadow: active ? "0 0 0 2px rgba(255,255,255,0.2)" : "none",
+                    position: "relative",
+                  }}
+                >
+                  <ScaledPreview item={s as never} targetWidth={140} />
+                  <span style={{
+                    position: "absolute", bottom: 2, left: 4,
+                    fontSize: 9, fontWeight: 600, color: "#fff",
+                    background: "rgba(0,0,0,0.6)", padding: "1px 4px", borderRadius: 2,
+                    fontVariantNumeric: "tabular-nums",
+                  }}>{i + 1}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Laser pointer dot */}
+        {laser && laserPos && (
+          <div
+            data-export-hide="true"
+            style={{
+              position: "fixed",
+              left: laserPos.x - 8, top: laserPos.y - 8,
+              width: 16, height: 16, borderRadius: 8,
+              background: "radial-gradient(circle, rgba(239,68,68,0.95) 0%, rgba(239,68,68,0.65) 40%, rgba(239,68,68,0) 70%)",
+              boxShadow: "0 0 16px rgba(239,68,68,0.7)",
+              pointerEvents: "none", zIndex: 9998,
+            }}
+          />
+        )}
+
+        {/* Blackout overlay */}
+        {blackout && (
+          <div
+            data-export-hide="true"
+            onClick={() => setBlackout(false)}
+            style={{
+              position: "fixed", inset: 0, background: "#000",
+              zIndex: 9997, cursor: "pointer",
+            }}
+          />
+        )}
       </SlideFilterProvider>
+
+      {/* Global cursor override when laser is on */}
+      {laser && <style>{`* { cursor: none !important; }`}</style>}
     </div>
   );
 }
