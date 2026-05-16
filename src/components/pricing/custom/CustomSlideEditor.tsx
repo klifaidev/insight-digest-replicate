@@ -2490,3 +2490,91 @@ function SpeakerNotesBar({ value, onChange }: { value: string; onChange: (v: str
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// ShortcutsDialog — painel de referência rápida dos atalhos do editor.
+function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const mod = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+  const sections: { title: string; items: [string, string][] }[] = [
+    {
+      title: "Edição",
+      items: [
+        [`${mod} + Z`, "Desfazer"],
+        [`${mod} + Y  ·  ${mod} + Shift + Z`, "Refazer"],
+        [`${mod} + D`, "Duplicar bloco selecionado"],
+        ["Delete  ·  Backspace", "Excluir bloco selecionado"],
+        [`${mod} + A`, "Selecionar todos os blocos"],
+        ["Esc", "Desselecionar / sair da edição inline"],
+      ],
+    },
+    {
+      title: "Área de transferência",
+      items: [
+        [`${mod} + C`, "Copiar bloco"],
+        [`${mod} + V`, "Colar bloco (mantém ao mudar de slide)"],
+        [`${mod} + X`, "Cortar bloco"],
+      ],
+    },
+    {
+      title: "Camadas",
+      items: [
+        [`${mod} + ]`, "Trazer para frente"],
+        [`${mod} + [`, "Enviar para trás"],
+        [`${mod} + Shift + ]`, "Trazer para a frente de tudo"],
+        [`${mod} + Shift + [`, "Enviar para o fundo"],
+      ],
+    },
+    {
+      title: "Alinhamento",
+      items: [
+        [`${mod} + Shift + H`, "Centralizar horizontalmente"],
+        [`${mod} + Shift + V`, "Centralizar verticalmente"],
+      ],
+    },
+    {
+      title: "Mover",
+      items: [
+        ["← → ↑ ↓", "Mover 10 px"],
+        ["Shift + setas", "Mover 40 px"],
+      ],
+    },
+    {
+      title: "Apresentação & ajuda",
+      items: [
+        ["F5", "Iniciar apresentação"],
+        [`${mod} + Shift + P`, "Iniciar apresentação"],
+        ["?", "Abrir este painel"],
+      ],
+    },
+  ];
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Keyboard className="h-4 w-4" /> Atalhos de teclado
+          </DialogTitle>
+        </DialogHeader>
+        <div className="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
+          {sections.map((sec) => (
+            <div key={sec.title} className="rounded-md border border-border/40 bg-card/40 p-3">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {sec.title}
+              </div>
+              <ul className="space-y-1.5">
+                {sec.items.map(([k, desc]) => (
+                  <li key={k} className="flex items-start justify-between gap-3 text-[12px]">
+                    <span className="text-foreground/90">{desc}</span>
+                    <kbd className="shrink-0 rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                      {k}
+                    </kbd>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
