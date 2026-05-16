@@ -20,6 +20,8 @@ export type CustomBlockKind =
   | "chart"
   | "topSku";
 
+export type BlockEnterAnimation = "none" | "fade" | "slide-up" | "pop";
+
 export interface BaseBlock {
   id: string;
   kind: CustomBlockKind;
@@ -29,6 +31,8 @@ export interface BaseBlock {
   locked?: boolean;
   /** Group ID — when set the block belongs to a group and moves/resizes with siblings. */
   groupId?: string;
+  /** Animação de entrada no modo apresentação. Default "none". */
+  enterAnimation?: BlockEnterAnimation;
 }
 
 /** Group of blocks that move/resize as a unit. Bounding box is derived from members. */
