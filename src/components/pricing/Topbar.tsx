@@ -95,45 +95,127 @@ export function Topbar({ title, subtitle }: TopbarProps) {
         </div>
 
         {months.length > 0 && (
-          <div className="flex w-full flex-wrap items-center gap-1.5">
-            <Button
-              size="sm"
-              variant={allSelected ? "default" : "outline"}
-              className={cn(
-                "h-7 rounded-full px-3 text-xs",
-                allSelected && "bg-primary/20 text-primary hover:bg-primary/25 border border-primary/30",
-              )}
-              onClick={() => setAll()}
-              title="Selecionar todos os meses"
-            >
-              Todos
-            </Button>
-            {months.map((m) => {
-              const active = !allSelected && selected!.includes(m.periodo);
-              return (
-                <Button
-                  key={m.periodo}
-                  size="sm"
-                  variant="outline"
-                  className={cn(
-                    "h-7 rounded-full border-border/60 bg-secondary/40 px-3 text-xs transition-colors",
-                    active && "border-primary/40 bg-primary/15 text-primary",
-                  )}
-                  onClick={(e) => handleMonthClick(m.periodo, e)}
-                  title="Clique para focar apenas neste mês • Shift/Ctrl-clique para múltipla seleção"
-                >
-                  {m.label}
-                </Button>
-              );
-            })}
-            {!allSelected && (
-              <span className="ml-1 hidden text-[10px] text-muted-foreground/70 md:inline">
-                Shift-clique p/ múltipla
-              </span>
-            )}
-          </div>
+          <MonthsStrip
+            months={months}
+            selected={selected}
+            allSelected={allSelected}
+            onAll={() => setAll()}
+            onMonthClick={handleMonthClick}
+          />
         )}
       </div>
     </header>
+  );
+}
+
+interface MonthsStripProps {
+  months: ReturnType<typeof useMonthsInfo>;
+  selected: string[] | null;
+  allSelected: boolean;
+  onAll: () => void;
+  onMonthClick: (periodo: string, e: React.MouseEvent) => void;
+}
+
+function MonthsStrip({ months, selected, allSelected, onAll, onMonthClick }: MonthsStripProps) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const activeBtnRef = useRef<HTMLButtonElement>(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(true);
+
+  const updateEdges = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setAtStart(el.scrollLeft <= 1);
+    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 1);
+  };
+
+  useEffect(() => {
+    updateEdges();
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateEdges, { passive: true });
+    const ro = new ResizeObserver(updateEdges);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateEdges);
+      ro.disconnect();
+    };
+  }, [months.length]);
+
+  // Scroll para o mês ativo (quando a seleção muda via código)
+  useEffect(() => {
+    if (allSelected) return;
+    activeBtnRef.current?.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+  }, [selected, allSelected]);
+
+  // Único mês ativo (para focar com scrollIntoView)
+  const focusPeriod = !allSelected && selected && selected.length === 1 ? selected[0] : null;
+
+  return (
+    <div className="flex w-full items-center gap-1.5">
+      <Button
+        size="sm"
+        variant={allSelected ? "default" : "outline"}
+        className={cn(
+          "h-7 shrink-0 rounded-full px-3 text-xs",
+          allSelected && "bg-primary/20 text-primary hover:bg-primary/25 border border-primary/30",
+        )}
+        onClick={onAll}
+        title="Selecionar todos os meses"
+      >
+        Todos
+      </Button>
+
+      <div className="relative min-w-0 flex-1">
+        <div
+          ref={scrollerRef}
+          className="no-scrollbar flex items-center gap-1.5 overflow-x-auto"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {months.map((m) => {
+            const active = !allSelected && selected!.includes(m.periodo);
+            return (
+              <Button
+                key={m.periodo}
+                ref={m.periodo === focusPeriod ? activeBtnRef : undefined}
+                size="sm"
+                variant="outline"
+                className={cn(
+                  "h-7 shrink-0 rounded-full border-border/60 bg-secondary/40 px-3 text-xs transition-colors",
+                  active && "border-primary/40 bg-primary/15 text-primary",
+                )}
+                onClick={(e) => onMonthClick(m.periodo, e)}
+                title="Clique para focar apenas neste mês • Shift/Ctrl-clique para múltipla seleção"
+              >
+                {m.label}
+              </Button>
+            );
+          })}
+        </div>
+
+        {/* Fade esquerda — só quando há conteúdo escondido à esquerda */}
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-background/80 to-transparent transition-opacity duration-150",
+            atStart ? "opacity-0" : "opacity-100",
+          )}
+        />
+        {/* Fade direita */}
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background/80 to-transparent transition-opacity duration-150",
+            atEnd ? "opacity-0" : "opacity-100",
+          )}
+        />
+      </div>
+
+      {!allSelected && (
+        <span className="ml-1 hidden shrink-0 text-[10px] text-muted-foreground/70 md:inline">
+          Shift-clique p/ múltipla
+        </span>
+      )}
+    </div>
   );
 }
