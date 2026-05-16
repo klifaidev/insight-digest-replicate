@@ -126,6 +126,7 @@ export function Topbar({ title, subtitle }: TopbarProps) {
               </Tooltip>
             </TooltipProvider>
           )}
+          <BookmarkButton />
           <InnovationToggle />
         </div>
 
