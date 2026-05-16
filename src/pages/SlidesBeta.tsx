@@ -1381,6 +1381,23 @@ export default function SlidesBeta() {
                     <TooltipTrigger asChild>
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
+                        onClick={() => {
+                          duplicateDeck();
+                          toast.success(`Deck duplicado (${items.length} slides)`);
+                        }}
+                        aria-label="Duplicar deck"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Duplicar deck inteiro</TooltipContent>
+                  </Tooltip>
+                )}
+                {items.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
                         onClick={() => { if (confirm("Limpar a esteira atual?")) clearItems(); }}
                         aria-label="Limpar esteira"
                       >
