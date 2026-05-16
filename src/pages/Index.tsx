@@ -72,7 +72,6 @@ export default function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allAlerts, rows.length]);
 
-  const lastMonth = months.length ? months[months.length - 1] : null;
   const empty = rows.length === 0;
 
   return (
