@@ -669,6 +669,7 @@ function StripThumbnail({
   };
   const meta = metaOf(item.kind);
   const Icon = ICON_MAP[meta.icon];
+  const hasNotes = !!((item.config as { speakerNotes?: string }).speakerNotes ?? "").trim();
   return (
     <div
       ref={setNodeRef}
@@ -681,6 +682,14 @@ function StripThumbnail({
         active ? "border-primary ring-2 ring-primary/40" : "border-border/40 hover:border-border/80",
       )}
     >
+      {hasNotes && (
+        <div
+          className="absolute right-1 top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-primary/90 text-primary-foreground shadow-sm"
+          title="Possui anotações do apresentador"
+        >
+          <StickyNote className="h-2.5 w-2.5" />
+        </div>
+      )}
       <div className="flex items-center gap-1.5 px-1.5 pt-1.5 pb-0.5">
         <span className="text-[9px] font-semibold tabular-nums text-muted-foreground">
           {String(index + 1).padStart(2, "0")}
