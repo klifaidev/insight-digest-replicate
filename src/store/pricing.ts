@@ -75,6 +75,10 @@ export const usePricing = create<PricingState>((set, get) => ({
   pvmMode: "fy",
   pvmBase: null,
   pvmComp: null,
+  parsing: false,
+
+  setParsingStart: () => set({ parsing: true }),
+  setParsingEnd: () => set({ parsing: false }),
 
   setMetric: (m) => set({ metric: m }),
   setFilter: (k, v) =>
