@@ -7,6 +7,8 @@ import {
   PRIORITY_LABEL,
   PRIORITY_TONE,
   Priority,
+  Recurrence,
+  RECURRENCE_LABEL,
   COLUMN_ACCENTS,
   avatarHue,
   defaultState,
