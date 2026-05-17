@@ -61,10 +61,24 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Kanban,
+  List,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronRight as ChevronRightSmall,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { usePageTitle } from "@/hooks/use-page-title";
+
+type ViewMode = "kanban" | "list" | "calendar";
+const VIEW_STORAGE_KEY = "atividades-viewmode";
 
 /* ---------------------------------------------------------------- */
 /* PAGE                                                              */
@@ -75,6 +89,23 @@ export default function Atividades() {
   const [editingCard, setEditingCard] = useState<{ card?: KanbanCard; columnId: string } | null>(null);
   const [dragCard, setDragCard] = useState<{ cardId: string; fromCol: string } | null>(null);
   const [dragOver, setDragOver] = useState<{ colId: string; index: number } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const v = localStorage.getItem(VIEW_STORAGE_KEY);
+      if (v === "kanban" || v === "list" || v === "calendar") return v;
+    } catch {
+      /* noop */
+    }
+    return "kanban";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
+    } catch {
+      /* noop */
+    }
+  }, [viewMode]);
 
   // persist
   useEffect(() => {
@@ -182,6 +213,7 @@ export default function Atividades() {
                 {doneCards} concluída{doneCards === 1 ? "" : "s"}
               </span>
             </div>
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
             <Button
               size="sm"
               onClick={() => setEditingCard({ columnId: state.columns[0]?.id ?? "" })}
@@ -195,48 +227,82 @@ export default function Atividades() {
         </div>
       </div>
 
-      {/* Board */}
-      <div className="flex w-full gap-4 overflow-x-auto px-8 pb-10 pt-6">
-        {state.columns.map((column) => (
-          <Column
-            key={column.id}
-            column={column}
-            cards={column.cardIds.map((id) => state.cards[id]).filter(Boolean)}
-            isDragOver={dragOver?.colId === column.id}
-            dragOverIndex={dragOver?.colId === column.id ? dragOver.index : -1}
-            onAddCard={() => setEditingCard({ columnId: column.id })}
-            onEditCard={(c) => setEditingCard({ card: c, columnId: column.id })}
-            onDeleteCard={deleteCard}
-            onUpdateColumn={(patch) => updateColumn(column.id, patch)}
-            onDeleteColumn={() => deleteColumn(column.id)}
-            onCardDragStart={(cardId) => setDragCard({ cardId, fromCol: column.id })}
-            onCardDragEnd={() => {
-              setDragCard(null);
-              setDragOver(null);
-            }}
-            onColumnDragOver={(index) => {
-              if (!dragCard) return;
-              setDragOver({ colId: column.id, index });
-            }}
-            onColumnDrop={(index) => {
-              if (!dragCard) return;
-              moveCard(dragCard.cardId, dragCard.fromCol, column.id, index);
-              setDragCard(null);
-              setDragOver(null);
-            }}
-          />
-        ))}
+      {/* Views */}
+      {viewMode === "kanban" && (
+        <div className="flex w-full gap-4 overflow-x-auto px-8 pb-10 pt-6">
+          {state.columns.map((column) => (
+            <Column
+              key={column.id}
+              column={column}
+              cards={column.cardIds.map((id) => state.cards[id]).filter(Boolean)}
+              isDragOver={dragOver?.colId === column.id}
+              dragOverIndex={dragOver?.colId === column.id ? dragOver.index : -1}
+              onAddCard={() => setEditingCard({ columnId: column.id })}
+              onEditCard={(c) => setEditingCard({ card: c, columnId: column.id })}
+              onDeleteCard={deleteCard}
+              onUpdateColumn={(patch) => updateColumn(column.id, patch)}
+              onDeleteColumn={() => deleteColumn(column.id)}
+              onCardDragStart={(cardId) => setDragCard({ cardId, fromCol: column.id })}
+              onCardDragEnd={() => {
+                setDragCard(null);
+                setDragOver(null);
+              }}
+              onColumnDragOver={(index) => {
+                if (!dragCard) return;
+                setDragOver({ colId: column.id, index });
+              }}
+              onColumnDrop={(index) => {
+                if (!dragCard) return;
+                moveCard(dragCard.cardId, dragCard.fromCol, column.id, index);
+                setDragCard(null);
+                setDragOver(null);
+              }}
+            />
+          ))}
 
-        {/* Add column */}
-        <button
-          type="button"
-          onClick={addColumn}
-          className="group flex h-14 w-[280px] shrink-0 items-center justify-center gap-2 rounded-2xl border border-dashed border-border/50 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
-        >
-          <Plus className="h-4 w-4" />
-          Adicionar coluna
-        </button>
-      </div>
+          {/* Add column */}
+          <button
+            type="button"
+            onClick={addColumn}
+            className="group flex h-14 w-[280px] shrink-0 items-center justify-center gap-2 rounded-2xl border border-dashed border-border/50 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar coluna
+          </button>
+        </div>
+      )}
+
+      {viewMode === "list" && (
+        <ListView
+          state={state}
+          onEditCard={(c, colId) => setEditingCard({ card: c, columnId: colId })}
+          onCompleteCard={(cardId, fromColId) => {
+            const last = state.columns[state.columns.length - 1];
+            if (!last) return;
+            if (last.id === fromColId) return;
+            moveCard(cardId, fromColId, last.id, last.cardIds.length);
+            toast.success("Atividade marcada como concluída", {
+              description: `Movida para "${last.title}"`,
+            });
+          }}
+        />
+      )}
+
+      {viewMode === "calendar" && (
+        <CalendarView
+          state={state}
+          onEditCard={(c, colId) => setEditingCard({ card: c, columnId: colId })}
+          onNewCardForDate={(date) => {
+            const card: KanbanCard = {
+              id: newId("card"),
+              title: "",
+              dueDate: format(date, "yyyy-MM-dd"),
+              createdAt: new Date().toISOString(),
+            };
+            setEditingCard({ card, columnId: state.columns[0]?.id ?? "" });
+          }}
+        />
+      )}
 
       {/* Dialog */}
       <CardDialog
@@ -829,6 +895,496 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         {label}
       </div>
       {children}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* VIEW TOGGLE                                                       */
+/* ---------------------------------------------------------------- */
+function ViewToggle({
+  mode,
+  onChange,
+}: {
+  mode: ViewMode;
+  onChange: (m: ViewMode) => void;
+}) {
+  const items: Array<{ id: ViewMode; icon: typeof Kanban; label: string }> = [
+    { id: "kanban", icon: Kanban, label: "Kanban" },
+    { id: "list", icon: List, label: "Lista" },
+    { id: "calendar", icon: CalendarDays, label: "Calendário" },
+  ];
+  return (
+    <div className="flex items-center gap-0.5 rounded-full border border-border/50 bg-card/40 p-0.5 backdrop-blur-sm">
+      {items.map((it) => {
+        const Icon = it.icon;
+        const active = mode === it.id;
+        return (
+          <button
+            key={it.id}
+            type="button"
+            onClick={() => onChange(it.id)}
+            title={it.label}
+            aria-label={it.label}
+            aria-pressed={active}
+            className={cn(
+              "inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+              active
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* LIST VIEW                                                         */
+/* ---------------------------------------------------------------- */
+type SortKey = "priority" | "title" | "column" | "assignee" | "dueDate" | "tags";
+type SortDir = "asc" | "desc";
+
+const PRIORITY_RANK: Record<Priority, number> = { high: 3, med: 2, low: 1 };
+
+function ListView({
+  state,
+  onEditCard,
+  onCompleteCard,
+}: {
+  state: KanbanState;
+  onEditCard: (c: KanbanCard, colId: string) => void;
+  onCompleteCard: (cardId: string, fromColId: string) => void;
+}) {
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const lastColId = state.columns[state.columns.length - 1]?.id;
+
+  function toggleSort(k: SortKey) {
+    if (sortKey === k) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(k);
+      setSortDir("asc");
+    }
+  }
+
+  function sortCards(cards: KanbanCard[], colTitle: string): KanbanCard[] {
+    if (!sortKey) return cards;
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...cards].sort((a, b) => {
+      let av: string | number = "";
+      let bv: string | number = "";
+      switch (sortKey) {
+        case "priority":
+          av = a.priority ? PRIORITY_RANK[a.priority] : 0;
+          bv = b.priority ? PRIORITY_RANK[b.priority] : 0;
+          break;
+        case "title":
+          av = (a.title ?? "").toLowerCase();
+          bv = (b.title ?? "").toLowerCase();
+          break;
+        case "column":
+          av = colTitle.toLowerCase();
+          bv = colTitle.toLowerCase();
+          break;
+        case "assignee":
+          av = (a.assignee ?? "").toLowerCase();
+          bv = (b.assignee ?? "").toLowerCase();
+          break;
+        case "dueDate":
+          av = a.dueDate ?? "9999-99-99";
+          bv = b.dueDate ?? "9999-99-99";
+          break;
+        case "tags":
+          av = (a.tags?.[0] ?? "").toLowerCase();
+          bv = (b.tags?.[0] ?? "").toLowerCase();
+          break;
+      }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }
+
+  const Header = ({ k, label, className }: { k: SortKey; label: string; className?: string }) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(k)}
+      className={cn(
+        "flex items-center gap-1 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground",
+        className,
+      )}
+    >
+      {label}
+      {sortKey === k && (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+    </button>
+  );
+
+  return (
+    <div className="px-8 pb-10 pt-6">
+      {/* Column headers */}
+      <div className="mb-3 grid grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.4fr)] items-center gap-3 px-3">
+        <span />
+        <Header k="priority" label="Pri." />
+        <Header k="title" label="Título" />
+        <Header k="column" label="Status" />
+        <Header k="assignee" label="Resp." />
+        <Header k="dueDate" label="Prazo" />
+        <Header k="tags" label="Tags" />
+      </div>
+
+      <div className="space-y-3">
+        {state.columns.map((column) => {
+          const cards = sortCards(
+            column.cardIds.map((id) => state.cards[id]).filter(Boolean),
+            column.title,
+          );
+          const isCollapsed = !!collapsed[column.id];
+          return (
+            <div
+              key={column.id}
+              className="overflow-hidden rounded-2xl border border-border/40 bg-card/40 backdrop-blur-xl"
+            >
+              <button
+                type="button"
+                onClick={() => setCollapsed((s) => ({ ...s, [column.id]: !s[column.id] }))}
+                className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-muted/20"
+              >
+                {isCollapsed ? (
+                  <ChevronRightSmall className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ backgroundColor: `hsl(${column.accent})` }}
+                />
+                <span className="text-sm font-medium">{column.title}</span>
+                <span className="rounded-full bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {cards.length}
+                </span>
+              </button>
+
+              {!isCollapsed && (
+                <div className="divide-y divide-border/30 border-t border-border/30">
+                  {cards.length === 0 && (
+                    <div className="px-4 py-3 text-[12px] italic text-muted-foreground">
+                      Nenhuma atividade
+                    </div>
+                  )}
+                  {cards.map((card) => {
+                    const status = dueStatus(card.dueDate);
+                    const isDone = column.id === lastColId;
+                    return (
+                      <div
+                        key={card.id}
+                        onClick={() => onEditCard(card, column.id)}
+                        className="group grid cursor-pointer grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.4fr)] items-center gap-3 border-l-2 px-3 py-2.5 transition-colors hover:bg-muted/20"
+                        style={{ borderLeftColor: `hsl(${column.accent})` }}
+                      >
+                        <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-center">
+                          <Checkbox
+                            checked={isDone}
+                            onCheckedChange={() => {
+                              if (!isDone) onCompleteCard(card.id, column.id);
+                            }}
+                            aria-label="Marcar como concluída"
+                          />
+                        </div>
+                        <div className="flex items-center justify-center">
+                          {card.priority ? (
+                            <Flag
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                card.priority === "high" && "text-destructive",
+                                card.priority === "med" && "text-warning",
+                                card.priority === "low" && "text-muted-foreground",
+                              )}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground/40">·</span>
+                          )}
+                        </div>
+                        <div className={cn("truncate text-[13px]", isDone && "text-muted-foreground line-through")}>
+                          {card.title || <span className="italic text-muted-foreground">Sem título</span>}
+                        </div>
+                        <div className="truncate text-[12px] text-muted-foreground">{column.title}</div>
+                        <div className="flex items-center gap-1.5 truncate text-[12px] text-muted-foreground">
+                          {card.assignee ? (
+                            <>
+                              <Avatar name={card.assignee} size={18} />
+                              <span className="truncate">{card.assignee}</span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </div>
+                        <div className="text-[12px]">
+                          {card.dueDate ? (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium",
+                                status === "overdue" && "bg-destructive/15 text-destructive",
+                                status === "today" && "bg-warning/15 text-warning",
+                                status === "soon" && "bg-primary/15 text-primary",
+                                status === "later" && "bg-muted/40 text-muted-foreground",
+                              )}
+                            >
+                              {formatDueShort(card.dueDate)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {card.tags?.slice(0, 3).map((t) => (
+                            <span
+                              key={t}
+                              className="rounded-full border border-border/40 bg-muted/30 px-1.5 py-px text-[10px] text-muted-foreground"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* CALENDAR VIEW                                                     */
+/* ---------------------------------------------------------------- */
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function CalendarView({
+  state,
+  onEditCard,
+  onNewCardForDate,
+}: {
+  state: KanbanState;
+  onEditCard: (c: KanbanCard, colId: string) => void;
+  onNewCardForDate: (date: Date) => void;
+}) {
+  const today = new Date();
+  const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+
+  // Build a map: cardId -> columnId
+  const cardToCol = useMemo(() => {
+    const m: Record<string, string> = {};
+    state.columns.forEach((c) => c.cardIds.forEach((id) => (m[id] = c.id)));
+    return m;
+  }, [state.columns]);
+
+  const colById = useMemo(() => {
+    const m: Record<string, KanbanColumn> = {};
+    state.columns.forEach((c) => (m[c.id] = c));
+    return m;
+  }, [state.columns]);
+
+  // Group cards by dueDate (yyyy-mm-dd) and "no date"
+  const { byDate, noDate } = useMemo(() => {
+    const byDate: Record<string, KanbanCard[]> = {};
+    const noDate: KanbanCard[] = [];
+    Object.values(state.cards).forEach((c) => {
+      if (c.dueDate) {
+        (byDate[c.dueDate] ||= []).push(c);
+      } else {
+        noDate.push(c);
+      }
+    });
+    return { byDate, noDate };
+  }, [state.cards]);
+
+  // Build month grid days
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = firstDay.getDay(); // 0 = Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((startWeekday + daysInMonth) / 7) * 7;
+
+  const cells: Array<{ date: Date; inMonth: boolean }> = [];
+  for (let i = 0; i < totalCells; i++) {
+    const dayNum = i - startWeekday + 1;
+    const d = new Date(year, month, dayNum);
+    cells.push({ date: d, inMonth: d.getMonth() === month });
+  }
+
+  function fmtKey(d: Date) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  const todayKey = fmtKey(today);
+
+  return (
+    <div className="px-8 pb-10 pt-6">
+      <div className="rounded-2xl border border-border/40 bg-card/40 p-4 backdrop-blur-xl">
+        {/* Header */}
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-sm font-medium">
+            {MONTH_NAMES[month]} {year}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCursor(new Date(year, month - 1, 1))}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+              className="rounded-md px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            >
+              Hoje
+            </button>
+            <button
+              type="button"
+              onClick={() => setCursor(new Date(year, month + 1, 1))}
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Weekday labels */}
+        <div className="mb-1 grid grid-cols-7 gap-1">
+          {WEEKDAY_LABELS.map((w) => (
+            <div
+              key={w}
+              className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+            >
+              {w}
+            </div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((cell, i) => {
+            const key = fmtKey(cell.date);
+            const cards = byDate[key] ?? [];
+            const isToday = key === todayKey;
+            return (
+              <div
+                key={i}
+                onClick={() => {
+                  if (cards.length === 0) onNewCardForDate(cell.date);
+                }}
+                className={cn(
+                  "group flex min-h-[96px] cursor-pointer flex-col gap-1 rounded-lg border border-border/30 p-1.5 transition-colors",
+                  cell.inMonth ? "bg-background/40" : "bg-muted/10 opacity-50",
+                  "hover:border-primary/40 hover:bg-primary/[0.04]",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium",
+                    isToday
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {cell.date.getDate()}
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  {cards.slice(0, 4).map((card) => {
+                    const col = colById[cardToCol[card.id]];
+                    const accent = col?.accent ?? "220 12% 65%";
+                    const title = (card.title || "Sem título").slice(0, 20);
+                    return (
+                      <button
+                        key={card.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (col) onEditCard(card, col.id);
+                        }}
+                        className="truncate rounded-md px-1.5 py-0.5 text-left text-[10px] font-medium transition-opacity hover:opacity-80"
+                        style={{
+                          backgroundColor: `hsl(${accent} / 0.18)`,
+                          color: `hsl(${accent})`,
+                          borderLeft: `2px solid hsl(${accent})`,
+                        }}
+                        title={card.title || "Sem título"}
+                      >
+                        {title}
+                        {(card.title?.length ?? 0) > 20 ? "…" : ""}
+                      </button>
+                    );
+                  })}
+                  {cards.length > 4 && (
+                    <span className="px-1.5 text-[10px] text-muted-foreground">
+                      +{cards.length - 4} mais
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sem prazo */}
+      <div className="mt-6 rounded-2xl border border-border/40 bg-card/40 p-4 backdrop-blur-xl">
+        <div className="mb-3 flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Sem prazo</h3>
+          <span className="rounded-full bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {noDate.length}
+          </span>
+        </div>
+        {noDate.length === 0 ? (
+          <p className="text-[12px] italic text-muted-foreground">
+            Todas as atividades têm prazo definido.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {noDate.map((card) => {
+              const col = colById[cardToCol[card.id]];
+              const accent = col?.accent ?? "220 12% 65%";
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => col && onEditCard(card, col.id)}
+                  className="inline-flex max-w-[260px] items-center gap-2 truncate rounded-lg border border-border/40 bg-card/60 px-2.5 py-1.5 text-[12px] transition-colors hover:bg-card"
+                  style={{ borderLeft: `2px solid hsl(${accent})` }}
+                >
+                  <span className="truncate">{card.title || "Sem título"}</span>
+                  {col && (
+                    <span className="text-[10px] text-muted-foreground">· {col.title}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
