@@ -678,6 +678,7 @@ function Column(props: ColumnProps) {
       className={cn(
         "flex w-[300px] shrink-0 flex-col rounded-2xl border border-border/40 bg-card/40 backdrop-blur-xl transition-colors",
         isDragOver && "border-primary/40 bg-primary/[0.04]",
+        overloaded && "border-warning/40 bg-warning/5",
       )}
       onDragOver={(e) => {
         e.preventDefault();
@@ -723,6 +724,12 @@ function Column(props: ColumnProps) {
         <span className="rounded-full bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
           {cards.length}
         </span>
+        {overloaded && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-warning">
+            <AlertTriangle className="h-3 w-3" />
+            Sobrecarregada
+          </span>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
@@ -765,20 +772,26 @@ function Column(props: ColumnProps) {
 
       {/* Cards */}
       <div className="flex flex-1 flex-col gap-2 px-2.5 pb-2.5">
-        {cards.map((card, i) => (
-          <div key={card.id}>
-            {isDragOver && dragOverIndex === i && <DropIndicator />}
-            <CardItem
-              card={card}
-              onEdit={() => onEditCard(card)}
-              onDelete={() => onDeleteCard(card.id)}
-              onDragStart={() => onCardDragStart(card.id)}
-              onDragEnd={onCardDragEnd}
-              onDragOverItem={() => onColumnDragOver(i)}
-              onDropOnItem={() => onColumnDrop(i)}
-            />
-          </div>
-        ))}
+        {cards.map((card, i) => {
+          const dim = dimmedIds?.has(card.id);
+          return (
+            <div
+              key={card.id}
+              className={cn(dim && "pointer-events-none opacity-35")}
+            >
+              {isDragOver && dragOverIndex === i && <DropIndicator />}
+              <CardItem
+                card={card}
+                onEdit={() => onEditCard(card)}
+                onDelete={() => onDeleteCard(card.id)}
+                onDragStart={() => onCardDragStart(card.id)}
+                onDragEnd={onCardDragEnd}
+                onDragOverItem={() => onColumnDragOver(i)}
+                onDropOnItem={() => onColumnDrop(i)}
+              />
+            </div>
+          );
+        })}
         {/* trailing drop zone */}
         <div
           className="min-h-[24px] flex-1"
