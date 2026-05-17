@@ -151,9 +151,13 @@ interface Props {
   slideId?: string;
   config: CustomSlideConfig;
   onChange: (next: CustomSlideConfig) => void;
+  /** Colaboradores ativos (todos os slides) — filtrados internamente por slideId */
+  collaborators?: import("@/lib/collaboration").CollabUser[];
+  /** Callback de mouse-move em coordenadas do canvas (1280x720) */
+  onCursorMove?: (x: number, y: number) => void;
 }
 
-export function CustomSlideEditor({ slideId, config, onChange }: Props) {
+export function CustomSlideEditor({ slideId, config, onChange, collaborators, onCursorMove }: Props) {
   // Bind the parent's config <-> internal Zustand+temporal store first so
   // selection store reflects the right slide on initial render.
   useEditorBinding(config, onChange, slideId);
