@@ -90,6 +90,7 @@ export default function Index() {
   const alerts = useMemo(() => allAlerts.slice(0, 5), [allAlerts]);
 
   const syncAlerts = useAlertHistory((s) => s.syncAlerts);
+  const addNotification = useNotifications((s) => s.addNotification);
   const lastMonth = months.length ? months[months.length - 1] : null;
   useEffect(() => {
     if (rows.length === 0) return;
@@ -97,6 +98,23 @@ export default function Index() {
       ? `${monthLabel(lastMonth.mes, lastMonth.ano)} · ${lastMonth.fy}`
       : "";
     syncAlerts(allAlerts, snapshot);
+    const existing = new Set(
+      useNotifications
+        .getState()
+        .notifications.filter((n) => n.type === "alert")
+        .map((n) => n.body),
+    );
+    for (const a of allAlerts) {
+      if (a.severity !== "high") continue;
+      if (existing.has(a.message)) continue;
+      addNotification({
+        type: "alert",
+        title: "Alerta de pricing",
+        body: a.message,
+        href: a.page,
+      });
+      existing.add(a.message);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allAlerts, rows.length]);
 
