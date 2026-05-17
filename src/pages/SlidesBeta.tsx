@@ -1727,6 +1727,7 @@ export default function SlidesBeta() {
                   </TooltipTrigger>
                   <TooltipContent>Log de alterações da sala</TooltipContent>
                 </Tooltip>
+                {items.length > 0 && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
