@@ -33,8 +33,19 @@ import {
   Lock,
   PlayCircle,
   Plus,
+  Settings2,
+  GripVertical,
+  Check as CheckIcon,
 } from "lucide-react";
 import { QuickActivityDialog, type QuickActivityPrefill } from "@/components/atividades/QuickActivityDialog";
+import { ActivitySummaryWidget } from "@/components/pricing/ActivitySummaryWidget";
+import { TrendChartWidget } from "@/components/pricing/TrendChartWidget";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useHomePrefs, WIDGET_LABEL, type HomeWidget, type PinnedKpi } from "@/store/homePrefs";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -266,112 +277,15 @@ export default function Index() {
               </div>
             )}
 
-            {/* KPIs */}
-            <GlassCard className="grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
-              <Stat
-                label="ROL Total"
-                value={formatBRL(kpis.rol, { compact: true })}
-                accent="text-primary"
-                delta={comparison?.deltaPct.rol}
-                deltaLabel={comparison?.label}
-              />
-              <Stat
-                label={metric === "cm" ? "Contrib. Marginal" : "Margem Bruta"}
-                value={formatBRL(kpis.margem, { compact: true })}
-                sub={formatPct(kpis.margemPct)}
-                accent="text-success"
-                delta={comparison?.deltaPct.margem}
-                deltaLabel={comparison?.label}
-              />
-              <Stat
-                label="Volume"
-                value={formatTon(kpis.volumeKg)}
-                accent="text-warning"
-                delta={comparison?.deltaPct.volumeKg}
-                deltaLabel={comparison?.label}
-              />
-              <Stat
-                label="SKUs ativos"
-                value={formatNum(kpis.skus)}
-                sub={`${months.length} mês(es)`}
-                accent="text-accent"
-                delta={comparison?.deltaPct.skus}
-                deltaLabel={comparison?.label}
-              />
-            </GlassCard>
-
-            {/* Atenção necessária */}
-            <GlassCard
-              className={cn(
-                "border-l-4",
-                alerts.length > 0 ? "border-l-warning" : "border-l-success",
-              )}
-            >
-              <header className="mb-3 flex items-center gap-2">
-                {alerts.length > 0 ? (
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                )}
-                <h3 className="text-sm font-medium">Atenção necessária</h3>
-                {alerts.length > 0 && (
-                  <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
-                    {alerts.length} {alerts.length === 1 ? "alerta" : "alertas"}
-                  </span>
-                )}
-              </header>
-              {alerts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Tudo certo — nenhum ponto de atenção no período atual.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {alerts.map((a) => (
-                    <AlertCard
-                      key={a.id}
-                      alert={a}
-                      onClick={() => navigate(a.page)}
-                      onCreateActivity={() => handleAlertCreateActivity(a)}
-                    />
-                  ))}
-                </div>
-              )}
-              <Link
-                to="/alertas"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              >
-                Ver histórico completo
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </GlassCard>
-
-            {/* Atalhos rápidos */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <ShortcutCard
-                to="/bridge-pvm"
-                icon={TrendingUp}
-                title="Bridge PVM"
-                desc="O que explica a variação de margem entre dois períodos?"
-              />
-              <ShortcutCard
-                to="/abc"
-                icon={Layers}
-                title="Portfólio de SKUs"
-                desc="Quais SKUs sustentam o portfólio e quais drenam margem?"
-              />
-              <ShortcutCard
-                to="/budget"
-                icon={Target}
-                title="Budget"
-                desc="Vou fechar o ano dentro do budget? Onde está o gap?"
-              />
-              <ShortcutCard
-                to="/canais"
-                icon={BarChart3}
-                title="Canais"
-                desc="Quais canais estão crescendo ou perdendo margem?"
-              />
-            </div>
+            <HomeWidgets
+              kpis={kpis}
+              metric={metric}
+              comparison={comparison}
+              months={months}
+              alerts={alerts}
+              onAlertClick={(p) => navigate(p)}
+              onAlertCreateActivity={handleAlertCreateActivity}
+            />
           </>
         )}
       </div>
@@ -613,6 +527,309 @@ function PreviewFilters() {
           {c}
         </span>
       ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// Home widgets — customizáveis e ordenáveis
+// ---------------------------------------------------------------
+
+interface HomeWidgetsProps {
+  kpis: ReturnType<typeof import("@/lib/analytics").computeKPIs>;
+  metric: ReturnType<typeof usePricing.getState>["metric"];
+  comparison: { deltaPct: { rol: number; margem: number; volumeKg: number; skus: number }; label: string } | null;
+  months: ReturnType<typeof useMonthsInfo>;
+  alerts: Alert[];
+  onAlertClick: (page: string) => void;
+  onAlertCreateActivity: (a: Alert) => void;
+}
+
+function HomeWidgets({ kpis, metric, comparison, months, alerts, onAlertClick, onAlertCreateActivity }: HomeWidgetsProps) {
+  const widgets = useHomePrefs((s) => s.widgets);
+  const activeWidgets = useHomePrefs((s) => s.activeWidgets);
+  const setWidgets = useHomePrefs((s) => s.setWidgets);
+  const toggleWidget = useHomePrefs((s) => s.toggleWidget);
+  const [editing, setEditing] = useState(false);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = widgets.indexOf(active.id as HomeWidget);
+    const newIdx = widgets.indexOf(over.id as HomeWidget);
+    if (oldIdx < 0 || newIdx < 0) return;
+    setWidgets(arrayMove(widgets, oldIdx, newIdx));
+  };
+
+  const visibleWidgets = editing ? widgets : widgets.filter((w) => activeWidgets[w]);
+
+  const renderWidget = (w: HomeWidget) => {
+    switch (w) {
+      case "kpis":
+        return <KpisWidget kpis={kpis} metric={metric} comparison={comparison} months={months} editing={editing} />;
+      case "alerts":
+        return (
+          <AlertsWidget alerts={alerts} onClick={onAlertClick} onCreateActivity={onAlertCreateActivity} />
+        );
+      case "shortcuts":
+        return <ShortcutsWidget />;
+      case "activity_summary":
+        return <ActivitySummaryWidget />;
+      case "trend_chart":
+        return <TrendChartWidget />;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setEditing((v) => !v)}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-2.5 py-1 text-xs font-medium transition-colors",
+            editing
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "bg-card/40 text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {editing ? <CheckIcon className="h-3.5 w-3.5" /> : <Settings2 className="h-3.5 w-3.5" />}
+          {editing ? "Concluir" : "Personalizar"}
+        </button>
+      </div>
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
+          <div className="space-y-4">
+            {visibleWidgets.map((w) => (
+              <SortableWidget
+                key={w}
+                id={w}
+                editing={editing}
+                active={activeWidgets[w]}
+                onToggle={() => toggleWidget(w)}
+              >
+                {renderWidget(w)}
+              </SortableWidget>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+}
+
+function SortableWidget({
+  id,
+  editing,
+  active,
+  onToggle,
+  children,
+}: {
+  id: HomeWidget;
+  editing: boolean;
+  active: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  if (!editing) {
+    return <div>{children}</div>;
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "rounded-2xl border border-dashed border-primary/30 bg-background/30 p-2 transition-opacity",
+        isDragging && "opacity-60",
+        !active && "opacity-50",
+      )}
+    >
+      <div className="mb-2 flex items-center gap-2 px-2">
+        <button
+          type="button"
+          className="cursor-grab text-muted-foreground/60 hover:text-foreground active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+          aria-label="Arrastar"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <span className="text-xs font-medium">{WIDGET_LABEL[id]}</span>
+        <div className="ml-auto">
+          <Switch checked={active} onCheckedChange={onToggle} />
+        </div>
+      </div>
+      <div className={cn(!active && "pointer-events-none")}>{children}</div>
+    </div>
+  );
+}
+
+function KpisWidget({
+  kpis,
+  metric,
+  comparison,
+  months,
+  editing,
+}: {
+  kpis: HomeWidgetsProps["kpis"];
+  metric: HomeWidgetsProps["metric"];
+  comparison: HomeWidgetsProps["comparison"];
+  months: HomeWidgetsProps["months"];
+  editing: boolean;
+}) {
+  const pinned = useHomePrefs((s) => s.pinnedKpis);
+  const toggle = useHomePrefs((s) => s.togglePinnedKpi);
+
+  const ALL_KPIS: Array<{
+    key: PinnedKpi;
+    label: string;
+    value: string;
+    sub?: string;
+    accent: string;
+    delta?: number;
+  }> = [
+    {
+      key: "rol",
+      label: "ROL Total",
+      value: formatBRL(kpis.rol, { compact: true }),
+      accent: "text-primary",
+      delta: comparison?.deltaPct.rol,
+    },
+    {
+      key: "margem",
+      label: metric === "cm" ? "Contrib. Marginal" : "Margem Bruta",
+      value: formatBRL(kpis.margem, { compact: true }),
+      sub: formatPct(kpis.margemPct),
+      accent: "text-success",
+      delta: comparison?.deltaPct.margem,
+    },
+    {
+      key: "volume",
+      label: "Volume",
+      value: formatTon(kpis.volumeKg),
+      accent: "text-warning",
+      delta: comparison?.deltaPct.volumeKg,
+    },
+    {
+      key: "skus",
+      label: "SKUs ativos",
+      value: formatNum(kpis.skus),
+      sub: `${months.length} mês(es)`,
+      accent: "text-accent",
+      delta: comparison?.deltaPct.skus,
+    },
+  ];
+
+  const items = ALL_KPIS.filter((k) => pinned.includes(k.key));
+  const cols = items.length === 1 ? "md:grid-cols-1" : items.length === 2 ? "md:grid-cols-2" : items.length === 3 ? "md:grid-cols-3" : "md:grid-cols-4";
+
+  return (
+    <>
+      <GlassCard className={cn("grid grid-cols-2 gap-6 p-6", cols)}>
+        {items.map((i) => (
+          <Stat
+            key={i.key}
+            label={i.label}
+            value={i.value}
+            sub={i.sub}
+            accent={i.accent}
+            delta={i.delta}
+            deltaLabel={comparison?.label}
+          />
+        ))}
+      </GlassCard>
+      {editing && (
+        <div className="mt-2 flex flex-wrap items-center gap-4 rounded-xl border border-border/40 bg-card/30 px-3 py-2">
+          <span className="text-[11px] font-medium text-muted-foreground">Mostrar:</span>
+          {(["rol", "margem", "volume", "skus"] as const).map((k) => (
+            <label key={k} className="flex cursor-pointer items-center gap-1.5 text-xs">
+              <Checkbox
+                checked={pinned.includes(k)}
+                onCheckedChange={() => toggle(k)}
+                disabled={pinned.length === 1 && pinned.includes(k)}
+              />
+              {k === "rol" ? "ROL" : k === "margem" ? "Margem" : k === "volume" ? "Volume" : "SKUs ativos"}
+            </label>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function AlertsWidget({
+  alerts,
+  onClick,
+  onCreateActivity,
+}: {
+  alerts: Alert[];
+  onClick: (page: string) => void;
+  onCreateActivity: (a: Alert) => void;
+}) {
+  return (
+    <GlassCard
+      className={cn(
+        "border-l-4",
+        alerts.length > 0 ? "border-l-warning" : "border-l-success",
+      )}
+    >
+      <header className="mb-3 flex items-center gap-2">
+        {alerts.length > 0 ? (
+          <AlertTriangle className="h-4 w-4 text-warning" />
+        ) : (
+          <CheckCircle2 className="h-4 w-4 text-success" />
+        )}
+        <h3 className="text-sm font-medium">Atenção necessária</h3>
+        {alerts.length > 0 && (
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+            {alerts.length} {alerts.length === 1 ? "alerta" : "alertas"}
+          </span>
+        )}
+      </header>
+      {alerts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Tudo certo — nenhum ponto de atenção no período atual.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {alerts.map((a) => (
+            <AlertCard
+              key={a.id}
+              alert={a}
+              onClick={() => onClick(a.page)}
+              onCreateActivity={() => onCreateActivity(a)}
+            />
+          ))}
+        </div>
+      )}
+      <Link
+        to="/alertas"
+        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+      >
+        Ver histórico completo
+        <ArrowRight className="h-3 w-3" />
+      </Link>
+    </GlassCard>
+  );
+}
+
+function ShortcutsWidget() {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <ShortcutCard to="/bridge-pvm" icon={TrendingUp} title="Bridge PVM" desc="O que explica a variação de margem entre dois períodos?" />
+      <ShortcutCard to="/abc" icon={Layers} title="Portfólio de SKUs" desc="Quais SKUs sustentam o portfólio e quais drenam margem?" />
+      <ShortcutCard to="/budget" icon={Target} title="Budget" desc="Vou fechar o ano dentro do budget? Onde está o gap?" />
+      <ShortcutCard to="/canais" icon={BarChart3} title="Canais" desc="Quais canais estão crescendo ou perdendo margem?" />
     </div>
   );
 }
