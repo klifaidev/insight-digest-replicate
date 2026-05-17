@@ -227,48 +227,82 @@ export default function Atividades() {
         </div>
       </div>
 
-      {/* Board */}
-      <div className="flex w-full gap-4 overflow-x-auto px-8 pb-10 pt-6">
-        {state.columns.map((column) => (
-          <Column
-            key={column.id}
-            column={column}
-            cards={column.cardIds.map((id) => state.cards[id]).filter(Boolean)}
-            isDragOver={dragOver?.colId === column.id}
-            dragOverIndex={dragOver?.colId === column.id ? dragOver.index : -1}
-            onAddCard={() => setEditingCard({ columnId: column.id })}
-            onEditCard={(c) => setEditingCard({ card: c, columnId: column.id })}
-            onDeleteCard={deleteCard}
-            onUpdateColumn={(patch) => updateColumn(column.id, patch)}
-            onDeleteColumn={() => deleteColumn(column.id)}
-            onCardDragStart={(cardId) => setDragCard({ cardId, fromCol: column.id })}
-            onCardDragEnd={() => {
-              setDragCard(null);
-              setDragOver(null);
-            }}
-            onColumnDragOver={(index) => {
-              if (!dragCard) return;
-              setDragOver({ colId: column.id, index });
-            }}
-            onColumnDrop={(index) => {
-              if (!dragCard) return;
-              moveCard(dragCard.cardId, dragCard.fromCol, column.id, index);
-              setDragCard(null);
-              setDragOver(null);
-            }}
-          />
-        ))}
+      {/* Views */}
+      {viewMode === "kanban" && (
+        <div className="flex w-full gap-4 overflow-x-auto px-8 pb-10 pt-6">
+          {state.columns.map((column) => (
+            <Column
+              key={column.id}
+              column={column}
+              cards={column.cardIds.map((id) => state.cards[id]).filter(Boolean)}
+              isDragOver={dragOver?.colId === column.id}
+              dragOverIndex={dragOver?.colId === column.id ? dragOver.index : -1}
+              onAddCard={() => setEditingCard({ columnId: column.id })}
+              onEditCard={(c) => setEditingCard({ card: c, columnId: column.id })}
+              onDeleteCard={deleteCard}
+              onUpdateColumn={(patch) => updateColumn(column.id, patch)}
+              onDeleteColumn={() => deleteColumn(column.id)}
+              onCardDragStart={(cardId) => setDragCard({ cardId, fromCol: column.id })}
+              onCardDragEnd={() => {
+                setDragCard(null);
+                setDragOver(null);
+              }}
+              onColumnDragOver={(index) => {
+                if (!dragCard) return;
+                setDragOver({ colId: column.id, index });
+              }}
+              onColumnDrop={(index) => {
+                if (!dragCard) return;
+                moveCard(dragCard.cardId, dragCard.fromCol, column.id, index);
+                setDragCard(null);
+                setDragOver(null);
+              }}
+            />
+          ))}
 
-        {/* Add column */}
-        <button
-          type="button"
-          onClick={addColumn}
-          className="group flex h-14 w-[280px] shrink-0 items-center justify-center gap-2 rounded-2xl border border-dashed border-border/50 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
-        >
-          <Plus className="h-4 w-4" />
-          Adicionar coluna
-        </button>
-      </div>
+          {/* Add column */}
+          <button
+            type="button"
+            onClick={addColumn}
+            className="group flex h-14 w-[280px] shrink-0 items-center justify-center gap-2 rounded-2xl border border-dashed border-border/50 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar coluna
+          </button>
+        </div>
+      )}
+
+      {viewMode === "list" && (
+        <ListView
+          state={state}
+          onEditCard={(c, colId) => setEditingCard({ card: c, columnId: colId })}
+          onCompleteCard={(cardId, fromColId) => {
+            const last = state.columns[state.columns.length - 1];
+            if (!last) return;
+            if (last.id === fromColId) return;
+            moveCard(cardId, fromColId, last.id, last.cardIds.length);
+            toast.success("Atividade marcada como concluída", {
+              description: `Movida para "${last.title}"`,
+            });
+          }}
+        />
+      )}
+
+      {viewMode === "calendar" && (
+        <CalendarView
+          state={state}
+          onEditCard={(c, colId) => setEditingCard({ card: c, columnId: colId })}
+          onNewCardForDate={(date) => {
+            const card: KanbanCard = {
+              id: newId("card"),
+              title: "",
+              dueDate: format(date, "yyyy-MM-dd"),
+              createdAt: new Date().toISOString(),
+            };
+            setEditingCard({ card, columnId: state.columns[0]?.id ?? "" });
+          }}
+        />
+      )}
 
       {/* Dialog */}
       <CardDialog
