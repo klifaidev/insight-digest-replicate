@@ -39,6 +39,7 @@ import { useActiveAlertCount } from "@/store/alertHistory";
 import { useTheme, type Theme } from "@/store/theme";
 import { useMemo, useState } from "react";
 import { GlobalSearch } from "./GlobalSearch";
+import { useCommandPalette } from "@/store/commandPalette";
 
 const dashItems = [
   { to: "/", label: "Início", icon: Home, end: true },
