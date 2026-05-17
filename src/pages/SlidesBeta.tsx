@@ -76,7 +76,6 @@ import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor
 import { TemplateGallery } from "@/components/pricing/custom/TemplateGallery";
 import type { SlideTemplate } from "@/lib/slideTemplates";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { SlideThumbnailSVG, pickRepresentativeKind } from "@/components/pricing/SlideThumbnailSVG";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
@@ -243,6 +242,7 @@ function DraggableCatalogItem({
   onClick: () => void;
 }) {
   const meta = metaOf(kind);
+  const Icon = ICON_MAP[meta.icon];
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `catalog:${kind}`,
     data: { source: "catalog", kind },
@@ -254,17 +254,21 @@ function DraggableCatalogItem({
       {...attributes}
       {...listeners}
       className={cn(
-        "group relative flex w-full flex-col gap-1.5 rounded-lg border border-border/40 bg-card/40 p-2 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-[0_6px_16px_-10px_hsl(var(--primary)/0.5)] cursor-grab active:cursor-grabbing",
+        "group relative flex items-start gap-2.5 rounded-xl border border-border/40 bg-card/40 p-2.5 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-[0_6px_16px_-10px_hsl(var(--primary)/0.5)] cursor-grab active:cursor-grabbing",
         isDragging && "opacity-40",
       )}
     >
-      <div className="relative overflow-hidden rounded-md border border-border/40 bg-white" style={{ aspectRatio: "16 / 9" }}>
-        <SlideThumbnailSVG kind={kind} width={120} height={68} className="h-full w-full" />
-        <Plus className="absolute right-1 top-1 h-3.5 w-3.5 rounded-full bg-primary/90 p-0.5 text-primary-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[meta.accent])}>
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="min-w-0">
-        <div className="truncate text-[11px] font-medium leading-tight">{meta.title}</div>
-        <p className="truncate text-[10px] leading-tight text-muted-foreground">{meta.description}</p>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1 text-[13px] font-medium tracking-tight">
+          <span className="truncate">{meta.title}</span>
+          <Plus className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
+        </div>
+        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground line-clamp-2">
+          {meta.description}
+        </p>
       </div>
     </button>
   );
