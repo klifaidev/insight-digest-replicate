@@ -61,6 +61,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  AlertTriangle,
   Kanban,
   List,
   CalendarDays,
@@ -70,8 +71,22 @@ import {
   ChevronRight as ChevronRightSmall,
   ArrowUp,
   ArrowDown,
+  Search,
+  BarChart3,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
+import { KpiCard } from "@/components/pricing/KpiCard";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  Cell,
+} from "recharts";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -118,6 +133,136 @@ export default function Atividades() {
     const last = state.columns[state.columns.length - 1];
     return last ? last.cardIds.length : 0;
   }, [state.columns]);
+
+  /* ---------- filters ---------- */
+  const [search, setSearch] = useState("");
+  const [filterAssignees, setFilterAssignees] = useState<string[]>([]);
+  const [filterPriority, setFilterPriority] = useState<"all" | "high" | "med" | "low">("all");
+  const [filterTag, setFilterTag] = useState<string>("all");
+  const [showMetrics, setShowMetrics] = useState(false);
+
+  const assigneeOptions = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(state.cards).forEach((c) => {
+      if (c.assignee && c.assignee.trim()) set.add(c.assignee.trim());
+    });
+    return Array.from(set).sort().map((a) => ({ value: a, label: a }));
+  }, [state.cards]);
+
+  const tagOptions = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(state.cards).forEach((c) => c.tags?.forEach((t) => t && set.add(t)));
+    return Array.from(set).sort();
+  }, [state.cards]);
+
+  const matchCard = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const asgSet = new Set(filterAssignees);
+    return (c: KanbanCard) => {
+      if (q) {
+        const hay = `${c.title ?? ""} ${c.description ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (asgSet.size > 0 && (!c.assignee || !asgSet.has(c.assignee))) return false;
+      if (filterPriority !== "all" && c.priority !== filterPriority) return false;
+      if (filterTag !== "all" && !(c.tags ?? []).includes(filterTag)) return false;
+      return true;
+    };
+  }, [search, filterAssignees, filterPriority, filterTag]);
+
+  const hasActiveFilters =
+    !!search.trim() ||
+    filterAssignees.length > 0 ||
+    filterPriority !== "all" ||
+    filterTag !== "all";
+
+  function clearFilters() {
+    setSearch("");
+    setFilterAssignees([]);
+    setFilterPriority("all");
+    setFilterTag("all");
+  }
+
+  const filteredCount = useMemo(
+    () => Object.values(state.cards).filter(matchCard).length,
+    [state.cards, matchCard],
+  );
+
+  const dimmedIds = useMemo(() => {
+    if (!hasActiveFilters) return undefined;
+    const set = new Set<string>();
+    Object.values(state.cards).forEach((c) => {
+      if (!matchCard(c)) set.add(c.id);
+    });
+    return set;
+  }, [state.cards, matchCard, hasActiveFilters]);
+
+  // Filtered state used by list & calendar views (hides non-matching cards entirely)
+  const filteredState = useMemo<KanbanState>(() => {
+    if (!hasActiveFilters) return state;
+    const cards: Record<string, KanbanCard> = {};
+    Object.values(state.cards).forEach((c) => {
+      if (matchCard(c)) cards[c.id] = c;
+    });
+    return {
+      cards,
+      columns: state.columns.map((col) => ({
+        ...col,
+        cardIds: col.cardIds.filter((id) => cards[id]),
+      })),
+    };
+  }, [state, hasActiveFilters, matchCard]);
+
+  /* ---------- metrics ---------- */
+  const metrics = useMemo(() => {
+    const all = Object.values(state.cards);
+    const total = all.length;
+    const lastCol = state.columns[state.columns.length - 1];
+    const lastId = lastCol?.id;
+
+    // "Em andamento": coluna cujo título contém "andamento" OU penúltima coluna como fallback
+    const inProgressCol =
+      state.columns.find((c) => c.title.toLowerCase().includes("andamento")) ??
+      state.columns[state.columns.length - 2];
+    const inProgress = inProgressCol ? inProgressCol.cardIds.length : 0;
+
+    const todayIso = format(new Date(), "yyyy-MM-dd");
+    let overdue = 0;
+    state.columns.forEach((col) => {
+      if (col.id === lastId) return;
+      col.cardIds.forEach((id) => {
+        const c = state.cards[id];
+        if (c?.dueDate && c.dueDate < todayIso) overdue += 1;
+      });
+    });
+
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    let doneWeek = 0;
+    if (lastCol) {
+      lastCol.cardIds.forEach((id) => {
+        const c = state.cards[id];
+        if (!c) return;
+        const refStr = c.dueDate ?? c.createdAt;
+        if (!refStr) return;
+        const t = new Date(refStr).getTime();
+        if (!isNaN(t) && t >= weekAgo) doneWeek += 1;
+      });
+    }
+
+    // Distribuição por responsável (top 8)
+    const byAsg: Record<string, number> = {};
+    all.forEach((c) => {
+      const k = c.assignee?.trim() || "Sem responsável";
+      byAsg[k] = (byAsg[k] ?? 0) + 1;
+    });
+    const byAssignee = Object.entries(byAsg)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    return { total, inProgress, overdue, doneWeek, byAssignee };
+  }, [state]);
+
 
   /* ---------- column ops ---------- */
   function addColumn() {
@@ -214,6 +359,21 @@ export default function Atividades() {
               </span>
             </div>
             <ViewToggle mode={viewMode} onChange={setViewMode} />
+            <button
+              type="button"
+              onClick={() => setShowMetrics((s) => !s)}
+              aria-pressed={showMetrics}
+              title="Métricas"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+                showMetrics
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+              )}
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              Métricas
+            </button>
             <Button
               size="sm"
               onClick={() => setEditingCard({ columnId: state.columns[0]?.id ?? "" })}
@@ -225,7 +385,149 @@ export default function Atividades() {
             </Button>
           </div>
         </div>
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border/30 px-8 py-3">
+          <div className="relative min-w-[220px] flex-1 max-w-xs">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar atividades..."
+              className="h-9 pl-8 text-xs"
+            />
+          </div>
+
+          <div className="min-w-[180px]">
+            <MultiSelectFilter
+              options={assigneeOptions}
+              selected={filterAssignees}
+              onChange={setFilterAssignees}
+              placeholder="Responsável"
+            />
+          </div>
+
+          <ToggleGroup
+            type="single"
+            value={filterPriority}
+            onValueChange={(v) => v && setFilterPriority(v as typeof filterPriority)}
+            className="h-9 rounded-md border border-border/50 bg-secondary/40 p-0.5"
+          >
+            <ToggleGroupItem value="all" className="h-8 rounded px-2.5 text-[11px]">
+              Todas
+            </ToggleGroupItem>
+            <ToggleGroupItem value="high" className="h-8 rounded px-2.5 text-[11px] data-[state=on]:bg-destructive/15 data-[state=on]:text-destructive">
+              Alta
+            </ToggleGroupItem>
+            <ToggleGroupItem value="med" className="h-8 rounded px-2.5 text-[11px] data-[state=on]:bg-warning/15 data-[state=on]:text-warning">
+              Média
+            </ToggleGroupItem>
+            <ToggleGroupItem value="low" className="h-8 rounded px-2.5 text-[11px]">
+              Baixa
+            </ToggleGroupItem>
+          </ToggleGroup>
+
+          <Select value={filterTag} onValueChange={setFilterTag}>
+            <SelectTrigger className="h-9 w-[160px] border-border/50 bg-secondary/40 text-xs">
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as tags</SelectItem>
+              {tagOptions.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilters && (
+            <>
+              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                {filteredCount} de {totalCards} atividades
+              </span>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/15"
+              >
+                <X className="h-3 w-3" />
+                Limpar filtros
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Metrics panel */}
+        {showMetrics && (
+          <div className="border-t border-border/30 bg-muted/10 px-8 py-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <KpiCard
+                label="Total de atividades"
+                value={String(metrics.total)}
+                accent="blue"
+              />
+              <KpiCard
+                label="Em andamento"
+                value={String(metrics.inProgress)}
+                accent="violet"
+              />
+              <KpiCard
+                label="Vencidas"
+                value={String(metrics.overdue)}
+                accent="red"
+              />
+              <KpiCard
+                label="Concluídas (7 dias)"
+                value={String(metrics.doneWeek)}
+                accent="green"
+              />
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-border/40 bg-card/40 p-4 backdrop-blur-xl">
+              <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Distribuição por responsável
+              </div>
+              {metrics.byAssignee.length === 0 ? (
+                <p className="text-[12px] italic text-muted-foreground">Sem dados.</p>
+              ) : (
+                <div style={{ width: "100%", height: Math.max(120, metrics.byAssignee.length * 28) }}>
+                  <ResponsiveContainer>
+                    <BarChart
+                      layout="vertical"
+                      data={metrics.byAssignee}
+                      margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
+                    >
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={140}
+                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <RTooltip
+                        cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                        contentStyle={{
+                          background: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={16}>
+                        {metrics.byAssignee.map((_, i) => (
+                          <Cell key={i} fill="hsl(var(--primary))" />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
 
       {/* Views */}
       {viewMode === "kanban" && (
@@ -257,6 +559,7 @@ export default function Atividades() {
                 setDragCard(null);
                 setDragOver(null);
               }}
+              dimmedIds={dimmedIds}
             />
           ))}
 
@@ -274,7 +577,7 @@ export default function Atividades() {
 
       {viewMode === "list" && (
         <ListView
-          state={state}
+          state={filteredState}
           onEditCard={(c, colId) => setEditingCard({ card: c, columnId: colId })}
           onCompleteCard={(cardId, fromColId) => {
             const last = state.columns[state.columns.length - 1];
@@ -290,7 +593,7 @@ export default function Atividades() {
 
       {viewMode === "calendar" && (
         <CalendarView
-          state={state}
+          state={filteredState}
           onEditCard={(c, colId) => setEditingCard({ card: c, columnId: colId })}
           onNewCardForDate={(date) => {
             const card: KanbanCard = {
@@ -344,6 +647,7 @@ interface ColumnProps {
   onCardDragEnd: () => void;
   onColumnDragOver: (index: number) => void;
   onColumnDrop: (index: number) => void;
+  dimmedIds?: Set<string>;
 }
 
 function Column(props: ColumnProps) {
@@ -361,7 +665,9 @@ function Column(props: ColumnProps) {
     onCardDragEnd,
     onColumnDragOver,
     onColumnDrop,
+    dimmedIds,
   } = props;
+  const overloaded = cards.length > 8;
 
   const [editTitle, setEditTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
@@ -372,6 +678,7 @@ function Column(props: ColumnProps) {
       className={cn(
         "flex w-[300px] shrink-0 flex-col rounded-2xl border border-border/40 bg-card/40 backdrop-blur-xl transition-colors",
         isDragOver && "border-primary/40 bg-primary/[0.04]",
+        overloaded && "border-warning/40 bg-warning/5",
       )}
       onDragOver={(e) => {
         e.preventDefault();
@@ -417,6 +724,12 @@ function Column(props: ColumnProps) {
         <span className="rounded-full bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
           {cards.length}
         </span>
+        {overloaded && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-warning">
+            <AlertTriangle className="h-3 w-3" />
+            Sobrecarregada
+          </span>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
@@ -459,20 +772,26 @@ function Column(props: ColumnProps) {
 
       {/* Cards */}
       <div className="flex flex-1 flex-col gap-2 px-2.5 pb-2.5">
-        {cards.map((card, i) => (
-          <div key={card.id}>
-            {isDragOver && dragOverIndex === i && <DropIndicator />}
-            <CardItem
-              card={card}
-              onEdit={() => onEditCard(card)}
-              onDelete={() => onDeleteCard(card.id)}
-              onDragStart={() => onCardDragStart(card.id)}
-              onDragEnd={onCardDragEnd}
-              onDragOverItem={() => onColumnDragOver(i)}
-              onDropOnItem={() => onColumnDrop(i)}
-            />
-          </div>
-        ))}
+        {cards.map((card, i) => {
+          const dim = dimmedIds?.has(card.id);
+          return (
+            <div
+              key={card.id}
+              className={cn(dim && "pointer-events-none opacity-35")}
+            >
+              {isDragOver && dragOverIndex === i && <DropIndicator />}
+              <CardItem
+                card={card}
+                onEdit={() => onEditCard(card)}
+                onDelete={() => onDeleteCard(card.id)}
+                onDragStart={() => onCardDragStart(card.id)}
+                onDragEnd={onCardDragEnd}
+                onDragOverItem={() => onColumnDragOver(i)}
+                onDropOnItem={() => onColumnDrop(i)}
+              />
+            </div>
+          );
+        })}
         {/* trailing drop zone */}
         <div
           className="min-h-[24px] flex-1"
