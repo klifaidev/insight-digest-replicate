@@ -1049,6 +1049,7 @@ function CardDialog({
   const [priority, setPriority] = useState<Priority | "none">("none");
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [colId, setColId] = useState(columnId);
 
   useEffect(() => {
@@ -1060,6 +1061,7 @@ function CardDialog({
     setPriority(initial?.priority ?? "none");
     setTags(initial?.tags ?? []);
     setTagDraft("");
+    setChecklist(initial?.checklist ?? []);
     setColId(columnId);
   }, [open, initial, columnId]);
 
@@ -1083,6 +1085,7 @@ function CardDialog({
       assignee: assignee.trim() || undefined,
       priority: priority === "none" ? undefined : priority,
       tags: tags.length ? tags : undefined,
+      checklist: checklist.length ? checklist : undefined,
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     };
     onSave(card, colId);
