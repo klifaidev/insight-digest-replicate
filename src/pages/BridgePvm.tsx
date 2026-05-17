@@ -14,8 +14,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowRight, BookOpen, Calendar, CalendarDays, Download, Info, TrendingDown, TrendingUp, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, BookOpen, Calendar, CalendarDays, Download, Info, Plus, TrendingDown, TrendingUp, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { QuickActivityDialog, type QuickActivityPrefill } from "@/components/atividades/QuickActivityDialog";
 import { toast } from "sonner";
 import { usePageTitle } from "@/hooks/use-page-title";
 
