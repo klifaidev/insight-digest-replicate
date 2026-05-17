@@ -356,6 +356,11 @@ export default function Index() {
           </>
         )}
       </div>
+      <QuickActivityDialog
+        open={!!quickPrefill}
+        onOpenChange={(o) => !o && setQuickPrefill(null)}
+        prefill={quickPrefill ?? undefined}
+      />
     </>
   );
 }
