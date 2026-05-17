@@ -7,6 +7,8 @@ import { NoResultsBanner } from "@/components/pricing/NoResultsBanner";
 import { ShortcutsHelp } from "@/components/pricing/ShortcutsHelp";
 import { CommandPalette } from "@/components/pricing/CommandPalette";
 import { useCommandPalette } from "@/store/commandPalette";
+import { useNotifications } from "@/store/notifications";
+import { loadState as loadKanban } from "@/lib/kanban";
 import { useSidebarState } from "@/store/sidebar";
 import { useTheme, applyTheme } from "@/store/theme";
 import { usePricing } from "@/store/pricing";
