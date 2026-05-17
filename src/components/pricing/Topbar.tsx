@@ -149,6 +149,27 @@ export function Topbar({ title, subtitle }: TopbarProps) {
   );
 }
 
+function NotificationsBell() {
+  const unread = useNotifications((s) => s.notifications.filter((n) => !n.read).length);
+  const label = unread > 9 ? "9+" : String(unread);
+  return (
+    <NotificationsPanel>
+      <button
+        type="button"
+        aria-label="Notificações"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-card/50 text-muted-foreground outline-none transition-colors hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/60"
+      >
+        <Bell className="h-4 w-4" />
+        {unread > 0 && (
+          <span className="absolute -right-1 -top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-semibold leading-none text-destructive-foreground h-4">
+            {label}
+          </span>
+        )}
+      </button>
+    </NotificationsPanel>
+  );
+}
+
 interface MonthsStripProps {
   months: ReturnType<typeof useMonthsInfo>;
   selected: string[] | null;
