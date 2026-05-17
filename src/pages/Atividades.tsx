@@ -61,10 +61,24 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Kanban,
+  List,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronRight as ChevronRightSmall,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { usePageTitle } from "@/hooks/use-page-title";
+
+type ViewMode = "kanban" | "list" | "calendar";
+const VIEW_STORAGE_KEY = "atividades-viewmode";
 
 /* ---------------------------------------------------------------- */
 /* PAGE                                                              */
