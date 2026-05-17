@@ -672,18 +672,22 @@ function CustomSlideFullscreenTrigger({ onOpen }: { onOpen: () => void }) {
 // Strip lateral de slides — thumbnails empilhados verticalmente, ordenáveis.
 // ----------------------------------------------------------------------------
 function StripThumbnail({
-  item, index, active, onClick,
+  item, index, active, onClick, editingUsers,
 }: {
   item: SlideItem;
   index: number;
   active: boolean;
   onClick: () => void;
+  editingUsers?: CollabUser[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-  const style = {
+  const editors = editingUsers ?? [];
+  const firstEditorColor = editors[0]?.color;
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    ...(firstEditorColor ? { borderColor: firstEditorColor, borderWidth: 2 } : {}),
   };
   const meta = metaOf(item.kind);
   const Icon = ICON_MAP[meta.icon];
