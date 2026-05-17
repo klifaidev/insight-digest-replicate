@@ -647,6 +647,7 @@ interface ColumnProps {
   onCardDragEnd: () => void;
   onColumnDragOver: (index: number) => void;
   onColumnDrop: (index: number) => void;
+  dimmedIds?: Set<string>;
 }
 
 function Column(props: ColumnProps) {
@@ -664,7 +665,9 @@ function Column(props: ColumnProps) {
     onCardDragEnd,
     onColumnDragOver,
     onColumnDrop,
+    dimmedIds,
   } = props;
+  const overloaded = cards.length > 8;
 
   const [editTitle, setEditTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(column.title);
