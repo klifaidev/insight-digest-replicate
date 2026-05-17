@@ -120,12 +120,14 @@ export function useCollaboration(
     });
 
     subscribeToComments(channel, (c: SlideComment) => {
-      void 0;
       if (c.author && userMetaRef.current && c.author === userMetaRef.current.name) {
         // ainda assim adiciona — addComment é idempotente por id
       }
       addLocalComment(c);
     });
+
+    // Todos os `.on(...)` foram registrados acima; agora sim, subscribe.
+    subscribeRoom(channel, user);
 
     return () => {
       setIsConnected(false);
