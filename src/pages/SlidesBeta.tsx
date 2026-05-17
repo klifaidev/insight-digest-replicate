@@ -867,7 +867,46 @@ function FullscreenCustomEditor({
           <DialogDescription className="sr-only">
             Editor de slide personalizado com strip lateral de navegação.
           </DialogDescription>
-          <div className="w-[200px]" />
+          <div className="flex w-[200px] items-center justify-end gap-2">
+            {isConnected && (
+              <span className="relative inline-flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+            )}
+            {(collaborators ?? []).length > 0 && (
+              <TooltipProvider delayDuration={150}>
+                <div className="flex items-center">
+                  {(collaborators ?? []).slice(0, 4).map((c, i) => {
+                    const slideIdx = items.findIndex((it) => it.id === c.slideId);
+                    const tip = slideIdx >= 0
+                      ? `${c.name} — editando slide ${slideIdx + 1}`
+                      : `${c.name} — sem slide ativo`;
+                    return (
+                      <Tooltip key={c.id}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-[11px] font-medium text-white"
+                            style={{ background: c.color, marginLeft: i === 0 ? 0 : -8 }}
+                          >
+                            {initials(c.name)}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">{tip}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                  {(collaborators ?? []).length > 4 && (
+                    <div
+                      className="ml-[-8px] flex h-7 min-w-[28px] items-center justify-center rounded-full border-2 border-background bg-muted px-1.5 text-[11px] font-medium text-foreground"
+                    >
+                      +{(collaborators ?? []).length - 4}
+                    </div>
+                  )}
+                </div>
+              </TooltipProvider>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 gap-3">
