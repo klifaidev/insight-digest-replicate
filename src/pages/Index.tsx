@@ -32,9 +32,12 @@ import {
   Presentation,
   Lock,
   PlayCircle,
+  Plus,
 } from "lucide-react";
+import { QuickActivityDialog, type QuickActivityPrefill } from "@/components/atividades/QuickActivityDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlertHistory } from "@/store/alertHistory";
 import { usePageTitle } from "@/hooks/use-page-title";
@@ -98,6 +101,17 @@ export default function Index() {
   }, [allAlerts, rows.length]);
 
   const empty = rows.length === 0;
+
+  const [quickPrefill, setQuickPrefill] = useState<QuickActivityPrefill | null>(null);
+
+  function handleAlertCreateActivity(alert: Alert) {
+    setQuickPrefill({
+      title: alert.message,
+      tags: ["alerta-pricing", alert.severity],
+      priority:
+        alert.severity === "high" ? "high" : alert.severity === "medium" ? "med" : undefined,
+    });
+  }
 
   return (
     <>
@@ -294,7 +308,12 @@ export default function Index() {
               ) : (
                 <div className="space-y-2">
                   {alerts.map((a) => (
-                    <AlertCard key={a.id} alert={a} onClick={() => navigate(a.page)} />
+                    <AlertCard
+                      key={a.id}
+                      alert={a}
+                      onClick={() => navigate(a.page)}
+                      onCreateActivity={() => handleAlertCreateActivity(a)}
+                    />
                   ))}
                 </div>
               )}
@@ -337,6 +356,11 @@ export default function Index() {
           </>
         )}
       </div>
+      <QuickActivityDialog
+        open={!!quickPrefill}
+        onOpenChange={(o) => !o && setQuickPrefill(null)}
+        prefill={quickPrefill ?? undefined}
+      />
     </>
   );
 }
@@ -348,7 +372,15 @@ const ALERT_ICONS: Record<string, typeof AlertCircle> = {
   target: Target,
 };
 
-function AlertCard({ alert, onClick }: { alert: Alert; onClick: () => void }) {
+function AlertCard({
+  alert,
+  onClick,
+  onCreateActivity,
+}: {
+  alert: Alert;
+  onClick: () => void;
+  onCreateActivity: () => void;
+}) {
   const Icon = ALERT_ICONS[alert.icon] ?? AlertCircle;
   const tone =
     alert.severity === "high"
@@ -357,17 +389,49 @@ function AlertCard({ alert, onClick }: { alert: Alert; onClick: () => void }) {
       ? "border-warning/40 bg-warning/5 hover:border-warning/70 text-warning"
       : "border-border/60 bg-card/40 hover:border-primary/40 text-muted-foreground";
   return (
-    <button
-      onClick={onClick}
+    <div
       className={cn(
-        "group flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all",
+        "group flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 transition-all",
         tone,
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      <span className="flex-1 text-sm text-foreground">{alert.message}</span>
-      <ArrowRight className="h-4 w-4 shrink-0 opacity-50 transition-transform group-hover:translate-x-0.5 group-hover:opacity-100" />
-    </button>
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex flex-1 items-center gap-3 text-left"
+      >
+        <span className="flex-1 text-sm text-foreground">{alert.message}</span>
+      </button>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCreateActivity();
+              }}
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-foreground"
+              aria-label="Criar atividade"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            Criar atividade a partir deste alerta
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label="Ir para o detalhe"
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 transition-all hover:text-foreground group-hover:translate-x-0.5"
+      >
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
 

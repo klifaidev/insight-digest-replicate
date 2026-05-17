@@ -7,6 +7,8 @@ import {
   PRIORITY_LABEL,
   PRIORITY_TONE,
   Priority,
+  Recurrence,
+  RECURRENCE_LABEL,
   COLUMN_ACCENTS,
   avatarHue,
   defaultState,
@@ -89,6 +91,7 @@ import {
   ArrowDown,
   Search,
   BarChart3,
+  Repeat2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -940,7 +943,7 @@ function CardItem({
       )}
 
       {/* Footer */}
-      {(card.dueDate || card.assignee || card.priority) && (
+      {(card.dueDate || card.assignee || card.priority || card.recurrence) && (
         <div className="mt-2.5 flex items-center justify-between gap-2 pl-5">
           <div className="flex items-center gap-1.5">
             {card.priority && (
@@ -970,6 +973,14 @@ function CardItem({
                   <Clock className="h-2.5 w-2.5" />
                 )}
                 {formatDueShort(card.dueDate)}
+              </span>
+            )}
+            {card.recurrence && (
+              <span
+                title={`Recorrência: ${RECURRENCE_LABEL[card.recurrence]}`}
+                className="inline-flex h-4 w-4 items-center justify-center text-muted-foreground/70"
+              >
+                <Repeat2 className="h-3 w-3" />
               </span>
             )}
           </div>
@@ -1050,6 +1061,7 @@ function CardDialog({
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [recurrence, setRecurrence] = useState<Recurrence | "none">("none");
   const [colId, setColId] = useState(columnId);
 
   useEffect(() => {
@@ -1062,6 +1074,7 @@ function CardDialog({
     setTags(initial?.tags ?? []);
     setTagDraft("");
     setChecklist(initial?.checklist ?? []);
+    setRecurrence(initial?.recurrence ?? "none");
     setColId(columnId);
   }, [open, initial, columnId]);
 
@@ -1086,6 +1099,7 @@ function CardDialog({
       priority: priority === "none" ? undefined : priority,
       tags: tags.length ? tags : undefined,
       checklist: checklist.length ? checklist : undefined,
+      recurrence: recurrence === "none" ? null : recurrence,
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     };
     onSave(card, colId);
@@ -1203,6 +1217,24 @@ function CardDialog({
                 onChange={(e) => setAssignee(e.target.value)}
                 className="h-9"
               />
+            </Field>
+
+            {/* Recorrência */}
+            <Field label="Recorrência">
+              <Select
+                value={recurrence}
+                onValueChange={(v) => setRecurrence(v as Recurrence | "none")}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não repete</SelectItem>
+                  <SelectItem value="weekly">Semanalmente</SelectItem>
+                  <SelectItem value="biweekly">A cada 2 semanas</SelectItem>
+                  <SelectItem value="monthly">Mensalmente</SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
           </div>
 
