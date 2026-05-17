@@ -703,6 +703,13 @@ function StripThumbnail({
   const meta = metaOf(item.kind);
   const Icon = ICON_MAP[meta.icon];
   const hasNotes = !!((item.config as { speakerNotes?: string }).speakerNotes ?? "").trim();
+
+  // Subscribe to comment changes so the badge updates live.
+  const [, force] = useState(0);
+  useEffect(() => subscribeComments(() => force((n) => n + 1)), []);
+  const unresolvedCount = getUnresolvedCount(item.id);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+
   return (
     <div
       ref={setNodeRef}
