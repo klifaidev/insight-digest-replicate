@@ -1622,6 +1622,54 @@ export default function SlidesBeta() {
         onSelect={applyTemplate}
       />
       <FullscreenCustomEditor open={fullscreenOpen} onOpenChange={setFullscreenOpen} />
+
+      <Dialog open={collabOpen} onOpenChange={setCollabOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users2 className="h-4 w-4 text-primary" />
+              Iniciar colaboração
+            </DialogTitle>
+            <DialogDescription>
+              Compartilhe o link da sala — alterações no deck aparecem em tempo real para todos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="collab-name" className="text-xs">Seu nome</Label>
+            <Input
+              id="collab-name"
+              value={collabName}
+              onChange={(e) => setCollabName(e.target.value)}
+              placeholder="Ex.: Alice"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") startCollab();
+              }}
+              autoFocus
+            />
+            {roomId && (
+              <p className="pt-2 text-xs text-muted-foreground">
+                Sala ativa: <span className="font-mono text-foreground">{roomId}</span>
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            {roomId && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setRoomId(null);
+                  setCollabOpen(false);
+                }}
+              >
+                Encerrar sala
+              </Button>
+            )}
+            <Button onClick={startCollab}>
+              {roomId ? "Nova sala" : "Iniciar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
