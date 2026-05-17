@@ -5,6 +5,8 @@ import { Sidebar } from "@/components/pricing/Sidebar";
 import { ActiveFiltersBar } from "@/components/pricing/ActiveFiltersBar";
 import { NoResultsBanner } from "@/components/pricing/NoResultsBanner";
 import { ShortcutsHelp } from "@/components/pricing/ShortcutsHelp";
+import { CommandPalette } from "@/components/pricing/CommandPalette";
+import { useCommandPalette } from "@/store/commandPalette";
 import { useSidebarState } from "@/store/sidebar";
 import { useTheme, applyTheme } from "@/store/theme";
 import { usePricing } from "@/store/pricing";
@@ -45,6 +47,8 @@ export default function AppShell() {
   const setFilter = usePricing((s) => s.setFilter);
   const setSelectedPeriods = usePricing((s) => s.setSelectedPeriods);
   const [helpOpen, setHelpOpen] = useState(false);
+  const commandOpen = useCommandPalette((s) => s.open);
+  const setCommandOpen = useCommandPalette((s) => s.setOpen);
 
   // Restaura filtros a partir da URL compartilhada (uma vez no mount)
   useEffect(() => {
@@ -191,6 +195,21 @@ export default function AppShell() {
     };
   }, [navigate, clearFilters]);
 
+  // Atalho global Ctrl/Cmd+K → command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        if (isTypingTarget(document.activeElement) && (e.target as HTMLElement)?.closest?.('[cmdk-root]') === null) {
+          // permite digitar livremente em campos, mas ainda intercepta Cmd+K em qualquer lugar
+        }
+        e.preventDefault();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setCommandOpen]);
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <Sidebar />
@@ -200,6 +219,7 @@ export default function AppShell() {
         <Outlet />
       </main>
       <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </div>
   );
 }
