@@ -1406,6 +1406,7 @@ export default function SlidesBeta() {
   }, [budgetRowsAll]);
 
   const addWithDefaults = (kind: SlideKind): string | null => {
+    if (viewOnlyRef.current) { toast.info("Modo somente leitura"); return null; }
     addItem(kind);
     // O zustand atualiza items síncronamente; pegamos o último item criado.
     const state = useSlidesFlow.getState();
