@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAlertHistory } from "@/store/alertHistory";
+import { useNotifications } from "@/store/notifications";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { generateDemoData } from "@/lib/demoData";
 import { toast } from "sonner";
