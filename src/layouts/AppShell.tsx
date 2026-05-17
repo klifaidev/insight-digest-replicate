@@ -195,6 +195,21 @@ export default function AppShell() {
     };
   }, [navigate, clearFilters]);
 
+  // Atalho global Ctrl/Cmd+K → command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        if (isTypingTarget(document.activeElement) && (e.target as HTMLElement)?.closest?.('[cmdk-root]') === null) {
+          // permite digitar livremente em campos, mas ainda intercepta Cmd+K em qualquer lugar
+        }
+        e.preventDefault();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setCommandOpen]);
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <Sidebar />
@@ -204,6 +219,7 @@ export default function AppShell() {
         <Outlet />
       </main>
       <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </div>
   );
 }
