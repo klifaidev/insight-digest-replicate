@@ -968,6 +968,8 @@ function FullscreenCustomEditor({
                     it.kind === "custom" ? ({ ...it, config: cfg } as SlideItem) : it,
                   )
                 }
+                collaborators={collaborators}
+                onCursorMove={updateCursor}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
