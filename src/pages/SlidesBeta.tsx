@@ -7,7 +7,7 @@
 //  3. Pode salvar a esteira como Pré-definição (localStorage)
 //  4. Exporta tudo num único PPTX preservando a ordem
 // ============================================================================
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -50,7 +50,7 @@ import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 import { toast } from "sonner";
 import {
   ArrowRight, BookOpen, Bookmark, ChevronLeft, ChevronRight, Copy, Download, FileText, Filter as FilterIcon,
-  GitBranch, GripVertical, Layers, LayoutTemplate, Plus, RotateCcw, Save, Sparkles, StickyNote, Target, Trash2, Users2, X,
+  GitBranch, GripVertical, Layers, LayoutTemplate, MessageSquare, History, CheckCheck, Send, Plus, RotateCcw, Save, Sparkles, StickyNote, Target, Trash2, Users2, X,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -79,6 +79,14 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { useCollaboration } from "@/hooks/use-collaboration";
 import type { CollabUser } from "@/lib/collaboration";
 import { initials } from "@/lib/kanban";
+import { Switch } from "@/components/ui/switch";
+import {
+  addComment, resolveComment, getComments, getUnresolvedCount, subscribe as subscribeComments,
+  type SlideComment,
+} from "@/lib/slideComments";
+import { readLog, clearLog, subscribeLog, type ChangeLogEntry } from "@/lib/slideChangeLog";
+import { formatDistanceToNow, format as formatDate } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
@@ -673,12 +681,15 @@ function CustomSlideFullscreenTrigger({ onOpen }: { onOpen: () => void }) {
 // ----------------------------------------------------------------------------
 function StripThumbnail({
   item, index, active, onClick, editingUsers,
+  currentUser, onAddComment,
 }: {
   item: SlideItem;
   index: number;
   active: boolean;
   onClick: () => void;
   editingUsers?: CollabUser[];
+  currentUser: { name: string; color: string };
+  onAddComment?: (c: SlideComment) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const editors = editingUsers ?? [];
@@ -692,6 +703,13 @@ function StripThumbnail({
   const meta = metaOf(item.kind);
   const Icon = ICON_MAP[meta.icon];
   const hasNotes = !!((item.config as { speakerNotes?: string }).speakerNotes ?? "").trim();
+
+  // Subscribe to comment changes so the badge updates live.
+  const [, force] = useState(0);
+  useEffect(() => subscribeComments(() => force((n) => n + 1)), []);
+  const unresolvedCount = getUnresolvedCount(item.id);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+
   return (
     <div
       ref={setNodeRef}
@@ -736,12 +754,150 @@ function StripThumbnail({
           +{editors.length - 1}
         </div>
       )}
+
+      {/* Botão de comentários (hover + sempre visível se houver não-resolvidos) */}
+      <Popover open={commentsOpen} onOpenChange={setCommentsOpen} modal={false}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setCommentsOpen((v) => !v); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className={cn(
+              "absolute left-1 top-1 z-10 flex h-5 items-center gap-0.5 rounded-md bg-card/90 px-1 text-muted-foreground shadow-sm transition-opacity hover:text-foreground",
+              unresolvedCount > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            )}
+            aria-label="Comentários do slide"
+          >
+            <MessageSquare className="h-3 w-3" />
+            {unresolvedCount > 0 && (
+              <span className="rounded-full bg-primary/90 px-1 text-[9px] font-semibold text-primary-foreground">
+                {unresolvedCount}
+              </span>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="right" align="start" className="w-80 p-0"
+          onInteractOutside={(e) => e.preventDefault()}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <CommentsThread
+            slideId={item.id}
+            slideLabel={item.label ?? meta.title}
+            currentUser={currentUser}
+            onAddComment={onAddComment}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// CommentsThread — lista + input de novo comentário para um slide.
+// ----------------------------------------------------------------------------
+function CommentsThread({
+  slideId, slideLabel, currentUser, onAddComment,
+}: {
+  slideId: string;
+  slideLabel: string;
+  currentUser: { name: string; color: string };
+  onAddComment?: (c: SlideComment) => void;
+}) {
+  const [, force] = useState(0);
+  useEffect(() => subscribeComments(() => force((n) => n + 1)), []);
+  const comments = getComments(slideId);
+  const [text, setText] = useState("");
+
+  const send = () => {
+    const t = text.trim();
+    if (!t) return;
+    const c: SlideComment = {
+      id: typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `c_${Math.random().toString(36).slice(2, 10)}`,
+      slideId,
+      author: currentUser.name || "Convidado",
+      authorColor: currentUser.color,
+      text: t,
+      createdAt: Date.now(),
+      resolved: false,
+    };
+    addComment(c);
+    onAddComment?.(c);
+    setText("");
+  };
+
+  return (
+    <div className="flex max-h-[60vh] flex-col">
+      <div className="border-b border-border/40 px-3 py-2 text-xs font-semibold">
+        Comentários — <span className="text-muted-foreground">{slideLabel}</span>
+      </div>
+      <ScrollArea className="max-h-72 flex-1">
+        <div className="space-y-3 p-3">
+          {comments.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">Sem comentários ainda.</p>
+          ) : comments.map((c) => (
+            <div key={c.id} className="flex gap-2">
+              <div
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-medium text-white"
+                style={{ background: c.authorColor }}
+              >
+                {initials(c.author)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <span className="font-semibold">{c.author}</span>
+                  <span className="text-muted-foreground">
+                    · {formatDistanceToNow(c.createdAt, { addSuffix: true, locale: ptBR })}
+                  </span>
+                  {!c.resolved && (
+                    <button
+                      type="button"
+                      onClick={() => resolveComment(slideId, c.id)}
+                      className="ml-auto inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                      title="Marcar como resolvido"
+                    >
+                      <CheckCheck className="h-3 w-3" /> Resolver
+                    </button>
+                  )}
+                </div>
+                <p className={cn(
+                  "mt-0.5 break-words text-xs",
+                  c.resolved && "text-muted-foreground line-through",
+                )}>
+                  {c.text}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+      <div className="flex items-end gap-1.5 border-t border-border/40 p-2">
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Escreva um comentário…"
+          rows={2}
+          className="min-h-[40px] resize-none text-xs"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault(); send();
+            }
+          }}
+        />
+        <Button size="sm" className="h-9 gap-1" onClick={send} disabled={!text.trim()}>
+          <Send className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 }
 
 function FullscreenCustomEditor({
   open, onOpenChange, collaborators, isConnected, updateCursor, updateSlideId,
+  currentUser, onAddComment,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -749,6 +905,8 @@ function FullscreenCustomEditor({
   isConnected?: boolean;
   updateCursor?: (x: number, y: number) => void;
   updateSlideId?: (slideId: string | null) => void;
+  currentUser: { name: string; color: string };
+  onAddComment?: (c: SlideComment) => void;
 }) {
   const items = useSlidesFlow((s) => s.items);
   const selectedId = useSlidesFlow((s) => s.selectedId);
@@ -926,6 +1084,8 @@ function FullscreenCustomEditor({
                         index={i}
                         active={it.id === current?.id}
                         editingUsers={(collaborators ?? []).filter((c) => c.slideId === it.id)}
+                        currentUser={currentUser}
+                        onAddComment={onAddComment}
                         onClick={() => {
                           if (it.id === current?.id) return;
                           select(it.id);
@@ -1246,6 +1406,7 @@ export default function SlidesBeta() {
   }, [budgetRowsAll]);
 
   const addWithDefaults = (kind: SlideKind): string | null => {
+    if (viewOnly) { toast.info("Modo somente leitura"); return null; }
     addItem(kind);
     // O zustand atualiza items síncronamente; pegamos o último item criado.
     const state = useSlidesFlow.getState();
@@ -1281,19 +1442,42 @@ export default function SlidesBeta() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const setCollabBroadcast = useSlidesFlow((s) => s.setCollabBroadcast);
 
+  const [viewOnly, setViewOnly] = useState(false);
+  const [guestReadOnly, setGuestReadOnly] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const room = params.get("room");
     const name = params.get("name");
+    const mode = params.get("mode");
     if (room) setRoomId(room);
     if (name) setCollabName(decodeURIComponent(name));
+    if (mode === "view") setViewOnly(true);
   }, []);
 
-  const { collaborators, isConnected, broadcast, updateCursor, updateSlideId, userId: collabUserId } = useCollaboration(
+  const { collaborators, isConnected, broadcast, updateCursor, updateSlideId, broadcastComment, userId: collabUserId } = useCollaboration(
     roomId,
     collabName,
   );
+
+  // Cor estável do usuário local (mesmo cálculo do hook de colaboração).
+  const currentUserColor = useMemo(() => {
+    const id = collabUserId ?? collabName ?? "anon";
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    const palette = ["#E63946", "#457B9D", "#2A9D8F", "#E9C46A", "#F4A261", "#A8DADC", "#8338EC", "#06D6A0", "#FFB703", "#FB8500", "#3A86FF", "#FF006E"];
+    return palette[h % palette.length];
+  }, [collabUserId, collabName]);
+  const currentUser = useMemo(
+    () => ({ name: collabName || "Convidado", color: currentUserColor }),
+    [collabName, currentUserColor],
+  );
+
+  const handleAddComment = useCallback((c: SlideComment) => {
+    if (roomId) broadcastComment(c);
+  }, [roomId, broadcastComment]);
 
   useEffect(() => {
     if (roomId) {
@@ -1530,6 +1714,19 @@ export default function SlidesBeta() {
                     {roomId ? `Sala ativa: ${roomId}` : "Compartilhar sessão em tempo real"}
                   </TooltipContent>
                 </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost" size="sm" className="h-8 gap-1.5"
+                      onClick={() => setHistoryOpen(true)}
+                      aria-label="Histórico de alterações"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      Histórico
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Log de alterações da sala</TooltipContent>
+                </Tooltip>
                 {items.length > 0 && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1636,7 +1833,7 @@ export default function SlidesBeta() {
                           index={idx}
                           selected={selectedId === item.id}
                           onSelect={() => select(item.id)}
-                          onRemove={() => removeItem(item.id)}
+                          onRemove={() => { if (viewOnly) { toast.info("Modo somente leitura"); return; } removeItem(item.id); }}
                           onDuplicate={() => duplicateItem(item.id)}
                         />
                       ))}
@@ -1696,6 +1893,8 @@ export default function SlidesBeta() {
         isConnected={isConnected}
         updateCursor={updateCursor}
         updateSlideId={updateSlideId}
+        currentUser={currentUser}
+        onAddComment={handleAddComment}
       />
 
       <Dialog open={collabOpen} onOpenChange={setCollabOpen}>
@@ -1726,6 +1925,35 @@ export default function SlidesBeta() {
                 Sala ativa: <span className="font-mono text-foreground">{roomId}</span>
               </p>
             )}
+            {roomId && (
+              <div className="space-y-2 rounded-md border border-border/40 bg-muted/30 p-2">
+                <Label className="text-xs">Link de convite</Label>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    readOnly
+                    value={`${window.location.origin}/slides?room=${roomId}&name=Convidado${guestReadOnly ? "&mode=view" : ""}`}
+                    className="h-8 font-mono text-[10px]"
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <Button
+                    size="sm" variant="outline" className="h-8 gap-1"
+                    onClick={() => {
+                      const url = `${window.location.origin}/slides?room=${roomId}&name=Convidado${guestReadOnly ? "&mode=view" : ""}`;
+                      navigator.clipboard?.writeText(url);
+                      toast.success("Link copiado!");
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" /> Copiar
+                  </Button>
+                </div>
+                <label className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-[11px] text-muted-foreground">
+                    Modo somente leitura para convidados
+                  </span>
+                  <Switch checked={guestReadOnly} onCheckedChange={setGuestReadOnly} />
+                </label>
+              </div>
+            )}
           </div>
           <DialogFooter>
             {roomId && (
@@ -1745,7 +1973,70 @@ export default function SlidesBeta() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <HistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
     </>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// HistoryDialog — log de alterações da sala de colaboração.
+// ----------------------------------------------------------------------------
+function HistoryDialog({
+  open, onOpenChange,
+}: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const [, force] = useState(0);
+  useEffect(() => subscribeLog(() => force((n) => n + 1)), []);
+  const entries: ChangeLogEntry[] = [...readLog()].reverse();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="h-4 w-4 text-primary" />
+            Histórico de alterações
+          </DialogTitle>
+          <DialogDescription>
+            Últimas {entries.length} {entries.length === 1 ? "alteração" : "alterações"} recebidas.
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="max-h-[60vh]">
+          {entries.length === 0 ? (
+            <p className="px-1 py-6 text-center text-xs text-muted-foreground">
+              Nenhuma alteração registrada ainda.
+            </p>
+          ) : (
+            <ul className="space-y-2 pr-2">
+              {entries.map((e) => (
+                <li key={e.eventId} className="flex items-start gap-2 rounded-md border border-border/40 bg-card/40 px-2 py-1.5">
+                  <div
+                    className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-medium text-white"
+                    style={{ background: e.userColor ?? "#666" }}
+                  >
+                    {initials(e.userName)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs">{e.description}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatDate(new Date(e.ts), "dd/MM HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ScrollArea>
+        <DialogFooter>
+          <Button
+            variant="ghost"
+            onClick={() => { clearLog(); toast.success("Histórico limpo"); }}
+            disabled={entries.length === 0}
+          >
+            Limpar histórico
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

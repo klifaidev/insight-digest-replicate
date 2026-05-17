@@ -13,6 +13,8 @@ import {
   type CollabEvent,
 } from "@/lib/collaboration";
 import { useSlidesFlow } from "@/store/slidesFlow";
+import { recordEvent } from "@/lib/slideChangeLog";
+import { addComment as addLocalComment, subscribeToComments, type SlideComment } from "@/lib/slideComments";
 import type { SlideItem } from "@/lib/slidesFlow";
 
 interface UseCollabReturn {
@@ -21,6 +23,7 @@ interface UseCollabReturn {
   broadcast: (e: CollabEvent) => void;
   updateCursor: (x: number, y: number) => void;
   updateSlideId: (slideId: string | null) => void;
+  broadcastComment: (c: SlideComment) => void;
   userId: string | null;
 }
 
@@ -87,6 +90,8 @@ export function useCollaboration(
 
     onEvent(channel, (event) => {
       if (event.userId === userId) return; // ignora ecos
+      const peer = collaboratorsByIdRef.current.get(event.userId);
+      recordEvent(event, peer?.name ?? "Colaborador", peer?.color);
       const store = useSlidesFlow.getState();
       switch (event.type) {
         case "add_item":
@@ -111,6 +116,13 @@ export function useCollaboration(
           break;
         }
       }
+    });
+
+    subscribeToComments(channel, (c: SlideComment) => {
+      if (c.author && userMetaRef.current && c.author === userMetaRef.current.name) {
+        // ainda assim adiciona — addComment é idempotente por id
+      }
+      addLocalComment(c);
     });
 
     return () => {
@@ -151,12 +163,19 @@ export function useCollaboration(
     }
   }, []);
 
+  const broadcastComment = useCallback((c: SlideComment) => {
+    const ch = channelRef.current;
+    if (!ch) return;
+    ch.send({ type: "broadcast", event: "comment", payload: c });
+  }, []);
+
   return {
     collaborators,
     isConnected,
     broadcast,
     updateCursor,
     updateSlideId,
+    broadcastComment,
     userId: userIdRef.current,
   };
 }
