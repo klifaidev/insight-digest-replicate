@@ -77,6 +77,8 @@ import { TemplateGallery } from "@/components/pricing/custom/TemplateGallery";
 import type { SlideTemplate } from "@/lib/slideTemplates";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useCollaboration } from "@/hooks/use-collaboration";
+import type { CollabUser } from "@/lib/collaboration";
+import { initials } from "@/lib/kanban";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
