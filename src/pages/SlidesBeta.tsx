@@ -1714,7 +1714,19 @@ export default function SlidesBeta() {
                     {roomId ? `Sala ativa: ${roomId}` : "Compartilhar sessão em tempo real"}
                   </TooltipContent>
                 </Tooltip>
-                {items.length > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost" size="sm" className="h-8 gap-1.5"
+                      onClick={() => setHistoryOpen(true)}
+                      aria-label="Histórico de alterações"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      Histórico
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Log de alterações da sala</TooltipContent>
+                </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
