@@ -975,6 +975,14 @@ function CardItem({
                 {formatDueShort(card.dueDate)}
               </span>
             )}
+            {card.recurrence && (
+              <span
+                title={`Recorrência: ${RECURRENCE_LABEL[card.recurrence]}`}
+                className="inline-flex h-4 w-4 items-center justify-center text-muted-foreground/70"
+              >
+                <Repeat2 className="h-3 w-3" />
+              </span>
+            )}
           </div>
           {card.assignee && <Avatar name={card.assignee} />}
         </div>
