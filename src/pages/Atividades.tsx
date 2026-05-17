@@ -1271,6 +1271,162 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /* ---------------------------------------------------------------- */
+/* CHECKLIST EDITOR                                                  */
+/* ---------------------------------------------------------------- */
+function ChecklistEditor({
+  items,
+  onChange,
+}: {
+  items: ChecklistItem[];
+  onChange: (next: ChecklistItem[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+  const total = items.length;
+  const done = items.filter((i) => i.done).length;
+
+  function add() {
+    const v = draft.trim();
+    if (!v) return;
+    onChange([...items, { id: newId("chk"), text: v, done: false }]);
+    setDraft("");
+  }
+
+  function toggle(id: string) {
+    onChange(items.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
+  }
+
+  function remove(id: string) {
+    onChange(items.filter((i) => i.id !== id));
+  }
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = items.findIndex((i) => i.id === active.id);
+    const newIdx = items.findIndex((i) => i.id === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    onChange(arrayMove(items, oldIdx, newIdx));
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Checklist
+        </div>
+        {total > 0 && (
+          <div className="text-[11px] text-muted-foreground">
+            {done} de {total} concluído{total === 1 ? "" : "s"}
+          </div>
+        )}
+      </div>
+
+      {total > 0 && (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-1 rounded-md border border-input bg-background p-1.5">
+              {items.map((item) => (
+                <ChecklistRow
+                  key={item.id}
+                  item={item}
+                  onToggle={() => toggle(item.id)}
+                  onRemove={() => remove(item.id)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      <div className="flex items-center gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Adicionar item..."
+          className="h-9 text-xs"
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={add}
+          disabled={!draft.trim()}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" />
+          Adicionar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ChecklistRow({
+  item,
+  onToggle,
+  onRemove,
+}: {
+  item: ChecklistItem;
+  onToggle: () => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group flex items-center gap-2 rounded px-1.5 py-1 hover:bg-muted/40"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing"
+        aria-label="Reordenar"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <Checkbox
+        checked={item.done}
+        onCheckedChange={onToggle}
+        aria-label="Marcar item"
+      />
+      <span
+        className={cn(
+          "flex-1 text-[12.5px]",
+          item.done && "text-muted-foreground line-through",
+        )}
+      >
+        {item.text}
+      </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/15 hover:text-destructive group-hover:opacity-100"
+        aria-label="Excluir item"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
 /* VIEW TOGGLE                                                       */
 /* ---------------------------------------------------------------- */
 function ViewToggle({
