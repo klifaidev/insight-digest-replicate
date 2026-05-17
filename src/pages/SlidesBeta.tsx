@@ -76,6 +76,7 @@ import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor
 import { TemplateGallery } from "@/components/pricing/custom/TemplateGallery";
 import type { SlideTemplate } from "@/lib/slideTemplates";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { SlideThumbnailSVG, pickRepresentativeKind } from "@/components/pricing/SlideThumbnailSVG";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
