@@ -120,6 +120,7 @@ export function useCollaboration(
     });
 
     subscribeToComments(channel, (c: SlideComment) => {
+      void 0;
       if (c.author && userMetaRef.current && c.author === userMetaRef.current.name) {
         // ainda assim adiciona — addComment é idempotente por id
       }
