@@ -925,6 +925,7 @@ function FullscreenCustomEditor({
                         item={it}
                         index={i}
                         active={it.id === current?.id}
+                        editingUsers={(collaborators ?? []).filter((c) => c.slideId === it.id)}
                         onClick={() => {
                           if (it.id === current?.id) return;
                           select(it.id);
