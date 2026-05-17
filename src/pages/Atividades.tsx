@@ -61,6 +61,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  AlertTriangle,
   Kanban,
   List,
   CalendarDays,
@@ -70,8 +71,22 @@ import {
   ChevronRight as ChevronRightSmall,
   ArrowUp,
   ArrowDown,
+  Search,
+  BarChart3,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
+import { KpiCard } from "@/components/pricing/KpiCard";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  Cell,
+} from "recharts";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
