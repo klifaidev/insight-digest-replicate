@@ -213,6 +213,7 @@ export default function Atividades() {
                 {doneCards} concluída{doneCards === 1 ? "" : "s"}
               </span>
             </div>
+            <ViewToggle mode={viewMode} onChange={setViewMode} />
             <Button
               size="sm"
               onClick={() => setEditingCard({ columnId: state.columns[0]?.id ?? "" })}
