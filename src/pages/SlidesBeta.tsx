@@ -1820,7 +1820,7 @@ export default function SlidesBeta() {
                           index={idx}
                           selected={selectedId === item.id}
                           onSelect={() => select(item.id)}
-                          onRemove={() => removeItem(item.id)}
+                          onRemove={() => { if (viewOnly) { toast.info("Modo somente leitura"); return; } removeItem(item.id); }}
                           onDuplicate={() => duplicateItem(item.id)}
                         />
                       ))}
