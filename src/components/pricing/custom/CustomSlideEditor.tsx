@@ -151,9 +151,13 @@ interface Props {
   slideId?: string;
   config: CustomSlideConfig;
   onChange: (next: CustomSlideConfig) => void;
+  /** Colaboradores ativos (todos os slides) — filtrados internamente por slideId */
+  collaborators?: import("@/lib/collaboration").CollabUser[];
+  /** Callback de mouse-move em coordenadas do canvas (1280x720) */
+  onCursorMove?: (x: number, y: number) => void;
 }
 
-export function CustomSlideEditor({ slideId, config, onChange }: Props) {
+export function CustomSlideEditor({ slideId, config, onChange, collaborators, onCursorMove }: Props) {
   // Bind the parent's config <-> internal Zustand+temporal store first so
   // selection store reflects the right slide on initial render.
   useEditorBinding(config, onChange, slideId);
@@ -635,6 +639,11 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                   setSelection([id]);
                 }
               }}
+              onMouseMove={(e) => {
+                if (!onCursorMove) return;
+                const pos = clientToCanvas(canvasRef.current, e.clientX, e.clientY, scaleRef.current);
+                if (pos) onCursorMove(pos.x, pos.y);
+              }}
             >
               {/* Snap-to-grid background — dot pattern, behind blocks. */}
               {prefs.gridEnabled && (
@@ -979,6 +988,41 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                   }}
                 />
               )}
+
+              {/* Cursores de colaboradores remotos (filtrados pelo slide atual) */}
+              {collaborators && collaborators
+                .filter((c) => c.slideId === slideId
+                  && typeof c.cursorX === "number" && typeof c.cursorY === "number")
+                .map((c) => (
+                  <div
+                    key={`cursor-${c.id}`}
+                    data-export-hide="true"
+                    style={{
+                      position: "absolute",
+                      left: c.cursorX, top: c.cursorY,
+                      pointerEvents: "none",
+                      zIndex: 9999,
+                      transition: "transform 50ms linear",
+                      transform: "translate(0,0)",
+                    }}
+                  >
+                    <svg width={12} height={18} viewBox="0 0 12 18" style={{ display: "block" }}>
+                      <path d="M0 0 L0 14 L4 10 L7 17 L9 16 L6 9 L11 9 Z"
+                        fill={c.color} stroke="#fff" strokeWidth={1} />
+                    </svg>
+                    <span
+                      style={{
+                        position: "absolute", top: 14, left: 12,
+                        background: c.color, color: "#fff",
+                        fontSize: 10, padding: "1px 6px",
+                        borderRadius: 999, whiteSpace: "nowrap",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {c.name}
+                    </span>
+                  </div>
+                ))}
 
               {/* Faixa Harald (não editável, sempre por cima) */}
               {config.showHaraldFooter && (

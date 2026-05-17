@@ -77,6 +77,8 @@ import { TemplateGallery } from "@/components/pricing/custom/TemplateGallery";
 import type { SlideTemplate } from "@/lib/slideTemplates";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useCollaboration } from "@/hooks/use-collaboration";
+import type { CollabUser } from "@/lib/collaboration";
+import { initials } from "@/lib/kanban";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
@@ -670,18 +672,22 @@ function CustomSlideFullscreenTrigger({ onOpen }: { onOpen: () => void }) {
 // Strip lateral de slides — thumbnails empilhados verticalmente, ordenáveis.
 // ----------------------------------------------------------------------------
 function StripThumbnail({
-  item, index, active, onClick,
+  item, index, active, onClick, editingUsers,
 }: {
   item: SlideItem;
   index: number;
   active: boolean;
   onClick: () => void;
+  editingUsers?: CollabUser[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-  const style = {
+  const editors = editingUsers ?? [];
+  const firstEditorColor = editors[0]?.color;
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    ...(firstEditorColor ? { borderColor: firstEditorColor, borderWidth: 2 } : {}),
   };
   const meta = metaOf(item.kind);
   const Icon = ICON_MAP[meta.icon];
@@ -721,15 +727,28 @@ function StripThumbnail({
       <div className="truncate px-1.5 pb-1.5 text-[10px] font-medium" title={item.label ?? meta.title}>
         {item.label ?? meta.title}
       </div>
+      {editors.length > 1 && (
+        <div
+          className="absolute bottom-1 right-1 z-10 rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm"
+          style={{ background: firstEditorColor ?? "#333" }}
+          title={`${editors.length} pessoas editando`}
+        >
+          +{editors.length - 1}
+        </div>
+      )}
     </div>
   );
 }
 
 function FullscreenCustomEditor({
-  open, onOpenChange,
+  open, onOpenChange, collaborators, isConnected, updateCursor, updateSlideId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  collaborators?: CollabUser[];
+  isConnected?: boolean;
+  updateCursor?: (x: number, y: number) => void;
+  updateSlideId?: (slideId: string | null) => void;
 }) {
   const items = useSlidesFlow((s) => s.items);
   const selectedId = useSlidesFlow((s) => s.selectedId);
@@ -747,6 +766,13 @@ function FullscreenCustomEditor({
   useEffect(() => {
     if (open && current && !isCustom) onOpenChange(false);
   }, [open, current, isCustom, onOpenChange]);
+
+  // Atualiza o slideId do usuário local no presence sempre que a seleção muda.
+  useEffect(() => {
+    if (!updateSlideId) return;
+    if (open && isCustom && current) updateSlideId(current.id);
+    else if (!open) updateSlideId(null);
+  }, [open, current, isCustom, updateSlideId]);
 
   // Navegação sequencial (apenas slides custom).
   const goRel = (offset: number) => {
@@ -841,7 +867,46 @@ function FullscreenCustomEditor({
           <DialogDescription className="sr-only">
             Editor de slide personalizado com strip lateral de navegação.
           </DialogDescription>
-          <div className="w-[200px]" />
+          <div className="flex w-[200px] items-center justify-end gap-2">
+            {isConnected && (
+              <span className="relative inline-flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+            )}
+            {(collaborators ?? []).length > 0 && (
+              <TooltipProvider delayDuration={150}>
+                <div className="flex items-center">
+                  {(collaborators ?? []).slice(0, 4).map((c, i) => {
+                    const slideIdx = items.findIndex((it) => it.id === c.slideId);
+                    const tip = slideIdx >= 0
+                      ? `${c.name} — editando slide ${slideIdx + 1}`
+                      : `${c.name} — sem slide ativo`;
+                    return (
+                      <Tooltip key={c.id}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-[11px] font-medium text-white"
+                            style={{ background: c.color, marginLeft: i === 0 ? 0 : -8 }}
+                          >
+                            {initials(c.name)}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">{tip}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                  {(collaborators ?? []).length > 4 && (
+                    <div
+                      className="ml-[-8px] flex h-7 min-w-[28px] items-center justify-center rounded-full border-2 border-background bg-muted px-1.5 text-[11px] font-medium text-foreground"
+                    >
+                      +{(collaborators ?? []).length - 4}
+                    </div>
+                  )}
+                </div>
+              </TooltipProvider>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 gap-3">
@@ -860,6 +925,7 @@ function FullscreenCustomEditor({
                         item={it}
                         index={i}
                         active={it.id === current?.id}
+                        editingUsers={(collaborators ?? []).filter((c) => c.slideId === it.id)}
                         onClick={() => {
                           if (it.id === current?.id) return;
                           select(it.id);
@@ -902,6 +968,8 @@ function FullscreenCustomEditor({
                     it.kind === "custom" ? ({ ...it, config: cfg } as SlideItem) : it,
                   )
                 }
+                collaborators={collaborators}
+                onCursorMove={updateCursor}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -1222,7 +1290,7 @@ export default function SlidesBeta() {
     if (name) setCollabName(decodeURIComponent(name));
   }, []);
 
-  const { collaborators, isConnected, broadcast, userId: collabUserId } = useCollaboration(
+  const { collaborators, isConnected, broadcast, updateCursor, updateSlideId, userId: collabUserId } = useCollaboration(
     roomId,
     collabName,
   );
@@ -1621,7 +1689,14 @@ export default function SlidesBeta() {
         ctx={{ months, budgetMonths }}
         onSelect={applyTemplate}
       />
-      <FullscreenCustomEditor open={fullscreenOpen} onOpenChange={setFullscreenOpen} />
+      <FullscreenCustomEditor
+        open={fullscreenOpen}
+        onOpenChange={setFullscreenOpen}
+        collaborators={collaborators}
+        isConnected={isConnected}
+        updateCursor={updateCursor}
+        updateSlideId={updateSlideId}
+      />
 
       <Dialog open={collabOpen} onOpenChange={setCollabOpen}>
         <DialogContent className="sm:max-w-md">

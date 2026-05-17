@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { toast } from "sonner";
 import {
   createRoom,
   leaveRoom,
@@ -19,6 +20,7 @@ interface UseCollabReturn {
   isConnected: boolean;
   broadcast: (e: CollabEvent) => void;
   updateCursor: (x: number, y: number) => void;
+  updateSlideId: (slideId: string | null) => void;
   userId: string | null;
 }
 
@@ -30,6 +32,9 @@ export function useCollaboration(
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const collaboratorsByIdRef = useRef<Map<string, CollabUser>>(new Map());
+  const userMetaRef = useRef<CollabUser | null>(null);
 
   useEffect(() => {
     if (!roomId) return;
@@ -38,6 +43,7 @@ export function useCollaboration(
         ? crypto.randomUUID()
         : `u_${Math.random().toString(36).slice(2, 10)}`;
     userIdRef.current = userId;
+    knownIdsRef.current = new Set([userId]);
     // Cor estável por hash do userId
     let h = 0;
     for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
@@ -49,6 +55,7 @@ export function useCollaboration(
       color,
       slideId: null,
     };
+    userMetaRef.current = user;
 
     const channel = createRoom(roomId, user);
     channelRef.current = channel;
@@ -56,6 +63,26 @@ export function useCollaboration(
     onPresenceChange(channel, (users) => {
       setCollaborators(users);
       setIsConnected(true);
+      // Toasts de entrada / saída — ignora o próprio usuário.
+      const currentIds = new Set(users.map((u) => u.id));
+      const prev = knownIdsRef.current;
+      for (const u of users) {
+        if (u.id === userId) continue;
+        if (!prev.has(u.id)) {
+          toast.info(`${u.name} entrou na sala`, { icon: "👋", duration: 2500 });
+        }
+      }
+      for (const id of prev) {
+        if (id === userId) continue;
+        if (!currentIds.has(id)) {
+          const gone = collaboratorsByIdRef.current.get(id);
+          toast.info(`${gone?.name ?? "Colaborador"} saiu`, { duration: 2000 });
+        }
+      }
+      const byId = new Map<string, CollabUser>();
+      for (const u of users) byId.set(u.id, u);
+      collaboratorsByIdRef.current = byId;
+      knownIdsRef.current = currentIds;
     });
 
     onEvent(channel, (event) => {
@@ -92,6 +119,9 @@ export function useCollaboration(
       leaveRoom(channel);
       channelRef.current = null;
       userIdRef.current = null;
+      knownIdsRef.current = new Set();
+      collaboratorsByIdRef.current = new Map();
+      userMetaRef.current = null;
     };
   }, [roomId, userName]);
 
@@ -108,11 +138,25 @@ export function useCollaboration(
     updateCursorRaw(ch, x, y, uid);
   }, []);
 
+  const updateSlideId = useCallback((slideId: string | null) => {
+    const ch = channelRef.current;
+    const meta = userMetaRef.current;
+    if (!ch || !meta) return;
+    if (meta.slideId === slideId) return;
+    userMetaRef.current = { ...meta, slideId };
+    try {
+      ch.track(userMetaRef.current);
+    } catch {
+      /* noop */
+    }
+  }, []);
+
   return {
     collaborators,
     isConnected,
     broadcast,
     updateCursor,
+    updateSlideId,
     userId: userIdRef.current,
   };
 }
