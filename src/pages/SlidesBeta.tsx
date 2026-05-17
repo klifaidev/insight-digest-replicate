@@ -767,6 +767,13 @@ function FullscreenCustomEditor({
     if (open && current && !isCustom) onOpenChange(false);
   }, [open, current, isCustom, onOpenChange]);
 
+  // Atualiza o slideId do usuário local no presence sempre que a seleção muda.
+  useEffect(() => {
+    if (!updateSlideId) return;
+    if (open && isCustom && current) updateSlideId(current.id);
+    else if (!open) updateSlideId(null);
+  }, [open, current, isCustom, updateSlideId]);
+
   // Navegação sequencial (apenas slides custom).
   const goRel = (offset: number) => {
     if (idx < 0) return;
