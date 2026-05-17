@@ -726,7 +726,15 @@ function StripThumbnail({
       </div>
       <div className="truncate px-1.5 pb-1.5 text-[10px] font-medium" title={item.label ?? meta.title}>
         {item.label ?? meta.title}
-      </div>
+      {editors.length > 1 && (
+        <div
+          className="absolute bottom-1 right-1 z-10 rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-white shadow-sm"
+          style={{ background: firstEditorColor ?? "#333" }}
+          title={`${editors.length} pessoas editando`}
+        >
+          +{editors.length - 1}
+        </div>
+      )}
     </div>
   );
 }
