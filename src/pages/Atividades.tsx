@@ -932,6 +932,13 @@ function CardItem({
         </div>
       )}
 
+      {/* Checklist progress */}
+      {card.checklist && card.checklist.length > 0 && (
+        <div className="mt-2 flex items-center gap-2 pl-5">
+          <ChecklistProgressBar items={card.checklist} />
+        </div>
+      )}
+
       {/* Footer */}
       {(card.dueDate || card.assignee || card.priority) && (
         <div className="mt-2.5 flex items-center justify-between gap-2 pl-5">
