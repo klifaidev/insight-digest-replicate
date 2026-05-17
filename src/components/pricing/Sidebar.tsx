@@ -71,6 +71,7 @@ export function Sidebar() {
   const mobileOpen = useSidebarState((s) => s.mobileOpen);
   const setMobileOpen = useSidebarState((s) => s.setMobileOpen);
   const [searchOpen, setSearchOpen] = useState(false);
+  const openCommandPalette = useCommandPalette((s) => s.setOpen);
 
   const cm = useMemo(() => metric === "cm", [metric]);
   const missingCount = useMemo(
