@@ -1614,7 +1614,7 @@ function ListView({
                       <div
                         key={card.id}
                         onClick={() => onEditCard(card, column.id)}
-                        className="group grid cursor-pointer grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.4fr)] items-center gap-3 border-l-2 px-3 py-2.5 transition-colors hover:bg-muted/20"
+                        className="group grid cursor-pointer grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1.4fr)] items-center gap-3 border-l-2 px-3 py-2.5 transition-colors hover:bg-muted/20"
                         style={{ borderLeftColor: `hsl(${column.accent})` }}
                       >
                         <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-center">
