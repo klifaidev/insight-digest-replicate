@@ -1441,19 +1441,42 @@ export default function SlidesBeta() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const setCollabBroadcast = useSlidesFlow((s) => s.setCollabBroadcast);
 
+  const [viewOnly, setViewOnly] = useState(false);
+  const [guestReadOnly, setGuestReadOnly] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const room = params.get("room");
     const name = params.get("name");
+    const mode = params.get("mode");
     if (room) setRoomId(room);
     if (name) setCollabName(decodeURIComponent(name));
+    if (mode === "view") setViewOnly(true);
   }, []);
 
-  const { collaborators, isConnected, broadcast, updateCursor, updateSlideId, userId: collabUserId } = useCollaboration(
+  const { collaborators, isConnected, broadcast, updateCursor, updateSlideId, broadcastComment, userId: collabUserId } = useCollaboration(
     roomId,
     collabName,
   );
+
+  // Cor estável do usuário local (mesmo cálculo do hook de colaboração).
+  const currentUserColor = useMemo(() => {
+    const id = collabUserId ?? collabName ?? "anon";
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    const palette = ["#E63946", "#457B9D", "#2A9D8F", "#E9C46A", "#F4A261", "#A8DADC", "#8338EC", "#06D6A0", "#FFB703", "#FB8500", "#3A86FF", "#FF006E"];
+    return palette[h % palette.length];
+  }, [collabUserId, collabName]);
+  const currentUser = useMemo(
+    () => ({ name: collabName || "Convidado", color: currentUserColor }),
+    [collabName, currentUserColor],
+  );
+
+  const handleAddComment = useCallback((c: SlideComment) => {
+    if (roomId) broadcastComment(c);
+  }, [roomId, broadcastComment]);
 
   useEffect(() => {
     if (roomId) {
