@@ -92,13 +92,88 @@ export function newId(prefix = "k") {
 export function loadState(): KanbanState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return seedTop3(defaultState());
+    if (!raw) return generateRecurring(seedTop3(defaultState()));
     const parsed = JSON.parse(raw) as KanbanState;
-    if (!parsed.columns || !parsed.cards) return seedTop3(defaultState());
-    return seedTop3(parsed);
+    if (!parsed.columns || !parsed.cards) return generateRecurring(seedTop3(defaultState()));
+    return generateRecurring(seedTop3(parsed));
   } catch {
-    return seedTop3(defaultState());
+    return generateRecurring(seedTop3(defaultState()));
   }
+}
+
+/**
+ * Para cada card concluído (na última coluna) com recurrence definida e dueDate no passado,
+ * gera uma nova instância na primeira coluna, com checklist resetado e nova data.
+ */
+function generateRecurring(state: KanbanState): KanbanState {
+  if (!state.columns.length) return state;
+  const firstCol = state.columns[0];
+  const lastCol = state.columns[state.columns.length - 1];
+  if (!firstCol || !lastCol || firstCol.id === lastCol.id) return state;
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const existingTitles = new Set(
+    firstCol.cardIds.map((id) => state.cards[id]?.title).filter(Boolean) as string[],
+  );
+
+  const newCards: Record<string, KanbanCard> = { ...state.cards };
+  const newIds: string[] = [];
+  const nowIso = new Date().toISOString();
+  let mutated = false;
+
+  for (const cid of lastCol.cardIds) {
+    const c = state.cards[cid];
+    if (!c?.recurrence || !c.dueDate) continue;
+    if (c.dueDate >= todayIso) continue;
+
+    const base = new Date(c.dueDate + "T00:00:00");
+    const days = RECURRENCE_DAYS[c.recurrence];
+    let next = new Date(base.getTime() + days * 86400000);
+    // Avança até futuro
+    while (next.toISOString().slice(0, 10) < todayIso) {
+      next = new Date(next.getTime() + days * 86400000);
+    }
+    const nextIso = next.toISOString().slice(0, 10);
+
+    // Evitar duplicar caso já exista uma instância com mesmo título e prazo na 1ª coluna
+    const dup = firstCol.cardIds.some((id) => {
+      const ex = state.cards[id];
+      return ex && ex.title === c.title && ex.dueDate === nextIso;
+    });
+    if (dup || existingTitles.size === 0 && false) continue;
+    if (dup) continue;
+
+    const id = newId("card");
+    newCards[id] = {
+      id,
+      title: c.title,
+      description: c.description,
+      assignee: c.assignee,
+      priority: c.priority,
+      tags: c.tags ? [...c.tags] : undefined,
+      checklist: c.checklist
+        ? c.checklist.map((it) => ({ id: newId("chk"), text: it.text, done: false }))
+        : undefined,
+      recurrence: c.recurrence,
+      dueDate: nextIso,
+      createdAt: nowIso,
+    };
+    newIds.push(id);
+    mutated = true;
+  }
+
+  if (!mutated) return state;
+
+  const columns = state.columns.map((col) =>
+    col.id === firstCol.id ? { ...col, cardIds: [...newIds, ...col.cardIds] } : col,
+  );
+  const next = { cards: newCards, columns };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    /* noop */
+  }
+  return next;
 }
 
 const SEED_FLAG = "harald.kanban.seed.top3.v1";
