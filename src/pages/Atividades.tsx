@@ -1671,6 +1671,13 @@ function ListView({
                             <span className="text-muted-foreground/40">—</span>
                           )}
                         </div>
+                        <div className="flex items-center gap-1.5">
+                          {card.checklist && card.checklist.length > 0 ? (
+                            <ChecklistProgressBar items={card.checklist} />
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap gap-1">
                           {card.tags?.slice(0, 3).map((t) => (
                             <span
