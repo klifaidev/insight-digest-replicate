@@ -1205,6 +1205,48 @@ export default function SlidesBeta() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
+  // ====== Colaboração em tempo real ======
+  const [collabOpen, setCollabOpen] = useState(false);
+  const [collabName, setCollabName] = useState<string>(() =>
+    typeof window === "undefined" ? "" : localStorage.getItem("collab-username") ?? "",
+  );
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const setCollabBroadcast = useSlidesFlow((s) => s.setCollabBroadcast);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get("room");
+    const name = params.get("name");
+    if (room) setRoomId(room);
+    if (name) setCollabName(decodeURIComponent(name));
+  }, []);
+
+  const { collaborators, isConnected, broadcast, userId: collabUserId } = useCollaboration(
+    roomId,
+    collabName,
+  );
+
+  useEffect(() => {
+    if (roomId) {
+      setCollabBroadcast(broadcast, collabUserId);
+    } else {
+      setCollabBroadcast(null, null);
+    }
+    return () => setCollabBroadcast(null, null);
+  }, [roomId, broadcast, collabUserId, setCollabBroadcast]);
+
+  const startCollab = () => {
+    const name = collabName.trim() || "Convidado";
+    if (typeof window !== "undefined") {
+      localStorage.setItem("collab-username", name);
+    }
+    setCollabName(name);
+    const newRoom = Math.random().toString(36).slice(2, 10);
+    setRoomId(newRoom);
+    setCollabOpen(false);
+  };
+
   const applyTemplate = (tpl: SlideTemplate) => {
     const built = tpl.build({ months, budgetMonths });
     if (built.length === 0) {
