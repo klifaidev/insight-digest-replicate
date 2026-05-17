@@ -47,6 +47,8 @@ export default function AppShell() {
   const setFilter = usePricing((s) => s.setFilter);
   const setSelectedPeriods = usePricing((s) => s.setSelectedPeriods);
   const [helpOpen, setHelpOpen] = useState(false);
+  const commandOpen = useCommandPalette((s) => s.open);
+  const setCommandOpen = useCommandPalette((s) => s.setOpen);
 
   // Restaura filtros a partir da URL compartilhada (uma vez no mount)
   useEffect(() => {
