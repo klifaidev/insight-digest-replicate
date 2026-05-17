@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ChecklistItem,
   KanbanCard,
   KanbanColumn,
   KanbanState,
@@ -16,6 +17,21 @@ import {
   newId,
   saveState,
 } from "@/lib/kanban";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -916,6 +932,13 @@ function CardItem({
         </div>
       )}
 
+      {/* Checklist progress */}
+      {card.checklist && card.checklist.length > 0 && (
+        <div className="mt-2 flex items-center gap-2 pl-5">
+          <ChecklistProgressBar items={card.checklist} />
+        </div>
+      )}
+
       {/* Footer */}
       {(card.dueDate || card.assignee || card.priority) && (
         <div className="mt-2.5 flex items-center justify-between gap-2 pl-5">
@@ -954,6 +977,29 @@ function CardItem({
         </div>
       )}
     </div>
+  );
+}
+
+function ChecklistProgressBar({ items }: { items: ChecklistItem[] }) {
+  const total = items.length;
+  const done = items.filter((i) => i.done).length;
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  const complete = total > 0 && done === total;
+  return (
+    <>
+      <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-muted/40">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all",
+            complete ? "bg-success" : "bg-primary",
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+        {done}/{total}
+      </span>
+    </>
   );
 }
 
@@ -1003,6 +1049,7 @@ function CardDialog({
   const [priority, setPriority] = useState<Priority | "none">("none");
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [colId, setColId] = useState(columnId);
 
   useEffect(() => {
@@ -1014,6 +1061,7 @@ function CardDialog({
     setPriority(initial?.priority ?? "none");
     setTags(initial?.tags ?? []);
     setTagDraft("");
+    setChecklist(initial?.checklist ?? []);
     setColId(columnId);
   }, [open, initial, columnId]);
 
@@ -1037,6 +1085,7 @@ function CardDialog({
       assignee: assignee.trim() || undefined,
       priority: priority === "none" ? undefined : priority,
       tags: tags.length ? tags : undefined,
+      checklist: checklist.length ? checklist : undefined,
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     };
     onSave(card, colId);
@@ -1192,6 +1241,9 @@ function CardDialog({
               />
             </div>
           </Field>
+
+          {/* Checklist */}
+          <ChecklistEditor items={checklist} onChange={setChecklist} />
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
@@ -1214,6 +1266,162 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         {label}
       </div>
       {children}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* CHECKLIST EDITOR                                                  */
+/* ---------------------------------------------------------------- */
+function ChecklistEditor({
+  items,
+  onChange,
+}: {
+  items: ChecklistItem[];
+  onChange: (next: ChecklistItem[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+  const total = items.length;
+  const done = items.filter((i) => i.done).length;
+
+  function add() {
+    const v = draft.trim();
+    if (!v) return;
+    onChange([...items, { id: newId("chk"), text: v, done: false }]);
+    setDraft("");
+  }
+
+  function toggle(id: string) {
+    onChange(items.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
+  }
+
+  function remove(id: string) {
+    onChange(items.filter((i) => i.id !== id));
+  }
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = items.findIndex((i) => i.id === active.id);
+    const newIdx = items.findIndex((i) => i.id === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    onChange(arrayMove(items, oldIdx, newIdx));
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Checklist
+        </div>
+        {total > 0 && (
+          <div className="text-[11px] text-muted-foreground">
+            {done} de {total} concluído{total === 1 ? "" : "s"}
+          </div>
+        )}
+      </div>
+
+      {total > 0 && (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-1 rounded-md border border-input bg-background p-1.5">
+              {items.map((item) => (
+                <ChecklistRow
+                  key={item.id}
+                  item={item}
+                  onToggle={() => toggle(item.id)}
+                  onRemove={() => remove(item.id)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      <div className="flex items-center gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Adicionar item..."
+          className="h-9 text-xs"
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={add}
+          disabled={!draft.trim()}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" />
+          Adicionar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ChecklistRow({
+  item,
+  onToggle,
+  onRemove,
+}: {
+  item: ChecklistItem;
+  onToggle: () => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group flex items-center gap-2 rounded px-1.5 py-1 hover:bg-muted/40"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing"
+        aria-label="Reordenar"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <Checkbox
+        checked={item.done}
+        onCheckedChange={onToggle}
+        aria-label="Marcar item"
+      />
+      <span
+        className={cn(
+          "flex-1 text-[12.5px]",
+          item.done && "text-muted-foreground line-through",
+        )}
+      >
+        {item.text}
+      </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/15 hover:text-destructive group-hover:opacity-100"
+        aria-label="Excluir item"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
@@ -1347,13 +1555,16 @@ function ListView({
   return (
     <div className="px-8 pb-10 pt-6">
       {/* Column headers */}
-      <div className="mb-3 grid grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.4fr)] items-center gap-3 px-3">
+      <div className="mb-3 grid grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1.4fr)] items-center gap-3 px-3">
         <span />
         <Header k="priority" label="Pri." />
         <Header k="title" label="Título" />
         <Header k="column" label="Status" />
         <Header k="assignee" label="Resp." />
         <Header k="dueDate" label="Prazo" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Progresso
+        </span>
         <Header k="tags" label="Tags" />
       </div>
 
@@ -1403,7 +1614,7 @@ function ListView({
                       <div
                         key={card.id}
                         onClick={() => onEditCard(card, column.id)}
-                        className="group grid cursor-pointer grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.4fr)] items-center gap-3 border-l-2 px-3 py-2.5 transition-colors hover:bg-muted/20"
+                        className="group grid cursor-pointer grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1.4fr)] items-center gap-3 border-l-2 px-3 py-2.5 transition-colors hover:bg-muted/20"
                         style={{ borderLeftColor: `hsl(${column.accent})` }}
                       >
                         <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-center">
@@ -1456,6 +1667,13 @@ function ListView({
                             >
                               {formatDueShort(card.dueDate)}
                             </span>
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {card.checklist && card.checklist.length > 0 ? (
+                            <ChecklistProgressBar items={card.checklist} />
                           ) : (
                             <span className="text-muted-foreground/40">—</span>
                           )}

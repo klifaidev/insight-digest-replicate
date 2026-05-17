@@ -1,6 +1,12 @@
 // Kanban — tipos e persistência local
 export type Priority = "low" | "med" | "high";
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface KanbanCard {
   id: string;
   title: string;
@@ -9,6 +15,7 @@ export interface KanbanCard {
   assignee?: string;
   priority?: Priority;
   tags?: string[];
+  checklist?: ChecklistItem[];
   createdAt: string;
 }
 
