@@ -5,6 +5,8 @@ import { Sidebar } from "@/components/pricing/Sidebar";
 import { ActiveFiltersBar } from "@/components/pricing/ActiveFiltersBar";
 import { NoResultsBanner } from "@/components/pricing/NoResultsBanner";
 import { ShortcutsHelp } from "@/components/pricing/ShortcutsHelp";
+import { CommandPalette } from "@/components/pricing/CommandPalette";
+import { useCommandPalette } from "@/store/commandPalette";
 import { useSidebarState } from "@/store/sidebar";
 import { useTheme, applyTheme } from "@/store/theme";
 import { usePricing } from "@/store/pricing";
