@@ -1973,7 +1973,70 @@ export default function SlidesBeta() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <HistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
     </>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// HistoryDialog — log de alterações da sala de colaboração.
+// ----------------------------------------------------------------------------
+function HistoryDialog({
+  open, onOpenChange,
+}: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const [, force] = useState(0);
+  useEffect(() => subscribeLog(() => force((n) => n + 1)), []);
+  const entries: ChangeLogEntry[] = [...readLog()].reverse();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="h-4 w-4 text-primary" />
+            Histórico de alterações
+          </DialogTitle>
+          <DialogDescription>
+            Últimas {entries.length} {entries.length === 1 ? "alteração" : "alterações"} recebidas.
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="max-h-[60vh]">
+          {entries.length === 0 ? (
+            <p className="px-1 py-6 text-center text-xs text-muted-foreground">
+              Nenhuma alteração registrada ainda.
+            </p>
+          ) : (
+            <ul className="space-y-2 pr-2">
+              {entries.map((e) => (
+                <li key={e.eventId} className="flex items-start gap-2 rounded-md border border-border/40 bg-card/40 px-2 py-1.5">
+                  <div
+                    className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-medium text-white"
+                    style={{ background: e.userColor ?? "#666" }}
+                  >
+                    {initials(e.userName)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs">{e.description}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatDate(new Date(e.ts), "dd/MM HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ScrollArea>
+        <DialogFooter>
+          <Button
+            variant="ghost"
+            onClick={() => { clearLog(); toast.success("Histórico limpo"); }}
+            disabled={entries.length === 0}
+          >
+            Limpar histórico
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
