@@ -3,6 +3,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import {
   createRoom,
+  subscribeRoom,
   leaveRoom,
   broadcastEvent,
   onEvent,
@@ -124,6 +125,9 @@ export function useCollaboration(
       }
       addLocalComment(c);
     });
+
+    // Todos os `.on(...)` foram registrados acima; agora sim, subscribe.
+    subscribeRoom(channel, user);
 
     return () => {
       setIsConnected(false);
