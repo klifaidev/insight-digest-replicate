@@ -3,6 +3,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import {
   createRoom,
+  subscribeRoom,
   leaveRoom,
   broadcastEvent,
   onEvent,
