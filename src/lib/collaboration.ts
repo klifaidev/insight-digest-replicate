@@ -44,15 +44,21 @@ export const CURSOR_COLORS: string[] = [
 ];
 
 export function createRoom(roomId: string, user: CollabUser): RealtimeChannel {
+  // Não fazemos subscribe aqui — todos os `.on(...)` listeners precisam ser
+  // registrados antes do subscribe. O caller chama `subscribeRoom(channel, user)`
+  // depois de adicionar listeners de presence/broadcast.
   const channel = supabase.channel(`deck:${roomId}`, {
     config: { presence: { key: user.id } },
   });
+  return channel;
+}
+
+export function subscribeRoom(channel: RealtimeChannel, user: CollabUser): void {
   channel.subscribe(async (status) => {
     if (status === "SUBSCRIBED") {
       await channel.track(user);
     }
   });
-  return channel;
 }
 
 export function broadcastEvent(channel: RealtimeChannel, event: CollabEvent): void {
