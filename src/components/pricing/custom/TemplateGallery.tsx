@@ -11,6 +11,7 @@ import {
   SLIDE_TEMPLATES, TEMPLATE_CATEGORIES,
   type TemplateCtx, type TemplateCategory, type SlideTemplate,
 } from "@/lib/slideTemplates";
+import { SlideThumbnailSVG, pickRepresentativeKind } from "@/components/pricing/SlideThumbnailSVG";
 
 interface Props {
   open: boolean;
