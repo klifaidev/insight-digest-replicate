@@ -1241,6 +1241,9 @@ function CardDialog({
               />
             </div>
           </Field>
+
+          {/* Checklist */}
+          <ChecklistEditor items={checklist} onChange={setChecklist} />
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
