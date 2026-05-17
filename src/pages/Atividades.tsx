@@ -1218,6 +1218,24 @@ function CardDialog({
                 className="h-9"
               />
             </Field>
+
+            {/* Recorrência */}
+            <Field label="Recorrência">
+              <Select
+                value={recurrence}
+                onValueChange={(v) => setRecurrence(v as Recurrence | "none")}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não repete</SelectItem>
+                  <SelectItem value="weekly">Semanalmente</SelectItem>
+                  <SelectItem value="biweekly">A cada 2 semanas</SelectItem>
+                  <SelectItem value="monthly">Mensalmente</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
           </div>
 
           {/* Tags */}
