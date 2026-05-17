@@ -33,6 +33,7 @@ export function useCollaboration(
   const channelRef = useRef<RealtimeChannel | null>(null);
   const userIdRef = useRef<string | null>(null);
   const knownIdsRef = useRef<Set<string>>(new Set());
+  const collaboratorsByIdRef = useRef<Map<string, CollabUser>>(new Map());
   const userMetaRef = useRef<CollabUser | null>(null);
 
   useEffect(() => {
