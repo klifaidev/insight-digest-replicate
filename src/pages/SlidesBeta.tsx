@@ -1418,6 +1418,18 @@ export default function SlidesBeta() {
                   Incompleto
                 </Badge>
               )}
+              {roomId && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                  <span className="relative inline-flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                  </span>
+                  Ao vivo
+                  {isConnected && collaborators.length > 0 && (
+                    <span className="text-muted-foreground">· {collaborators.length}</span>
+                  )}
+                </span>
+              )}
             </div>
             <TooltipProvider delayDuration={200}>
               <div className="flex items-center gap-1.5">
@@ -1435,6 +1447,21 @@ export default function SlidesBeta() {
                   <TooltipContent>Galeria de templates</TooltipContent>
                 </Tooltip>
                 <SavePresetDialog />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline" size="sm" className="h-8 gap-1.5"
+                      onClick={() => setCollabOpen(true)}
+                      aria-label="Iniciar colaboração"
+                    >
+                      <Users2 className="h-3.5 w-3.5" />
+                      Colaborar
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {roomId ? `Sala ativa: ${roomId}` : "Compartilhar sessão em tempo real"}
+                  </TooltipContent>
+                </Tooltip>
                 {items.length > 0 && (
                   <Tooltip>
                     <TooltipTrigger asChild>
