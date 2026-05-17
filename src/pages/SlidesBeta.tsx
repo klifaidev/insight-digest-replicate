@@ -1925,6 +1925,35 @@ export default function SlidesBeta() {
                 Sala ativa: <span className="font-mono text-foreground">{roomId}</span>
               </p>
             )}
+            {roomId && (
+              <div className="space-y-2 rounded-md border border-border/40 bg-muted/30 p-2">
+                <Label className="text-xs">Link de convite</Label>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    readOnly
+                    value={`${window.location.origin}/slides?room=${roomId}&name=Convidado${guestReadOnly ? "&mode=view" : ""}`}
+                    className="h-8 font-mono text-[10px]"
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <Button
+                    size="sm" variant="outline" className="h-8 gap-1"
+                    onClick={() => {
+                      const url = `${window.location.origin}/slides?room=${roomId}&name=Convidado${guestReadOnly ? "&mode=view" : ""}`;
+                      navigator.clipboard?.writeText(url);
+                      toast.success("Link copiado!");
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" /> Copiar
+                  </Button>
+                </div>
+                <label className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-[11px] text-muted-foreground">
+                    Modo somente leitura para convidados
+                  </span>
+                  <Switch checked={guestReadOnly} onCheckedChange={setGuestReadOnly} />
+                </label>
+              </div>
+            )}
           </div>
           <DialogFooter>
             {roomId && (
