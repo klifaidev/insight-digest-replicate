@@ -89,6 +89,8 @@ export function useCollaboration(
 
     onEvent(channel, (event) => {
       if (event.userId === userId) return; // ignora ecos
+      const peer = collaboratorsByIdRef.current.get(event.userId);
+      recordEvent(event, peer?.name ?? "Colaborador", peer?.color);
       const store = useSlidesFlow.getState();
       switch (event.type) {
         case "add_item":
@@ -113,6 +115,13 @@ export function useCollaboration(
           break;
         }
       }
+    });
+
+    subscribeToComments(channel, (c: SlideComment) => {
+      if (c.author && userMetaRef.current && c.author === userMetaRef.current.name) {
+        // ainda assim adiciona — addComment é idempotente por id
+      }
+      addLocalComment(c);
     });
 
     return () => {
