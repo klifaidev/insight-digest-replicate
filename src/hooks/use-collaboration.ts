@@ -12,7 +12,8 @@ import {
   type CollabUser,
   type CollabEvent,
 } from "@/lib/collaboration";
-import { useSlidesFlow } from "@/store/slidesFlow";
+import { recordEvent } from "@/lib/slideChangeLog";
+import { addComment as addLocalComment, subscribeToComments, type SlideComment } from "@/lib/slideComments";
 import type { SlideItem } from "@/lib/slidesFlow";
 
 interface UseCollabReturn {
