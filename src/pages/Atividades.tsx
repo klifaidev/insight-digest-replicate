@@ -559,6 +559,7 @@ export default function Atividades() {
                 setDragCard(null);
                 setDragOver(null);
               }}
+              dimmedIds={dimmedIds}
             />
           ))}
 
