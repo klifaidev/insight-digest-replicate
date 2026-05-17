@@ -131,7 +131,7 @@ export function Sidebar() {
         <div className={`px-3 pb-3 ${collapsed ? "md:px-2" : ""}`}>
           <button
             type="button"
-            onClick={() => setSearchOpen(true)}
+            onClick={() => openCommandPalette(true)}
             title="Buscar (Ctrl+K)"
             aria-label="Buscar"
             className={`flex w-full items-center gap-2 rounded-lg border border-border/50 bg-sidebar-accent/30 px-2.5 py-2 text-[12px] text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-primary/60 ${
