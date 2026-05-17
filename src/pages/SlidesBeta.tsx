@@ -681,12 +681,15 @@ function CustomSlideFullscreenTrigger({ onOpen }: { onOpen: () => void }) {
 // ----------------------------------------------------------------------------
 function StripThumbnail({
   item, index, active, onClick, editingUsers,
+  currentUser, onAddComment,
 }: {
   item: SlideItem;
   index: number;
   active: boolean;
   onClick: () => void;
   editingUsers?: CollabUser[];
+  currentUser: { name: string; color: string };
+  onAddComment?: (c: SlideComment) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const editors = editingUsers ?? [];
