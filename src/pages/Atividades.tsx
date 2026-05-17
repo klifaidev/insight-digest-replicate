@@ -1555,13 +1555,16 @@ function ListView({
   return (
     <div className="px-8 pb-10 pt-6">
       {/* Column headers */}
-      <div className="mb-3 grid grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.4fr)] items-center gap-3 px-3">
+      <div className="mb-3 grid grid-cols-[28px_28px_minmax(0,3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1.4fr)] items-center gap-3 px-3">
         <span />
         <Header k="priority" label="Pri." />
         <Header k="title" label="Título" />
         <Header k="column" label="Status" />
         <Header k="assignee" label="Resp." />
         <Header k="dueDate" label="Prazo" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Progresso
+        </span>
         <Header k="tags" label="Tags" />
       </div>
 
