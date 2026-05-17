@@ -140,7 +140,6 @@ function generateRecurring(state: KanbanState): KanbanState {
       const ex = state.cards[id];
       return ex && ex.title === c.title && ex.dueDate === nextIso;
     });
-    if (dup || existingTitles.size === 0 && false) continue;
     if (dup) continue;
 
     const id = newId("card");
