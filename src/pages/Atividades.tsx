@@ -577,7 +577,7 @@ export default function Atividades() {
 
       {viewMode === "list" && (
         <ListView
-          state={state}
+          state={filteredState}
           onEditCard={(c, colId) => setEditingCard({ card: c, columnId: colId })}
           onCompleteCard={(cardId, fromColId) => {
             const last = state.columns[state.columns.length - 1];
@@ -593,7 +593,7 @@ export default function Atividades() {
 
       {viewMode === "calendar" && (
         <CalendarView
-          state={state}
+          state={filteredState}
           onEditCard={(c, colId) => setEditingCard({ card: c, columnId: colId })}
           onNewCardForDate={(date) => {
             const card: KanbanCard = {
