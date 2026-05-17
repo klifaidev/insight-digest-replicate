@@ -50,7 +50,7 @@ import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 import { toast } from "sonner";
 import {
   ArrowRight, BookOpen, Bookmark, ChevronLeft, ChevronRight, Copy, Download, FileText, Filter as FilterIcon,
-  GitBranch, GripVertical, Layers, LayoutTemplate, Plus, RotateCcw, Save, Sparkles, StickyNote, Target, Trash2, X,
+  GitBranch, GripVertical, Layers, LayoutTemplate, Plus, RotateCcw, Save, Sparkles, StickyNote, Target, Trash2, Users2, X,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -76,6 +76,7 @@ import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor
 import { TemplateGallery } from "@/components/pricing/custom/TemplateGallery";
 import type { SlideTemplate } from "@/lib/slideTemplates";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useCollaboration } from "@/hooks/use-collaboration";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
@@ -1204,6 +1205,48 @@ export default function SlidesBeta() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
+  // ====== Colaboração em tempo real ======
+  const [collabOpen, setCollabOpen] = useState(false);
+  const [collabName, setCollabName] = useState<string>(() =>
+    typeof window === "undefined" ? "" : localStorage.getItem("collab-username") ?? "",
+  );
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const setCollabBroadcast = useSlidesFlow((s) => s.setCollabBroadcast);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const room = params.get("room");
+    const name = params.get("name");
+    if (room) setRoomId(room);
+    if (name) setCollabName(decodeURIComponent(name));
+  }, []);
+
+  const { collaborators, isConnected, broadcast, userId: collabUserId } = useCollaboration(
+    roomId,
+    collabName,
+  );
+
+  useEffect(() => {
+    if (roomId) {
+      setCollabBroadcast(broadcast, collabUserId);
+    } else {
+      setCollabBroadcast(null, null);
+    }
+    return () => setCollabBroadcast(null, null);
+  }, [roomId, broadcast, collabUserId, setCollabBroadcast]);
+
+  const startCollab = () => {
+    const name = collabName.trim() || "Convidado";
+    if (typeof window !== "undefined") {
+      localStorage.setItem("collab-username", name);
+    }
+    setCollabName(name);
+    const newRoom = Math.random().toString(36).slice(2, 10);
+    setRoomId(newRoom);
+    setCollabOpen(false);
+  };
+
   const applyTemplate = (tpl: SlideTemplate) => {
     const built = tpl.build({ months, budgetMonths });
     if (built.length === 0) {
@@ -1375,6 +1418,18 @@ export default function SlidesBeta() {
                   Incompleto
                 </Badge>
               )}
+              {roomId && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
+                  <span className="relative inline-flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                  </span>
+                  Ao vivo
+                  {isConnected && collaborators.length > 0 && (
+                    <span className="text-muted-foreground">· {collaborators.length}</span>
+                  )}
+                </span>
+              )}
             </div>
             <TooltipProvider delayDuration={200}>
               <div className="flex items-center gap-1.5">
@@ -1392,6 +1447,21 @@ export default function SlidesBeta() {
                   <TooltipContent>Galeria de templates</TooltipContent>
                 </Tooltip>
                 <SavePresetDialog />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline" size="sm" className="h-8 gap-1.5"
+                      onClick={() => setCollabOpen(true)}
+                      aria-label="Iniciar colaboração"
+                    >
+                      <Users2 className="h-3.5 w-3.5" />
+                      Colaborar
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {roomId ? `Sala ativa: ${roomId}` : "Compartilhar sessão em tempo real"}
+                  </TooltipContent>
+                </Tooltip>
                 {items.length > 0 && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1552,6 +1622,54 @@ export default function SlidesBeta() {
         onSelect={applyTemplate}
       />
       <FullscreenCustomEditor open={fullscreenOpen} onOpenChange={setFullscreenOpen} />
+
+      <Dialog open={collabOpen} onOpenChange={setCollabOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users2 className="h-4 w-4 text-primary" />
+              Iniciar colaboração
+            </DialogTitle>
+            <DialogDescription>
+              Compartilhe o link da sala — alterações no deck aparecem em tempo real para todos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="collab-name" className="text-xs">Seu nome</Label>
+            <Input
+              id="collab-name"
+              value={collabName}
+              onChange={(e) => setCollabName(e.target.value)}
+              placeholder="Ex.: Alice"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") startCollab();
+              }}
+              autoFocus
+            />
+            {roomId && (
+              <p className="pt-2 text-xs text-muted-foreground">
+                Sala ativa: <span className="font-mono text-foreground">{roomId}</span>
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            {roomId && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setRoomId(null);
+                  setCollabOpen(false);
+                }}
+              >
+                Encerrar sala
+              </Button>
+            )}
+            <Button onClick={startCollab}>
+              {roomId ? "Nova sala" : "Iniciar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
