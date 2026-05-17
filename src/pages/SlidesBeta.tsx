@@ -1689,7 +1689,14 @@ export default function SlidesBeta() {
         ctx={{ months, budgetMonths }}
         onSelect={applyTemplate}
       />
-      <FullscreenCustomEditor open={fullscreenOpen} onOpenChange={setFullscreenOpen} />
+      <FullscreenCustomEditor
+        open={fullscreenOpen}
+        onOpenChange={setFullscreenOpen}
+        collaborators={collaborators}
+        isConnected={isConnected}
+        updateCursor={updateCursor}
+        updateSlideId={updateSlideId}
+      />
 
       <Dialog open={collabOpen} onOpenChange={setCollabOpen}>
         <DialogContent className="sm:max-w-md">
