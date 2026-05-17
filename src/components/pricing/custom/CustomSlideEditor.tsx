@@ -639,6 +639,11 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                   setSelection([id]);
                 }
               }}
+              onMouseMove={(e) => {
+                if (!onCursorMove) return;
+                const pos = clientToCanvas(canvasRef.current, e.clientX, e.clientY, scaleRef.current);
+                if (pos) onCursorMove(pos.x, pos.y);
+              }}
             >
               {/* Snap-to-grid background — dot pattern, behind blocks. */}
               {prefs.gridEnabled && (
