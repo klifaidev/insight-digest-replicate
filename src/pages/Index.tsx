@@ -32,7 +32,11 @@ import {
   Presentation,
   Lock,
   PlayCircle,
+  Plus,
 } from "lucide-react";
+import { useState } from "react";
+import { QuickActivityDialog, type QuickActivityPrefill } from "@/components/atividades/QuickActivityDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
