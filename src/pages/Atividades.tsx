@@ -1061,6 +1061,7 @@ function CardDialog({
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [recurrence, setRecurrence] = useState<Recurrence | "none">("none");
   const [colId, setColId] = useState(columnId);
 
   useEffect(() => {
@@ -1073,6 +1074,7 @@ function CardDialog({
     setTags(initial?.tags ?? []);
     setTagDraft("");
     setChecklist(initial?.checklist ?? []);
+    setRecurrence(initial?.recurrence ?? "none");
     setColId(columnId);
   }, [open, initial, columnId]);
 
@@ -1097,6 +1099,7 @@ function CardDialog({
       priority: priority === "none" ? undefined : priority,
       tags: tags.length ? tags : undefined,
       checklist: checklist.length ? checklist : undefined,
+      recurrence: recurrence === "none" ? null : recurrence,
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     };
     onSave(card, colId);
