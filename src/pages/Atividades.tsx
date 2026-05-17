@@ -980,6 +980,29 @@ function CardItem({
   );
 }
 
+function ChecklistProgressBar({ items }: { items: ChecklistItem[] }) {
+  const total = items.length;
+  const done = items.filter((i) => i.done).length;
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  const complete = total > 0 && done === total;
+  return (
+    <>
+      <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-muted/40">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all",
+            complete ? "bg-success" : "bg-primary",
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+        {done}/{total}
+      </span>
+    </>
+  );
+}
+
 function Avatar({ name, size = 22 }: { name: string; size?: number }) {
   const hue = avatarHue(name);
   return (
