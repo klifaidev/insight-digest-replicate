@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { SlideItem, SlideKind } from "@/lib/slidesFlow";
 import { defaultItem, newId } from "@/lib/slidesFlow";
+import type { CollabEvent } from "@/lib/collaboration";
 
 export interface SlidesPreset {
   id: string;
@@ -21,6 +22,11 @@ interface SlidesFlowState {
   selectedId: string | null;
   transition: SlideTransition;
 
+  // Colaboração — função opcional injetada pelo hook useCollaboration.
+  _collabBroadcast: ((e: CollabEvent) => void) | null;
+  _collabUserId: string | null;
+  setCollabBroadcast: (fn: ((e: CollabEvent) => void) | null, userId?: string | null) => void;
+
   // Itens
   addItem: (kind: SlideKind) => void;
   removeItem: (id: string) => void;
@@ -31,6 +37,10 @@ interface SlidesFlowState {
   duplicateDeck: () => void;
   select: (id: string | null) => void;
   setTransition: (t: SlideTransition) => void;
+
+  // Mutações vindas de colaboradores (não re-broadcast)
+  addItemFromCollab: (item: SlideItem) => void;
+  updateItemFromCollab: (payload: { id: string; patch: Partial<SlideItem> }) => void;
 
   // Presets
   savePreset: (name: string, description?: string) => SlidesPreset;
