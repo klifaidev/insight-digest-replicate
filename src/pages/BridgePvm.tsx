@@ -554,6 +554,8 @@ function buildPvmReading(result: PVMResult): React.ReactNode[] {
 
 function PvmReadingCard({ result }: { result: PVMResult }) {
   const sentences = useMemo(() => buildPvmReading(result), [result]);
+  const [prefill, setPrefill] = useState<QuickActivityPrefill | null>(null);
+
   return (
     <GlassCard>
       <div className="mb-4 flex items-center gap-2">
@@ -567,15 +569,56 @@ function PvmReadingCard({ result }: { result: PVMResult }) {
       </div>
       <ol className="space-y-2.5">
         {sentences.map((s, i) => (
-          <li key={i} className="flex items-start gap-3 rounded-xl border border-border/40 bg-secondary/20 p-3 text-sm leading-relaxed text-foreground/90">
-            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
-              {i + 1}
-            </span>
-            <span>{s}</span>
-          </li>
+          <PvmReadingItem
+            key={i}
+            index={i}
+            sentence={s}
+            onCreateActivity={(text) =>
+              setPrefill({ title: text.slice(0, 80), tags: ["bridge-pvm"] })
+            }
+          />
         ))}
       </ol>
+      <QuickActivityDialog
+        open={!!prefill}
+        onOpenChange={(o) => !o && setPrefill(null)}
+        prefill={prefill ?? undefined}
+      />
     </GlassCard>
+  );
+}
+
+function PvmReadingItem({
+  index,
+  sentence,
+  onCreateActivity,
+}: {
+  index: number;
+  sentence: React.ReactNode;
+  onCreateActivity: (text: string) => void;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  return (
+    <li className="group flex items-start gap-3 rounded-xl border border-border/40 bg-secondary/20 p-3 text-sm leading-relaxed text-foreground/90">
+      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+        {index + 1}
+      </span>
+      <span ref={ref} className="flex-1">
+        {sentence}
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          const text = ref.current?.textContent?.trim() ?? "";
+          if (text) onCreateActivity(text);
+        }}
+        className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/70 opacity-0 transition-all hover:bg-muted/60 hover:text-foreground group-hover:opacity-100"
+        title="Criar atividade a partir desta leitura"
+      >
+        <Plus className="h-3 w-3" />
+        Atividade
+      </button>
+    </li>
   );
 }
 
