@@ -134,6 +134,136 @@ export default function Atividades() {
     return last ? last.cardIds.length : 0;
   }, [state.columns]);
 
+  /* ---------- filters ---------- */
+  const [search, setSearch] = useState("");
+  const [filterAssignees, setFilterAssignees] = useState<string[]>([]);
+  const [filterPriority, setFilterPriority] = useState<"all" | "high" | "med" | "low">("all");
+  const [filterTag, setFilterTag] = useState<string>("all");
+  const [showMetrics, setShowMetrics] = useState(false);
+
+  const assigneeOptions = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(state.cards).forEach((c) => {
+      if (c.assignee && c.assignee.trim()) set.add(c.assignee.trim());
+    });
+    return Array.from(set).sort().map((a) => ({ value: a, label: a }));
+  }, [state.cards]);
+
+  const tagOptions = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(state.cards).forEach((c) => c.tags?.forEach((t) => t && set.add(t)));
+    return Array.from(set).sort();
+  }, [state.cards]);
+
+  const matchCard = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const asgSet = new Set(filterAssignees);
+    return (c: KanbanCard) => {
+      if (q) {
+        const hay = `${c.title ?? ""} ${c.description ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (asgSet.size > 0 && (!c.assignee || !asgSet.has(c.assignee))) return false;
+      if (filterPriority !== "all" && c.priority !== filterPriority) return false;
+      if (filterTag !== "all" && !(c.tags ?? []).includes(filterTag)) return false;
+      return true;
+    };
+  }, [search, filterAssignees, filterPriority, filterTag]);
+
+  const hasActiveFilters =
+    !!search.trim() ||
+    filterAssignees.length > 0 ||
+    filterPriority !== "all" ||
+    filterTag !== "all";
+
+  function clearFilters() {
+    setSearch("");
+    setFilterAssignees([]);
+    setFilterPriority("all");
+    setFilterTag("all");
+  }
+
+  const filteredCount = useMemo(
+    () => Object.values(state.cards).filter(matchCard).length,
+    [state.cards, matchCard],
+  );
+
+  const dimmedIds = useMemo(() => {
+    if (!hasActiveFilters) return undefined;
+    const set = new Set<string>();
+    Object.values(state.cards).forEach((c) => {
+      if (!matchCard(c)) set.add(c.id);
+    });
+    return set;
+  }, [state.cards, matchCard, hasActiveFilters]);
+
+  // Filtered state used by list & calendar views (hides non-matching cards entirely)
+  const filteredState = useMemo<KanbanState>(() => {
+    if (!hasActiveFilters) return state;
+    const cards: Record<string, KanbanCard> = {};
+    Object.values(state.cards).forEach((c) => {
+      if (matchCard(c)) cards[c.id] = c;
+    });
+    return {
+      cards,
+      columns: state.columns.map((col) => ({
+        ...col,
+        cardIds: col.cardIds.filter((id) => cards[id]),
+      })),
+    };
+  }, [state, hasActiveFilters, matchCard]);
+
+  /* ---------- metrics ---------- */
+  const metrics = useMemo(() => {
+    const all = Object.values(state.cards);
+    const total = all.length;
+    const lastCol = state.columns[state.columns.length - 1];
+    const lastId = lastCol?.id;
+
+    // "Em andamento": coluna cujo título contém "andamento" OU penúltima coluna como fallback
+    const inProgressCol =
+      state.columns.find((c) => c.title.toLowerCase().includes("andamento")) ??
+      state.columns[state.columns.length - 2];
+    const inProgress = inProgressCol ? inProgressCol.cardIds.length : 0;
+
+    const todayIso = format(new Date(), "yyyy-MM-dd");
+    let overdue = 0;
+    state.columns.forEach((col) => {
+      if (col.id === lastId) return;
+      col.cardIds.forEach((id) => {
+        const c = state.cards[id];
+        if (c?.dueDate && c.dueDate < todayIso) overdue += 1;
+      });
+    });
+
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    let doneWeek = 0;
+    if (lastCol) {
+      lastCol.cardIds.forEach((id) => {
+        const c = state.cards[id];
+        if (!c) return;
+        const refStr = c.dueDate ?? c.createdAt;
+        if (!refStr) return;
+        const t = new Date(refStr).getTime();
+        if (!isNaN(t) && t >= weekAgo) doneWeek += 1;
+      });
+    }
+
+    // Distribuição por responsável (top 8)
+    const byAsg: Record<string, number> = {};
+    all.forEach((c) => {
+      const k = c.assignee?.trim() || "Sem responsável";
+      byAsg[k] = (byAsg[k] ?? 0) + 1;
+    });
+    const byAssignee = Object.entries(byAsg)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    return { total, inProgress, overdue, doneWeek, byAssignee };
+  }, [state]);
+
+
   /* ---------- column ops ---------- */
   function addColumn() {
     setState((s) => ({
