@@ -163,12 +163,19 @@ export function useCollaboration(
     }
   }, []);
 
+  const broadcastComment = useCallback((c: SlideComment) => {
+    const ch = channelRef.current;
+    if (!ch) return;
+    ch.send({ type: "broadcast", event: "comment", payload: c });
+  }, []);
+
   return {
     collaborators,
     isConnected,
     broadcast,
     updateCursor,
     updateSlideId,
+    broadcastComment,
     userId: userIdRef.current,
   };
 }
