@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,6 +21,7 @@ const TYPE_ICON: Record<Notification["type"], { Icon: typeof Bell; tone: string 
 };
 
 export function NotificationsPanel({ children }: Props) {
+  const [open, setOpen] = useState(false);
   const notifications = useNotifications((s) => s.notifications);
   const markRead = useNotifications((s) => s.markRead);
   const markAllRead = useNotifications((s) => s.markAllRead);
@@ -27,7 +29,7 @@ export function NotificationsPanel({ children }: Props) {
   const unread = notifications.filter((n) => !n.read).length;
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent align="end" className="w-[360px] p-0">
         <header className="flex items-center justify-between border-b border-border/60 px-4 py-3">
@@ -56,16 +58,10 @@ export function NotificationsPanel({ children }: Props) {
                   <li key={n.id}>
                     <button
                       type="button"
-                      onClick={(e) => {
+                      onClick={() => {
                         markRead(n.id);
-                        if (n.href) {
-                          navigate(n.href);
-                          // fecha o popover
-                          (e.currentTarget.closest("[data-radix-popper-content-wrapper]") as HTMLElement | null)
-                            ?.querySelector<HTMLElement>("[data-state]")
-                            ?.focus();
-                          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-                        }
+                        if (n.href) navigate(n.href);
+                        setOpen(false);
                       }}
                       className={cn(
                         "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40",
