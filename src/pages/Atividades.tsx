@@ -943,7 +943,7 @@ function CardItem({
       )}
 
       {/* Footer */}
-      {(card.dueDate || card.assignee || card.priority) && (
+      {(card.dueDate || card.assignee || card.priority || card.recurrence) && (
         <div className="mt-2.5 flex items-center justify-between gap-2 pl-5">
           <div className="flex items-center gap-1.5">
             {card.priority && (
