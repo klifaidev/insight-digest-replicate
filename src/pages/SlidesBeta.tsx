@@ -1290,7 +1290,7 @@ export default function SlidesBeta() {
     if (name) setCollabName(decodeURIComponent(name));
   }, []);
 
-  const { collaborators, isConnected, broadcast, userId: collabUserId } = useCollaboration(
+  const { collaborators, isConnected, broadcast, updateCursor, updateSlideId, userId: collabUserId } = useCollaboration(
     roomId,
     collabName,
   );
