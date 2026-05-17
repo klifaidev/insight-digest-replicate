@@ -754,6 +754,143 @@ function StripThumbnail({
           +{editors.length - 1}
         </div>
       )}
+
+      {/* Botão de comentários (hover + sempre visível se houver não-resolvidos) */}
+      <Popover open={commentsOpen} onOpenChange={setCommentsOpen} modal={false}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setCommentsOpen((v) => !v); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className={cn(
+              "absolute left-1 top-1 z-10 flex h-5 items-center gap-0.5 rounded-md bg-card/90 px-1 text-muted-foreground shadow-sm transition-opacity hover:text-foreground",
+              unresolvedCount > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            )}
+            aria-label="Comentários do slide"
+          >
+            <MessageSquare className="h-3 w-3" />
+            {unresolvedCount > 0 && (
+              <span className="rounded-full bg-primary/90 px-1 text-[9px] font-semibold text-primary-foreground">
+                {unresolvedCount}
+              </span>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="right" align="start" className="w-80 p-0"
+          onInteractOutside={(e) => e.preventDefault()}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <CommentsThread
+            slideId={item.id}
+            slideLabel={item.label ?? meta.title}
+            currentUser={currentUser}
+            onAddComment={onAddComment}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// CommentsThread — lista + input de novo comentário para um slide.
+// ----------------------------------------------------------------------------
+function CommentsThread({
+  slideId, slideLabel, currentUser, onAddComment,
+}: {
+  slideId: string;
+  slideLabel: string;
+  currentUser: { name: string; color: string };
+  onAddComment?: (c: SlideComment) => void;
+}) {
+  const [, force] = useState(0);
+  useEffect(() => subscribeComments(() => force((n) => n + 1)), []);
+  const comments = getComments(slideId);
+  const [text, setText] = useState("");
+
+  const send = () => {
+    const t = text.trim();
+    if (!t) return;
+    const c: SlideComment = {
+      id: typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `c_${Math.random().toString(36).slice(2, 10)}`,
+      slideId,
+      author: currentUser.name || "Convidado",
+      authorColor: currentUser.color,
+      text: t,
+      createdAt: Date.now(),
+      resolved: false,
+    };
+    addComment(c);
+    onAddComment?.(c);
+    setText("");
+  };
+
+  return (
+    <div className="flex max-h-[60vh] flex-col">
+      <div className="border-b border-border/40 px-3 py-2 text-xs font-semibold">
+        Comentários — <span className="text-muted-foreground">{slideLabel}</span>
+      </div>
+      <ScrollArea className="max-h-72 flex-1">
+        <div className="space-y-3 p-3">
+          {comments.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">Sem comentários ainda.</p>
+          ) : comments.map((c) => (
+            <div key={c.id} className="flex gap-2">
+              <div
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-medium text-white"
+                style={{ background: c.authorColor }}
+              >
+                {initials(c.author)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <span className="font-semibold">{c.author}</span>
+                  <span className="text-muted-foreground">
+                    · {formatDistanceToNow(c.createdAt, { addSuffix: true, locale: ptBR })}
+                  </span>
+                  {!c.resolved && (
+                    <button
+                      type="button"
+                      onClick={() => resolveComment(slideId, c.id)}
+                      className="ml-auto inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                      title="Marcar como resolvido"
+                    >
+                      <CheckCheck className="h-3 w-3" /> Resolver
+                    </button>
+                  )}
+                </div>
+                <p className={cn(
+                  "mt-0.5 break-words text-xs",
+                  c.resolved && "text-muted-foreground line-through",
+                )}>
+                  {c.text}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+      <div className="flex items-end gap-1.5 border-t border-border/40 p-2">
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Escreva um comentário…"
+          rows={2}
+          className="min-h-[40px] resize-none text-xs"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault(); send();
+            }
+          }}
+        />
+        <Button size="sm" className="h-9 gap-1" onClick={send} disabled={!text.trim()}>
+          <Send className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 }
