@@ -308,7 +308,12 @@ export default function Index() {
               ) : (
                 <div className="space-y-2">
                   {alerts.map((a) => (
-                    <AlertCard key={a.id} alert={a} onClick={() => navigate(a.page)} />
+                    <AlertCard
+                      key={a.id}
+                      alert={a}
+                      onClick={() => navigate(a.page)}
+                      onCreateActivity={() => handleAlertCreateActivity(a)}
+                    />
                   ))}
                 </div>
               )}
