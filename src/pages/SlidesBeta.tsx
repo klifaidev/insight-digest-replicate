@@ -79,6 +79,14 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { useCollaboration } from "@/hooks/use-collaboration";
 import type { CollabUser } from "@/lib/collaboration";
 import { initials } from "@/lib/kanban";
+import { Switch } from "@/components/ui/switch";
+import {
+  addComment, resolveComment, getComments, getUnresolvedCount, subscribe as subscribeComments,
+  type SlideComment,
+} from "@/lib/slideComments";
+import { readLog, clearLog, subscribeLog, type ChangeLogEntry } from "@/lib/slideChangeLog";
+import { formatDistanceToNow, format as formatDate } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
