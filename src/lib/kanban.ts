@@ -7,6 +7,8 @@ export interface ChecklistItem {
   done: boolean;
 }
 
+export type Recurrence = "weekly" | "biweekly" | "monthly";
+
 export interface KanbanCard {
   id: string;
   title: string;
@@ -16,8 +18,21 @@ export interface KanbanCard {
   priority?: Priority;
   tags?: string[];
   checklist?: ChecklistItem[];
+  recurrence?: Recurrence | null;
   createdAt: string;
 }
+
+export const RECURRENCE_LABEL: Record<Recurrence, string> = {
+  weekly: "Semanalmente",
+  biweekly: "A cada 2 semanas",
+  monthly: "Mensalmente",
+};
+
+const RECURRENCE_DAYS: Record<Recurrence, number> = {
+  weekly: 7,
+  biweekly: 14,
+  monthly: 30,
+};
 
 export interface KanbanColumn {
   id: string;
