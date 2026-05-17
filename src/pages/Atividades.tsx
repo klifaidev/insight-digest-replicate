@@ -359,6 +359,21 @@ export default function Atividades() {
               </span>
             </div>
             <ViewToggle mode={viewMode} onChange={setViewMode} />
+            <button
+              type="button"
+              onClick={() => setShowMetrics((s) => !s)}
+              aria-pressed={showMetrics}
+              title="Métricas"
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+                showMetrics
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+              )}
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              Métricas
+            </button>
             <Button
               size="sm"
               onClick={() => setEditingCard({ columnId: state.columns[0]?.id ?? "" })}
@@ -370,7 +385,149 @@ export default function Atividades() {
             </Button>
           </div>
         </div>
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border/30 px-8 py-3">
+          <div className="relative min-w-[220px] flex-1 max-w-xs">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar atividades..."
+              className="h-9 pl-8 text-xs"
+            />
+          </div>
+
+          <div className="min-w-[180px]">
+            <MultiSelectFilter
+              options={assigneeOptions}
+              selected={filterAssignees}
+              onChange={setFilterAssignees}
+              placeholder="Responsável"
+            />
+          </div>
+
+          <ToggleGroup
+            type="single"
+            value={filterPriority}
+            onValueChange={(v) => v && setFilterPriority(v as typeof filterPriority)}
+            className="h-9 rounded-md border border-border/50 bg-secondary/40 p-0.5"
+          >
+            <ToggleGroupItem value="all" className="h-8 rounded px-2.5 text-[11px]">
+              Todas
+            </ToggleGroupItem>
+            <ToggleGroupItem value="high" className="h-8 rounded px-2.5 text-[11px] data-[state=on]:bg-destructive/15 data-[state=on]:text-destructive">
+              Alta
+            </ToggleGroupItem>
+            <ToggleGroupItem value="med" className="h-8 rounded px-2.5 text-[11px] data-[state=on]:bg-warning/15 data-[state=on]:text-warning">
+              Média
+            </ToggleGroupItem>
+            <ToggleGroupItem value="low" className="h-8 rounded px-2.5 text-[11px]">
+              Baixa
+            </ToggleGroupItem>
+          </ToggleGroup>
+
+          <Select value={filterTag} onValueChange={setFilterTag}>
+            <SelectTrigger className="h-9 w-[160px] border-border/50 bg-secondary/40 text-xs">
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as tags</SelectItem>
+              {tagOptions.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilters && (
+            <>
+              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                {filteredCount} de {totalCards} atividades
+              </span>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/15"
+              >
+                <X className="h-3 w-3" />
+                Limpar filtros
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Metrics panel */}
+        {showMetrics && (
+          <div className="border-t border-border/30 bg-muted/10 px-8 py-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <KpiCard
+                label="Total de atividades"
+                value={String(metrics.total)}
+                accent="blue"
+              />
+              <KpiCard
+                label="Em andamento"
+                value={String(metrics.inProgress)}
+                accent="violet"
+              />
+              <KpiCard
+                label="Vencidas"
+                value={String(metrics.overdue)}
+                accent="red"
+              />
+              <KpiCard
+                label="Concluídas (7 dias)"
+                value={String(metrics.doneWeek)}
+                accent="green"
+              />
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-border/40 bg-card/40 p-4 backdrop-blur-xl">
+              <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Distribuição por responsável
+              </div>
+              {metrics.byAssignee.length === 0 ? (
+                <p className="text-[12px] italic text-muted-foreground">Sem dados.</p>
+              ) : (
+                <div style={{ width: "100%", height: Math.max(120, metrics.byAssignee.length * 28) }}>
+                  <ResponsiveContainer>
+                    <BarChart
+                      layout="vertical"
+                      data={metrics.byAssignee}
+                      margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
+                    >
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={140}
+                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <RTooltip
+                        cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                        contentStyle={{
+                          background: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                      />
+                      <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={16}>
+                        {metrics.byAssignee.map((_, i) => (
+                          <Cell key={i} fill="hsl(var(--primary))" />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
 
       {/* Views */}
       {viewMode === "kanban" && (
