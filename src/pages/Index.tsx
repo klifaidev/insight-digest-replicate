@@ -102,6 +102,17 @@ export default function Index() {
 
   const empty = rows.length === 0;
 
+  const [quickPrefill, setQuickPrefill] = useState<QuickActivityPrefill | null>(null);
+
+  function handleAlertCreateActivity(alert: Alert) {
+    setQuickPrefill({
+      title: alert.message,
+      tags: ["alerta-pricing", alert.severity],
+      priority:
+        alert.severity === "high" ? "high" : alert.severity === "medium" ? "med" : undefined,
+    });
+  }
+
   return (
     <>
       <Topbar
