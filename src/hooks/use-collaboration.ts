@@ -23,6 +23,7 @@ interface UseCollabReturn {
   broadcast: (e: CollabEvent) => void;
   updateCursor: (x: number, y: number) => void;
   updateSlideId: (slideId: string | null) => void;
+  broadcastComment: (c: SlideComment) => void;
   userId: string | null;
 }
 
