@@ -33,8 +33,19 @@ import {
   Lock,
   PlayCircle,
   Plus,
+  Settings2,
+  GripVertical,
+  Check as CheckIcon,
 } from "lucide-react";
 import { QuickActivityDialog, type QuickActivityPrefill } from "@/components/atividades/QuickActivityDialog";
+import { ActivitySummaryWidget } from "@/components/pricing/ActivitySummaryWidget";
+import { TrendChartWidget } from "@/components/pricing/TrendChartWidget";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useHomePrefs, WIDGET_LABEL, type HomeWidget, type PinnedKpi } from "@/store/homePrefs";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
