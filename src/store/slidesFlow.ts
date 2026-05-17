@@ -58,19 +58,56 @@ export const useSlidesFlow = create<SlidesFlowState>()(
       selectedId: null,
       transition: "fade",
 
-      setTransition: (t) => set({ transition: t }),
+      _collabBroadcast: null,
+      _collabUserId: null,
+      setCollabBroadcast: (fn, userId = null) =>
+        set({ _collabBroadcast: fn, _collabUserId: userId }),
+
+      setTransition: (t) =>
+        set((s) => {
+          if (s._collabBroadcast) {
+            s._collabBroadcast({
+              type: "update_transition",
+              payload: { transition: t },
+              userId: s._collabUserId ?? "local",
+              ts: Date.now(),
+            });
+          }
+          return { transition: t };
+        }),
 
       addItem: (kind) =>
         set((s) => {
           const item = defaultItem(kind);
+          if (s._collabBroadcast) {
+            s._collabBroadcast({
+              type: "add_item",
+              payload: item,
+              userId: s._collabUserId ?? "local",
+              ts: Date.now(),
+            });
+          }
           return { items: [...s.items, item], selectedId: item.id };
         }),
 
+      addItemFromCollab: (item) =>
+        set((s) => ({ items: [...s.items, item] })),
+
       removeItem: (id) =>
-        set((s) => ({
-          items: s.items.filter((i) => i.id !== id),
-          selectedId: s.selectedId === id ? null : s.selectedId,
-        })),
+        set((s) => {
+          if (s._collabBroadcast) {
+            s._collabBroadcast({
+              type: "remove_item",
+              payload: { id },
+              userId: s._collabUserId ?? "local",
+              ts: Date.now(),
+            });
+          }
+          return {
+            items: s.items.filter((i) => i.id !== id),
+            selectedId: s.selectedId === id ? null : s.selectedId,
+          };
+        }),
 
       duplicateItem: (id) =>
         set((s) => {
@@ -82,15 +119,48 @@ export const useSlidesFlow = create<SlidesFlowState>()(
           if (clone.label) clone.label = `${clone.label} (cópia)`;
           const items = [...s.items];
           items.splice(idx + 1, 0, clone);
+          if (s._collabBroadcast) {
+            s._collabBroadcast({
+              type: "add_item",
+              payload: clone,
+              userId: s._collabUserId ?? "local",
+              ts: Date.now(),
+            });
+          }
           return { items, selectedId: clone.id };
         }),
 
       updateItem: (id, patch) =>
-        set((s) => ({
-          items: s.items.map((i) => {
+        set((s) => {
+          const next = s.items.map((i) => {
             if (i.id !== id) return i;
             return typeof patch === "function" ? patch(i) : ({ ...i, ...patch } as SlideItem);
-          }),
+          });
+          if (s._collabBroadcast && typeof patch !== "function") {
+            s._collabBroadcast({
+              type: "update_item",
+              payload: { id, patch },
+              userId: s._collabUserId ?? "local",
+              ts: Date.now(),
+            });
+          } else if (s._collabBroadcast) {
+            // Para mutações funcionais transmitimos o item final completo.
+            const updated = next.find((i) => i.id === id);
+            if (updated) {
+              s._collabBroadcast({
+                type: "update_item",
+                payload: { id, patch: updated },
+                userId: s._collabUserId ?? "local",
+                ts: Date.now(),
+              });
+            }
+          }
+          return { items: next };
+        }),
+
+      updateItemFromCollab: ({ id, patch }) =>
+        set((s) => ({
+          items: s.items.map((i) => (i.id === id ? ({ ...i, ...patch } as SlideItem) : i)),
         })),
 
       reorder: (sourceId, targetId) =>
@@ -101,6 +171,14 @@ export const useSlidesFlow = create<SlidesFlowState>()(
           const items = [...s.items];
           const [moved] = items.splice(from, 1);
           items.splice(to, 0, moved);
+          if (s._collabBroadcast) {
+            s._collabBroadcast({
+              type: "reorder",
+              payload: { activeId: sourceId, overId: targetId },
+              userId: s._collabUserId ?? "local",
+              ts: Date.now(),
+            });
+          }
           return { items };
         }),
 
