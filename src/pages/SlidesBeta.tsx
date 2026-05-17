@@ -741,10 +741,14 @@ function StripThumbnail({
 }
 
 function FullscreenCustomEditor({
-  open, onOpenChange,
+  open, onOpenChange, collaborators, isConnected, updateCursor, updateSlideId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  collaborators?: CollabUser[];
+  isConnected?: boolean;
+  updateCursor?: (x: number, y: number) => void;
+  updateSlideId?: (slideId: string | null) => void;
 }) {
   const items = useSlidesFlow((s) => s.items);
   const selectedId = useSlidesFlow((s) => s.selectedId);
