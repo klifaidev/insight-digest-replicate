@@ -89,6 +89,23 @@ export default function Atividades() {
   const [editingCard, setEditingCard] = useState<{ card?: KanbanCard; columnId: string } | null>(null);
   const [dragCard, setDragCard] = useState<{ cardId: string; fromCol: string } | null>(null);
   const [dragOver, setDragOver] = useState<{ colId: string; index: number } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const v = localStorage.getItem(VIEW_STORAGE_KEY);
+      if (v === "kanban" || v === "list" || v === "calendar") return v;
+    } catch {
+      /* noop */
+    }
+    return "kanban";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
+    } catch {
+      /* noop */
+    }
+  }, [viewMode]);
 
   // persist
   useEffect(() => {
