@@ -1880,6 +1880,8 @@ export default function SlidesBeta() {
         isConnected={isConnected}
         updateCursor={updateCursor}
         updateSlideId={updateSlideId}
+        currentUser={currentUser}
+        onAddComment={handleAddComment}
       />
 
       <Dialog open={collabOpen} onOpenChange={setCollabOpen}>
