@@ -212,6 +212,54 @@ export default function AppShell() {
     return () => window.removeEventListener("keydown", handler);
   }, [setCommandOpen]);
 
+  // Scan diário do Kanban → notificações de atividades a vencer / atrasadas
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const todayIso = new Date().toISOString().slice(0, 10);
+    try {
+      if (localStorage.getItem("notif-checked-date") === todayIso) return;
+      const kanban = loadKanban();
+      const lastColId = kanban.columns[kanban.columns.length - 1]?.id;
+      const add = useNotifications.getState().addNotification;
+      const existing = new Set(
+        useNotifications
+          .getState()
+          .notifications.filter((n) => n.type === "activity_due" || n.type === "activity_overdue")
+          .map((n) => `${n.type}:${n.body}`),
+      );
+      for (const card of Object.values(kanban.cards)) {
+        if (!card.dueDate) continue;
+        const inLastCol = lastColId
+          ? kanban.columns.find((c) => c.id === lastColId)?.cardIds.includes(card.id)
+          : false;
+        if (card.dueDate === todayIso) {
+          const key = `activity_due:${card.title}`;
+          if (existing.has(key)) continue;
+          add({
+            type: "activity_due",
+            title: "Atividade vence hoje",
+            body: card.title,
+            href: "/atividades",
+          });
+          existing.add(key);
+        } else if (card.dueDate < todayIso && !inLastCol) {
+          const key = `activity_overdue:${card.title}`;
+          if (existing.has(key)) continue;
+          add({
+            type: "activity_overdue",
+            title: "Atividade em atraso",
+            body: card.title,
+            href: "/atividades",
+          });
+          existing.add(key);
+        }
+      }
+      localStorage.setItem("notif-checked-date", todayIso);
+    } catch {
+      /* noop */
+    }
+  }, []);
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <Sidebar />
