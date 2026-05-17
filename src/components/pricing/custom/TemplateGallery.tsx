@@ -11,6 +11,7 @@ import {
   SLIDE_TEMPLATES, TEMPLATE_CATEGORIES,
   type TemplateCtx, type TemplateCategory, type SlideTemplate,
 } from "@/lib/slideTemplates";
+import { SlideThumbnailSVG, pickRepresentativeKind } from "@/components/pricing/SlideThumbnailSVG";
 
 interface Props {
   open: boolean;
@@ -76,13 +77,21 @@ export function TemplateGallery({ open, onOpenChange, ctx, onSelect }: Props) {
 }
 
 function TemplateCard({ template, onSelect }: { template: SlideTemplate; onSelect: () => void }) {
-  const Thumb = template.thumbnail;
+  // Deriva tipo representativo a partir dos slides gerados pelo template.
+  const repKind = (() => {
+    try {
+      const items = template.build({ months: [], budgetMonths: [] });
+      return pickRepresentativeKind(items.map((it) => it.kind));
+    } catch {
+      return "custom" as const;
+    }
+  })();
   return (
     <div
       className="group relative rounded-xl border border-border/60 bg-card p-3 transition-all hover:border-primary hover:shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.5)]"
     >
-      <div className="aspect-video rounded-lg overflow-hidden border border-border/40 bg-muted/30">
-        <Thumb className="w-full h-full" />
+      <div className="overflow-hidden rounded-lg border border-border/40 bg-muted/30" style={{ width: "100%", aspectRatio: "16 / 9" }}>
+        <SlideThumbnailSVG kind={repKind} width={280} height={158} className="h-full w-full" />
       </div>
       <div className="mt-3 space-y-1.5">
         <div className="flex items-start justify-between gap-2">
@@ -95,7 +104,7 @@ function TemplateCard({ template, onSelect }: { template: SlideTemplate; onSelec
           {template.description}
         </p>
       </div>
-      <div className="absolute inset-0 flex items-end justify-center p-4 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-card via-card/80 to-transparent rounded-xl">
+      <div className="absolute inset-0 flex items-end justify-center p-4 opacity-0 transition-opacity duration-150 group-hover:opacity-100 bg-gradient-to-t from-card via-card/85 to-card/40 rounded-xl">
         <Button size="sm" onClick={onSelect} className="shadow-md">
           Usar este template
         </Button>
