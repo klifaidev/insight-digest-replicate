@@ -277,112 +277,15 @@ export default function Index() {
               </div>
             )}
 
-            {/* KPIs */}
-            <GlassCard className="grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
-              <Stat
-                label="ROL Total"
-                value={formatBRL(kpis.rol, { compact: true })}
-                accent="text-primary"
-                delta={comparison?.deltaPct.rol}
-                deltaLabel={comparison?.label}
-              />
-              <Stat
-                label={metric === "cm" ? "Contrib. Marginal" : "Margem Bruta"}
-                value={formatBRL(kpis.margem, { compact: true })}
-                sub={formatPct(kpis.margemPct)}
-                accent="text-success"
-                delta={comparison?.deltaPct.margem}
-                deltaLabel={comparison?.label}
-              />
-              <Stat
-                label="Volume"
-                value={formatTon(kpis.volumeKg)}
-                accent="text-warning"
-                delta={comparison?.deltaPct.volumeKg}
-                deltaLabel={comparison?.label}
-              />
-              <Stat
-                label="SKUs ativos"
-                value={formatNum(kpis.skus)}
-                sub={`${months.length} mês(es)`}
-                accent="text-accent"
-                delta={comparison?.deltaPct.skus}
-                deltaLabel={comparison?.label}
-              />
-            </GlassCard>
-
-            {/* Atenção necessária */}
-            <GlassCard
-              className={cn(
-                "border-l-4",
-                alerts.length > 0 ? "border-l-warning" : "border-l-success",
-              )}
-            >
-              <header className="mb-3 flex items-center gap-2">
-                {alerts.length > 0 ? (
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                )}
-                <h3 className="text-sm font-medium">Atenção necessária</h3>
-                {alerts.length > 0 && (
-                  <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
-                    {alerts.length} {alerts.length === 1 ? "alerta" : "alertas"}
-                  </span>
-                )}
-              </header>
-              {alerts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Tudo certo — nenhum ponto de atenção no período atual.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {alerts.map((a) => (
-                    <AlertCard
-                      key={a.id}
-                      alert={a}
-                      onClick={() => navigate(a.page)}
-                      onCreateActivity={() => handleAlertCreateActivity(a)}
-                    />
-                  ))}
-                </div>
-              )}
-              <Link
-                to="/alertas"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              >
-                Ver histórico completo
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </GlassCard>
-
-            {/* Atalhos rápidos */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <ShortcutCard
-                to="/bridge-pvm"
-                icon={TrendingUp}
-                title="Bridge PVM"
-                desc="O que explica a variação de margem entre dois períodos?"
-              />
-              <ShortcutCard
-                to="/abc"
-                icon={Layers}
-                title="Portfólio de SKUs"
-                desc="Quais SKUs sustentam o portfólio e quais drenam margem?"
-              />
-              <ShortcutCard
-                to="/budget"
-                icon={Target}
-                title="Budget"
-                desc="Vou fechar o ano dentro do budget? Onde está o gap?"
-              />
-              <ShortcutCard
-                to="/canais"
-                icon={BarChart3}
-                title="Canais"
-                desc="Quais canais estão crescendo ou perdendo margem?"
-              />
-            </div>
+            <HomeWidgets
+              kpis={kpis}
+              metric={metric}
+              comparison={comparison}
+              months={months}
+              alerts={alerts}
+              onAlertClick={(p) => navigate(p)}
+              onAlertCreateActivity={handleAlertCreateActivity}
+            />
           </>
         )}
       </div>
