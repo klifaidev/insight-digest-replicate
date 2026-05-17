@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { toast } from "sonner";
 import {
   createRoom,
   leaveRoom,
@@ -19,6 +20,7 @@ interface UseCollabReturn {
   isConnected: boolean;
   broadcast: (e: CollabEvent) => void;
   updateCursor: (x: number, y: number) => void;
+  updateSlideId: (slideId: string | null) => void;
   userId: string | null;
 }
 
