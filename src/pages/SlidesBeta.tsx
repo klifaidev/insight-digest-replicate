@@ -897,6 +897,7 @@ function CommentsThread({
 
 function FullscreenCustomEditor({
   open, onOpenChange, collaborators, isConnected, updateCursor, updateSlideId,
+  currentUser, onAddComment,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -904,6 +905,8 @@ function FullscreenCustomEditor({
   isConnected?: boolean;
   updateCursor?: (x: number, y: number) => void;
   updateSlideId?: (slideId: string | null) => void;
+  currentUser: { name: string; color: string };
+  onAddComment?: (c: SlideComment) => void;
 }) {
   const items = useSlidesFlow((s) => s.items);
   const selectedId = useSlidesFlow((s) => s.selectedId);
