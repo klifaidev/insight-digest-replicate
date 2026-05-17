@@ -112,9 +112,6 @@ function generateRecurring(state: KanbanState): KanbanState {
   if (!firstCol || !lastCol || firstCol.id === lastCol.id) return state;
 
   const todayIso = new Date().toISOString().slice(0, 10);
-  const existingTitles = new Set(
-    firstCol.cardIds.map((id) => state.cards[id]?.title).filter(Boolean) as string[],
-  );
 
   const newCards: Record<string, KanbanCard> = { ...state.cards };
   const newIds: string[] = [];
