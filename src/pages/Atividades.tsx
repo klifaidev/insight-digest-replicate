@@ -91,6 +91,7 @@ import {
   ArrowDown,
   Search,
   BarChart3,
+  Repeat2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
