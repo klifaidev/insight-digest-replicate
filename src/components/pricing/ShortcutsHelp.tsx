@@ -15,7 +15,7 @@ const SHORTCUTS: Array<{ keys: string; label: string }> = [
   { keys: "G U", label: "Budget" },
   { keys: "G S", label: "Slides" },
   { keys: "G F", label: "Focar nos filtros" },
-  { keys: "Ctrl/Cmd + K", label: "Busca global" },
+  { keys: "Ctrl + K", label: "Busca global" },
   { keys: "Esc", label: "Limpar filtros" },
   { keys: "?", label: "Mostrar esta ajuda" },
 ];
