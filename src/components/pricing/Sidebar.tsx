@@ -1,7 +1,7 @@
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { useSidebarState } from "@/store/sidebar";
@@ -60,8 +60,6 @@ const workItems = [
 ] as { to: string; label: string; icon: typeof KanbanSquare; alertBadge?: boolean }[];
 
 export function Sidebar() {
-  const metric = usePricing((s) => s.metric);
-  const setMetric = usePricing((s) => s.setMetric);
   const missing = usePricing((s) => s.missing);
   const monthsCount = useMonthsInfo().length;
   const hasFilters = useHasActiveFilters();
@@ -74,7 +72,6 @@ export function Sidebar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const openCommandPalette = useCommandPalette((s) => s.setOpen);
 
-  const cm = useMemo(() => metric === "cm", [metric]);
   const missingCount = useMemo(
     () => missing.skus.length + missing.canais.length + missing.regioes.length + missing.ufs.length,
     [missing],
@@ -272,29 +269,6 @@ export function Sidebar() {
         {/* Histórico recente — oculto quando sidebar está colapsada */}
         {!collapsed && <RecentHistory onNavigate={closeMobile} />}
 
-        {/* Metric toggle (oculto quando colapsado em desktop) */}
-        <div
-          className={`m-3 rounded-xl border border-border/50 bg-sidebar-accent/40 p-3 ${
-            collapsed ? "md:hidden" : ""
-          }`}
-        >
-          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Métrica
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <span className={`text-xs font-medium ${!cm ? "text-foreground" : "text-muted-foreground"}`}>
-              Margem Bruta
-            </span>
-            <Switch
-              checked={cm}
-              onCheckedChange={(c) => setMetric(c ? "cm" : "mb")}
-              aria-label="Alternar métrica entre Margem Bruta e Contribuição Marginal"
-            />
-            <span className={`text-xs font-medium ${cm ? "text-primary" : "text-muted-foreground"}`}>
-              Contrib. Marg.
-            </span>
-          </div>
-        </div>
 
         {/* Theme toggle */}
         <ThemeToggle collapsed={collapsed} />
@@ -326,7 +300,7 @@ function ThemeToggle({ collapsed }: { collapsed: boolean }) {
   ];
   return (
     <div
-      className={`mx-3 mb-2 flex items-center gap-1 rounded-lg border border-border/50 bg-sidebar-accent/30 p-1 ${
+      className={`mx-3 mb-2 flex items-center gap-1 overflow-hidden rounded-lg border border-border/50 bg-sidebar-accent/30 p-1 ${
         collapsed ? "md:flex-col" : ""
       }`}
     >
@@ -341,7 +315,7 @@ function ThemeToggle({ collapsed }: { collapsed: boolean }) {
             aria-label={o.label}
             aria-pressed={active}
             title={o.label}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
+            className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
               active
                 ? "bg-primary/15 text-primary"
                 : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
