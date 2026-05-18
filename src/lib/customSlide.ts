@@ -18,7 +18,10 @@ export type CustomBlockKind =
   | "bridge"
   | "table"
   | "chart"
-  | "topSku";
+  | "topSku"
+  | "bridge_pvm_block"
+  | "budget_evo_block"
+  | "cover_block";
 
 export type BlockEnterAnimation = "none" | "fade" | "slide-up" | "pop";
 
