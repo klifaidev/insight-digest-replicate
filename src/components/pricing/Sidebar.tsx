@@ -315,7 +315,7 @@ function ThemeToggle({ collapsed }: { collapsed: boolean }) {
             aria-label={o.label}
             aria-pressed={active}
             title={o.label}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
+            className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
               active
                 ? "bg-primary/15 text-primary"
                 : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
