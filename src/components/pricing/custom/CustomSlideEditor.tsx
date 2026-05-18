@@ -146,6 +146,142 @@ const ELEMENT_PALETTE: { id: string; kind: CustomBlockKind; label: string; icon:
   { id: "topSku", kind: "topSku", label: "Top Ranking", icon: Trophy },
 ];
 
+// Refined 6×6 resize handles — white square w/ primary border, like Figma.
+const HANDLE_BASE: React.CSSProperties = {
+  width: 8, height: 8,
+  background: "hsl(var(--background))",
+  border: "1.5px solid hsl(var(--primary))",
+  borderRadius: 2,
+  boxShadow: "0 1px 2px hsl(0 0% 0% / 0.18)",
+};
+const RESIZE_HANDLE_STYLES = {
+  top:         { ...HANDLE_BASE, top: -4, left: "calc(50% - 4px)" },
+  bottom:      { ...HANDLE_BASE, bottom: -4, left: "calc(50% - 4px)" },
+  left:        { ...HANDLE_BASE, left: -4, top: "calc(50% - 4px)" },
+  right:       { ...HANDLE_BASE, right: -4, top: "calc(50% - 4px)" },
+  topLeft:     { ...HANDLE_BASE, top: -4, left: -4 },
+  topRight:    { ...HANDLE_BASE, top: -4, right: -4 },
+  bottomLeft:  { ...HANDLE_BASE, bottom: -4, left: -4 },
+  bottomRight: { ...HANDLE_BASE, bottom: -4, right: -4 },
+} as const;
+
+/**
+ * Rulers around the scaled canvas — horizontal (top) + vertical (left).
+ * Marks every 100px with a label and every 50px with a smaller tick.
+ * Also shows the current cursor coordinate (canvas-space) at bottom-right.
+ */
+function CanvasRulers({ width, height, scale, cursor }: {
+  width: number;
+  height: number;
+  scale: number;
+  cursor: { x: number; y: number } | null;
+}) {
+  const ticksH: React.ReactNode[] = [];
+  for (let x = 0; x <= CANVAS_W; x += 50) {
+    const left = x * scale;
+    const major = x % 100 === 0;
+    ticksH.push(
+      <div key={`th-${x}`} style={{
+        position: "absolute", left, bottom: 0,
+        width: 1, height: major ? 8 : 4,
+        background: "hsl(var(--muted-foreground) / 0.5)",
+      }} />,
+    );
+    if (major) {
+      ticksH.push(
+        <div key={`tl-${x}`} style={{
+          position: "absolute", left: left + 2, bottom: 8,
+          fontSize: 9, lineHeight: 1,
+          color: "hsl(var(--muted-foreground) / 0.7)",
+          fontVariantNumeric: "tabular-nums",
+        }}>{x}</div>,
+      );
+    }
+  }
+  const ticksV: React.ReactNode[] = [];
+  for (let y = 0; y <= CANVAS_H; y += 50) {
+    const top = y * scale;
+    const major = y % 100 === 0;
+    ticksV.push(
+      <div key={`tv-${y}`} style={{
+        position: "absolute", top, right: 0,
+        height: 1, width: major ? 8 : 4,
+        background: "hsl(var(--muted-foreground) / 0.5)",
+      }} />,
+    );
+    if (major) {
+      ticksV.push(
+        <div key={`tvl-${y}`} style={{
+          position: "absolute", top: top + 2, right: 10,
+          fontSize: 9, lineHeight: 1,
+          color: "hsl(var(--muted-foreground) / 0.7)",
+          fontVariantNumeric: "tabular-nums",
+          transform: "rotate(-90deg)", transformOrigin: "right top",
+        }}>{y}</div>,
+      );
+    }
+  }
+  return (
+    <>
+      <div
+        data-export-hide="true"
+        style={{
+          position: "absolute", left: 0, top: -20,
+          width, height: 20,
+          background: "hsl(var(--card) / 0.6)",
+          borderBottom: "1px solid hsl(var(--border) / 0.4)",
+          pointerEvents: "none",
+        }}
+      >
+        {ticksH}
+        {/* Cursor X indicator */}
+        {cursor && (
+          <div style={{
+            position: "absolute", left: cursor.x * scale, top: 0,
+            width: 1, height: 20, background: "hsl(var(--primary) / 0.8)",
+          }} />
+        )}
+      </div>
+      <div
+        data-export-hide="true"
+        style={{
+          position: "absolute", top: 0, left: -20,
+          height, width: 20,
+          background: "hsl(var(--card) / 0.6)",
+          borderRight: "1px solid hsl(var(--border) / 0.4)",
+          pointerEvents: "none",
+        }}
+      >
+        {ticksV}
+        {cursor && (
+          <div style={{
+            position: "absolute", top: cursor.y * scale, left: 0,
+            height: 1, width: 20, background: "hsl(var(--primary) / 0.8)",
+          }} />
+        )}
+      </div>
+      {/* Coord readout */}
+      {cursor && (
+        <div
+          data-export-hide="true"
+          style={{
+            position: "absolute", right: 4, bottom: 4,
+            padding: "2px 6px", borderRadius: 4,
+            background: "hsl(var(--card) / 0.85)",
+            border: "1px solid hsl(var(--border) / 0.6)",
+            fontSize: 10, lineHeight: 1.2,
+            color: "hsl(var(--muted-foreground))",
+            fontVariantNumeric: "tabular-nums",
+            pointerEvents: "none", zIndex: 10,
+          }}
+        >
+          {cursor.x} · {cursor.y}
+        </div>
+      )}
+    </>
+  );
+}
+
 interface Props {
   /** ID estável do slide — usado para registrar o canvas no exporter */
   slideId?: string;
@@ -155,9 +291,11 @@ interface Props {
   collaborators?: import("@/lib/collaboration").CollabUser[];
   /** Callback de mouse-move em coordenadas do canvas (1280x720) */
   onCursorMove?: (x: number, y: number) => void;
+  /** Factor externo (Figma-style) — se omitido, calculado internamente via ResizeObserver. */
+  factor?: number;
 }
 
-export function CustomSlideEditor({ slideId, config, onChange, collaborators, onCursorMove }: Props) {
+export function CustomSlideEditor({ slideId, config, onChange, collaborators, onCursorMove, factor }: Props) {
   // Bind the parent's config <-> internal Zustand+temporal store first so
   // selection store reflects the right slide on initial render.
   useEditorBinding(config, onChange, slideId);
@@ -172,6 +310,10 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
   const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
   const [manualScale, setManualScale] = useState(1);
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
+  const [snapFlash, setSnapFlash] = useState(false);
+  const lastGuideKey = useRef<string>("");
+  // Cursor coordinates (canvas-space) for ruler readout.
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   // Marquee selection rectangle (canvas-space coords).
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   // Inline text editing (double-click no bloco title/text).
@@ -189,7 +331,9 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
   const scaleRef = useRef(1);
 
   // Calcula a escala para caber no contêiner mantendo a proporção 16:9
+  // (somente quando `factor` externo não é fornecido).
   useEffect(() => {
+    if (factor !== undefined) return;
     function compute() {
       const el = wrapperRef.current;
       if (!el) return;
@@ -203,7 +347,7 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
     const ro = new ResizeObserver(compute);
     if (wrapperRef.current) ro.observe(wrapperRef.current);
     return () => ro.disconnect();
-  }, []);
+  }, [factor]);
 
   useEffect(() => {
     if (!slideId) return;
@@ -211,11 +355,17 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
     return () => registerCustomCanvas(slideId, null);
   }, [slideId]);
 
-  const scale = zoomMode === "fit" ? fitScale : manualScale;
+  // Effective scale = (external factor || fit) × manual zoom (when manual mode).
+  const baseScale = factor !== undefined ? factor : fitScale;
+  const scale = zoomMode === "fit"
+    ? baseScale * (prefs.zoom || 1)
+    : manualScale;
   scaleRef.current = scale;
   const setZoom = (s: number) => {
+    const clamped = Math.max(0.1, Math.min(3, s));
     setZoomMode("manual");
-    setManualScale(Math.max(0.1, Math.min(3, s)));
+    setManualScale(clamped);
+    prefs.setZoom(Math.max(0.5, Math.min(1.5, clamped / Math.max(baseScale, 0.0001))));
   };
 
   const selected = selectedIds.length === 1
@@ -417,6 +567,19 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
     const others = boundsOf(config.blocks, excl);
     const snap = computeSnap({ x, y, w, h }, others);
     setGuides(snap.guides);
+    // Magnetic-snap feedback: flash + haptic when a new guide line engages.
+    const key = `${snap.guides.v.join(",")}|${snap.guides.h.join(",")}`;
+    const hasGuide = snap.guides.v.length > 0 || snap.guides.h.length > 0;
+    if (hasGuide && key !== lastGuideKey.current) {
+      setSnapFlash(true);
+      window.setTimeout(() => setSnapFlash(false), 100);
+      try {
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          (navigator as Navigator & { vibrate?: (p: number) => boolean }).vibrate?.(10);
+        }
+      } catch { /* ignore */ }
+    }
+    lastGuideKey.current = hasGuide ? key : "";
     return snap;
   }, [config.blocks]);
 
@@ -595,6 +758,7 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
               margin: "12px auto",
             }}
           >
+            <CanvasRulers width={CANVAS_W * scale} height={CANVAS_H * scale} scale={scale} cursor={cursorPos} />
             <div
               data-canvas-bg="true"
               style={{
@@ -640,10 +804,13 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                 }
               }}
               onMouseMove={(e) => {
-                if (!onCursorMove) return;
                 const pos = clientToCanvas(canvasRef.current, e.clientX, e.clientY, scaleRef.current);
-                if (pos) onCursorMove(pos.x, pos.y);
+                if (pos) {
+                  setCursorPos({ x: Math.round(pos.x), y: Math.round(pos.y) });
+                  onCursorMove?.(pos.x, pos.y);
+                }
               }}
+              onMouseLeave={() => setCursorPos(null)}
             >
               {/* Snap-to-grid background — dot pattern, behind blocks. */}
               {prefs.gridEnabled && (
@@ -791,11 +958,15 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                           enterGroupEdit(blk.id);
                         }
                       }}
-                      style={{ zIndex: isEditing ? 9999998 : blk.z }}
+                      style={{
+                        zIndex: isEditing ? 9999998 : blk.z,
+                        cursor: blk.locked ? "default" : (isSelected ? "grab" : "pointer"),
+                      }}
+                      resizeHandleStyles={blk.locked ? undefined : RESIZE_HANDLE_STYLES}
                       className={cn(
                         "group/block",
                         isSelected
-                          ? "outline outline-2 outline-offset-1 outline-primary"
+                          ? "outline outline-2 outline-offset-[1px] outline-primary shadow-[0_0_0_4px_hsl(var(--primary)/0.12)]"
                           : "outline outline-1 outline-transparent hover:outline-primary/40",
                       )}
                     >
@@ -852,34 +1023,61 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-56">
                     <ContextMenuItem onSelect={() => duplicateBlock(blk.id)}>
+                      <CopyIcon className="mr-2 h-3.5 w-3.5" />
                       Duplicar <ContextMenuShortcut>⌘D</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => removeBlock(blk.id)} className="text-destructive focus:text-destructive">
+                      <Trash2 className="mr-2 h-3.5 w-3.5" />
                       Excluir <ContextMenuShortcut>Del</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={() => bringForward(blk.id)}>
+                      <ChevronUp className="mr-2 h-3.5 w-3.5" />
                       Trazer para frente <ContextMenuShortcut>⌘]</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => bringToFront(blk.id)}>
+                      <ChevronsUp className="mr-2 h-3.5 w-3.5" />
                       Trazer para a frente de tudo
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => sendBack(blk.id)}>
+                      <ArrowDown className="mr-2 h-3.5 w-3.5" />
                       Enviar para trás <ContextMenuShortcut>⌘[</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => sendToBack(blk.id)}>
+                      <ChevronsDown className="mr-2 h-3.5 w-3.5" />
                       Enviar para o fundo
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={() => toggleLock(blk.id)}>
+                      {blk.locked
+                        ? <Unlock className="mr-2 h-3.5 w-3.5" />
+                        : <Lock className="mr-2 h-3.5 w-3.5" />}
                       {blk.locked ? "Desbloquear posição" : "Bloquear posição"}
                     </ContextMenuItem>
+                    {blk.kind === "image" && (blk as unknown as { src?: string }).src && (
+                      <>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => {
+                          const src = (blk as unknown as { src?: string }).src;
+                          if (src) {
+                            setBackgroundAction("transparent");
+                            // Patch background image via onChange surface.
+                            onChange({ ...config, backgroundImage: src });
+                            toast.success("Imagem definida como fundo");
+                          }
+                        }}>
+                          <ImageIcon className="mr-2 h-3.5 w-3.5" />
+                          Definir como fundo
+                        </ContextMenuItem>
+                      </>
+                    )}
                     {blk.kind === "chart" && (
                       <>
                         <ContextMenuSeparator />
                         <ContextMenuItem onSelect={() => {
                           if (copyChartStyleAction(blk.id)) toast.success("Estilo copiado");
                         }}>
+                          <Paintbrush className="mr-2 h-3.5 w-3.5" />
                           Copiar estilo
                         </ContextMenuItem>
                         <ContextMenuItem
@@ -887,6 +1085,7 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                           onSelect={() => {
                             if (pasteChartStyleAction(blk.id)) toast.success("Estilo colado");
                           }}>
+                          <Paintbrush className="mr-2 h-3.5 w-3.5" />
                           Colar estilo
                         </ContextMenuItem>
                       </>
@@ -895,12 +1094,14 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                       <>
                         <ContextMenuSeparator />
                         <ContextMenuItem onSelect={() => { groupBlocksAction(selectedIds); toast.success("Blocos agrupados"); }}>
+                          <GroupIcon className="mr-2 h-3.5 w-3.5" />
                           Agrupar <ContextMenuShortcut>⌘G</ContextMenuShortcut>
                         </ContextMenuItem>
                       </>
                     )}
                     {blk.groupId && (
                       <ContextMenuItem onSelect={() => { ungroupBlocksAction([blk.id]); toast.success("Grupo desfeito"); }}>
+                        <UngroupIcon className="mr-2 h-3.5 w-3.5" />
                         Desagrupar <ContextMenuShortcut>⌘⇧G</ContextMenuShortcut>
                       </ContextMenuItem>
                     )}
@@ -957,19 +1158,25 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                 );
               })}
 
-              {/* Smart guides overlay (B8.3). */}
+              {/* Smart guides overlay (B8.3) — primary tinted, flash red on snap. */}
               <svg
                 data-export-hide="true"
                 width={CANVAS_W} height={CANVAS_H}
                 style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 999998 }}
               >
                 {guides.v.map((x, i) => (
-                  <line key={`gv-${i}`} x1={x} x2={x} y1={0} y2={CANVAS_H}
-                    stroke="#3B82F6" strokeWidth={1} />
+                  <g key={`gv-${i}`}>
+                    <line x1={x} x2={x} y1={0} y2={CANVAS_H}
+                      stroke={snapFlash ? "hsl(0 84% 60%)" : "hsl(var(--primary) / 0.8)"}
+                      strokeWidth={1} />
+                  </g>
                 ))}
                 {guides.h.map((y, i) => (
-                  <line key={`gh-${i}`} y1={y} y2={y} x1={0} x2={CANVAS_W}
-                    stroke="#3B82F6" strokeWidth={1} />
+                  <g key={`gh-${i}`}>
+                    <line y1={y} y2={y} x1={0} x2={CANVAS_W}
+                      stroke={snapFlash ? "hsl(0 84% 60%)" : "hsl(var(--primary) / 0.8)"}
+                      strokeWidth={1} />
+                  </g>
                 ))}
               </svg>
 
