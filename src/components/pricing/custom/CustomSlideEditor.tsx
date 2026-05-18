@@ -165,7 +165,8 @@ const RESIZE_HANDLE_STYLES = {
   bottomRight: { ...HANDLE_BASE, bottom: -4, right: -4 },
 } as const;
 
-
+/**
+ * Rulers around the scaled canvas — horizontal (top) + vertical (left).
  * Marks every 100px with a label and every 50px with a smaller tick.
  * Also shows the current cursor coordinate (canvas-space) at bottom-right.
  */
