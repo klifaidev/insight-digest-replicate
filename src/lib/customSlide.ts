@@ -18,10 +18,7 @@ export type CustomBlockKind =
   | "bridge"
   | "table"
   | "chart"
-  | "topSku"
-  | "bridge_pvm_block"
-  | "budget_evo_block"
-  | "cover_block";
+  | "topSku";
 
 export type BlockEnterAnimation = "none" | "fade" | "slide-up" | "pop";
 
@@ -348,36 +345,9 @@ export interface TopSkuBlock extends BaseBlock {
   dataSource?: BlockDataSource;
 }
 
-export interface BridgePvmBlock extends BaseBlock {
-  kind: "bridge_pvm_block";
-  mode: "fy" | "month";
-  base: string | null;
-  comp: string | null;
-  filters: Filters;
-}
-
-export interface BudgetEvoBlock extends BaseBlock {
-  kind: "budget_evo_block";
-  start: string | null;
-  end: string | null;
-  filters: Filters;
-}
-
-export interface CoverBlock extends BaseBlock {
-  kind: "cover_block";
-  title: string;
-  subtitle?: string;
-  variant: "cover" | "divider";
-  /** Hex sem '#'. Default "C8102E". */
-  bgColor?: string;
-  /** Hex sem '#'. Default "FFFFFF". */
-  textColor?: string;
-}
-
 export type CustomBlock =
   | TitleBlock | TextBlock | KpiBlock | ImageBlock
-  | ShapeBlock | BridgeBlock | TableBlock | ChartBlock | TopSkuBlock
-  | BridgePvmBlock | BudgetEvoBlock | CoverBlock;
+  | ShapeBlock | BridgeBlock | TableBlock | ChartBlock | TopSkuBlock;
 
 export interface CustomSlideConfig {
   blocks: CustomBlock[];
@@ -477,22 +447,6 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         autoFit: true, showOthers: false, exportNote: false,
         dataSource: "ke30",
       };
-    case "bridge_pvm_block":
-      return {
-        id, kind, z, x: 0, y: 0, w: CANVAS_W, h: CANVAS_H - FOOTER_H,
-        mode: "month", base: null, comp: null, filters: {},
-      };
-    case "budget_evo_block":
-      return {
-        id, kind, z, x: 0, y: 0, w: CANVAS_W, h: CANVAS_H - FOOTER_H,
-        start: null, end: null, filters: {},
-      };
-    case "cover_block":
-      return {
-        id, kind, z, x: 0, y: 0, w: CANVAS_W, h: CANVAS_H - FOOTER_H,
-        title: "Resultado Mensal", subtitle: "", variant: "cover",
-        bgColor: "C8102E", textColor: "FFFFFF",
-      };
   }
 }
 
@@ -547,9 +501,6 @@ export const BLOCK_LABELS: Record<CustomBlockKind, string> = {
   table: "Tabela",
   chart: "Linha",
   topSku: "Top Ranking",
-  bridge_pvm_block: "Bridge PVM",
-  budget_evo_block: "Budget Evolutivo",
-  cover_block: "Capa / Divisor",
 };
 
 // ---------------------------------------------------------------------------

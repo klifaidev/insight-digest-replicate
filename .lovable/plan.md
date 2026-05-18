@@ -1,48 +1,50 @@
-# Redesign visual do CustomSlideEditor
+## Chart Inspector — UX Revolution
 
-O CustomSlideEditor (2624 linhas) ganha um polimento visual sério inspirado em Figma/Keynote, sem mexer na lógica de undo/redo, grouping, lock nem na renderização interna dos blocos.
+A complete UI overhaul of the right-side inspector panel in the slide editor, following the uploaded `prompt_inspector_revolution.md`. No data logic, schema, or canvas rendering changes — only inspector surface.
 
-## Escopo das mudanças
+### Scope at a glance
+- Panel width 300 → **320px** (update grid in `CustomSlideEditor.tsx`).
+- Persistent **chart type picker** (icon tiles) at top of panel.
+- **3 tabs**: Dados / Visual / Análises (replace flat section list).
+- Global typography reset: no uppercase, sentence-case, 12–13px, more breathing room (h-8 inputs, p-3 cards, 12px row gaps).
+- **Popover color picker** (`react-colorful`) replacing inline color+hex+swatches.
+- All native `<select>` → shadcn `<Select>` (Radix).
+- New `stylePresets.ts` with 5 presets (Default, Minimal, Bold, Monochrome, Harald Brand) applied via a new `applyStylePreset` action.
 
-### 1. Escalonamento do canvas
-- Nova prop opcional `factor?: number` e `canvasContainerRef?: RefObject<HTMLDivElement>`.
-- Se `factor` não vier, calcular internamente com `ResizeObserver` no container pai: `factor = min(availW / CANVAS_W, availH / CANVAS_H)`.
-- Wrapper externo com `width/height = CANVAS_* × factor`, `overflow:hidden`. Canvas interno renderizado com `transform: scale(factor)`, `transformOrigin: "top left"`.
-- Zoom do toolbar multiplica esse factor (range 0.5–1.5), armazenado em `editorPrefs.zoom`.
+### Tab contents
+- **Dados** — source (KE30/Budget segmented), measures, dimension field-wells with icons, sort (segmented + dir toggle), Bridge column builder restyled, and an "Interatividade" section with the cross-filter toggles.
+- **Visual** — quick style thumbnails, series color swatches (popover picker), compact typography group (title/labels/axis/legend on inline rows with B/I icon toggles + size dropdowns), contextual chart-body group (per-type controls), canvas group, inline data labels with **visual position selector** per chart type, collapsible Axes disclosure.
+- **Análises** — restyled reference lines, trendline, forecast, conditional formatting cards with colored left borders and inline controls.
 
-### 2. Réguas + grid + coordenadas
-- Régua horizontal (20px) e vertical (20px) com marcações a cada 50/100px, `bg-card/60`, `text-muted-foreground/50`.
-- Grid via SVG `<pattern id="dots">` com pontos de 1px em `hsl(var(--muted-foreground)/0.15)`, controlado pelo toggle do toolbar.
-- Coordenadas X/Y do cursor no canto inferior do canvas (`text-[10px] text-muted-foreground`).
+### New / changed files
+- New: `src/components/pricing/custom/chart/stylePresets.ts`
+- New: `src/components/pricing/custom/chart/inspector/` directory split:
+  - `ChartTypePicker.tsx`
+  - `DadosTab.tsx`
+  - `VisualTab.tsx`
+  - `AnalisesTab.tsx`
+  - `ColorPickerPopover.tsx` (using `react-colorful`)
+  - `primitives.tsx` (new Field/IconButton/Stepper restyled)
+- Rewritten: `src/components/pricing/custom/chart/ChartInspector.tsx` becomes a thin shell (chart type picker + tabs).
+- Updated: `src/components/pricing/custom/CustomSlideEditor.tsx` grid template.
+- Updated: `src/components/pricing/custom/chart/Inspector.tsx` (kept exports, restyled tokens).
+- Optional: scrollbar utility classes in `src/index.css`.
 
-### 3. Toolbar redesenhada (48px, `bg-card/80 backdrop-blur-xl border-b`)
-Grupos: histórico (Undo/Redo) · alinhamento (visível só com seleção) · z-order · lock · grid + snap-select + zoom controls · play + save template + speaker notes.
+### Dependencies
+- Add `react-colorful` (lightweight, ~3kb, no peer issues).
 
-### 4. Speaker notes colapsável
-Barra inferior 72px ↔ 0 com transição, `bg-card/40 border-t`, `Textarea` sem borda + contador de caracteres. Persiste em `config.speakerNotes` via `setSpeakerNotesAction`.
+### What stays the same
+- All `updStyle` / `updPath` / `updSeries` patch helpers.
+- `BridgeColumnBuilder` data-handling logic (only restyled).
+- `FilteredInspector` data source logic (Dados tab reuses it).
+- Chart canvas rendering, computation, schema.
 
-### 5. Refinamentos visuais nos blocos
-- Handles de resize: 6×6 brancos com borda `primary` nos 8 pontos.
-- Handle de rotação: círculo 8px acima do topo com `RotateCcw`.
-- Seleção múltipla: bounding box tracejado `border-primary/60`.
-- Locked: ícone de cadeado superior direito, handles escondidos.
-- Cursors: `grab` / `grabbing` / `crosshair` / `default` conforme contexto.
+### Risks / notes
+- Big diff in `ChartInspector.tsx`. To keep it safe I'll split into the new `inspector/` files rather than one huge rewrite.
+- The "quick style presets" only patch existing style fields — no new schema.
+- Empty-state and loading skeletons for the Dados tab are small additions confined to the inspector.
 
-### 6. Guias de alinhamento
-- Linhas 1px `hsl(var(--primary)/0.8)`, badge minúsculo com distância em px.
-- Snap magnético com flash vermelho 100ms + `navigator.vibrate(10)`.
+### Out of scope
+- Canvas-side empty state ("Sem dados para os filtros selecionados") — Part 7's canvas change is in `ChartCanvas.tsx`; I'll include it as it's a small, additive empty-state branch only, but flag if you'd rather skip.
 
-### 7. Context menu
-- Ícones em todos os items, separadores entre grupos lógicos, submenu "Adicionar bloco", item "Definir como fundo" para imagens.
-
-### 8. editorPrefs
-- Adicionar `zoom: number` (default 1) com setter `setZoom`, persistido em localStorage junto com grid.
-
-## Arquivos
-- `src/components/pricing/custom/editorPrefs.ts` — adicionar campo `zoom`.
-- `src/components/pricing/custom/CustomSlideEditor.tsx` — implementar todas as mudanças visuais.
-- `src/pages/SlidesBeta.tsx` — passar `canvasContainerRef` para o editor (ajuste pequeno).
-
-## Fora de escopo
-- Lógica de undo/redo, grouping, lock, drag/resize matemático e renderização dos blocos (BlockRenderer) ficam intactas.
-- Inspector contextual e palette flutuante de SlidesBeta seguem como estão.
+Approve and I'll implement, then produce the v2 UX audit as requested in §"After completing".

@@ -1,5 +1,5 @@
 // Editor preferences persisted to localStorage (B8.4).
-// Grid + manual zoom.
+// Currently: snap-to-grid toggle and grid size.
 
 import { useEffect, useState } from "react";
 
@@ -8,16 +8,10 @@ export type GridSize = 4 | 8 | 16 | 32;
 interface EditorPrefs {
   gridEnabled: boolean;
   gridSize: GridSize;
-  zoom: number; // 0.5 – 1.5, multiplies the fit factor
 }
 
 const STORAGE_KEY = "harald.editorPrefs.v1";
-const DEFAULT: EditorPrefs = { gridEnabled: false, gridSize: 8, zoom: 1 };
-
-function clampZoom(z: unknown): number {
-  const n = typeof z === "number" && Number.isFinite(z) ? z : 1;
-  return Math.max(0.5, Math.min(1.5, n));
-}
+const DEFAULT: EditorPrefs = { gridEnabled: false, gridSize: 8 };
 
 function read(): EditorPrefs {
   try {
@@ -29,7 +23,6 @@ function read(): EditorPrefs {
       gridSize: ([4, 8, 16, 32] as const).includes(parsed.gridSize as GridSize)
         ? (parsed.gridSize as GridSize)
         : 8,
-      zoom: clampZoom(parsed.zoom),
     };
   } catch {
     return DEFAULT;
@@ -40,14 +33,13 @@ function write(p: EditorPrefs) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch { /* ignore */ }
 }
 
+// Module-level subscribers so multiple components stay in sync.
 let current: EditorPrefs = read();
 const subs = new Set<() => void>();
 
 export function getEditorPrefs(): EditorPrefs { return current; }
 export function setEditorPrefs(patch: Partial<EditorPrefs>) {
-  const next = { ...current, ...patch };
-  if (patch.zoom !== undefined) next.zoom = clampZoom(patch.zoom);
-  current = next;
+  current = { ...current, ...patch };
   write(current);
   subs.forEach((fn) => fn());
 }
@@ -55,7 +47,6 @@ export function setEditorPrefs(patch: Partial<EditorPrefs>) {
 export function useEditorPrefs(): EditorPrefs & {
   setGridEnabled: (v: boolean) => void;
   setGridSize: (s: GridSize) => void;
-  setZoom: (z: number) => void;
 } {
   const [, force] = useState(0);
   useEffect(() => {
@@ -67,10 +58,10 @@ export function useEditorPrefs(): EditorPrefs & {
     ...current,
     setGridEnabled: (v) => setEditorPrefs({ gridEnabled: v }),
     setGridSize: (s) => setEditorPrefs({ gridSize: s }),
-    setZoom: (z) => setEditorPrefs({ zoom: z }),
   };
 }
 
+/** Snap a value to the nearest grid multiple. */
 export function snapToGrid(value: number, gridSize: number): number {
   return Math.round(value / gridSize) * gridSize;
 }
