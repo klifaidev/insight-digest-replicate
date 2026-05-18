@@ -146,8 +146,26 @@ const ELEMENT_PALETTE: { id: string; kind: CustomBlockKind; label: string; icon:
   { id: "topSku", kind: "topSku", label: "Top Ranking", icon: Trophy },
 ];
 
-/**
- * Rulers around the scaled canvas — horizontal (top) + vertical (left).
+// Refined 6×6 resize handles — white square w/ primary border, like Figma.
+const HANDLE_BASE: React.CSSProperties = {
+  width: 8, height: 8,
+  background: "hsl(var(--background))",
+  border: "1.5px solid hsl(var(--primary))",
+  borderRadius: 2,
+  boxShadow: "0 1px 2px hsl(0 0% 0% / 0.18)",
+};
+const RESIZE_HANDLE_STYLES = {
+  top:         { ...HANDLE_BASE, top: -4, left: "calc(50% - 4px)" },
+  bottom:      { ...HANDLE_BASE, bottom: -4, left: "calc(50% - 4px)" },
+  left:        { ...HANDLE_BASE, left: -4, top: "calc(50% - 4px)" },
+  right:       { ...HANDLE_BASE, right: -4, top: "calc(50% - 4px)" },
+  topLeft:     { ...HANDLE_BASE, top: -4, left: -4 },
+  topRight:    { ...HANDLE_BASE, top: -4, right: -4 },
+  bottomLeft:  { ...HANDLE_BASE, bottom: -4, left: -4 },
+  bottomRight: { ...HANDLE_BASE, bottom: -4, right: -4 },
+} as const;
+
+
  * Marks every 100px with a label and every 50px with a smaller tick.
  * Also shows the current cursor coordinate (canvas-space) at bottom-right.
  */
