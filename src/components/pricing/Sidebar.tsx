@@ -369,9 +369,9 @@ function RecentHistory({ onNavigate }: { onNavigate: () => void }) {
   const clearFilters = usePricing((s) => s.clearFilters);
   const setSelectedPeriods = usePricing((s) => s.setSelectedPeriods);
   const navigate = useNavigate();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
-  const recent = entries.slice(0, 5);
+  const recent = entries.slice(0, 8);
   if (recent.length === 0) return null;
 
   const handleClick = (e: typeof entries[number]) => {
@@ -381,25 +381,49 @@ function RecentHistory({ onNavigate }: { onNavigate: () => void }) {
     }
     setSelectedPeriods(e.selectedPeriods);
     navigate(e.page);
+    setOpen(false);
     onNavigate();
   };
 
   return (
-    <div className="mx-3 mb-2 rounded-xl border border-border/50 bg-sidebar-accent/30 p-2">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-1 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
-      >
-        <span className="flex items-center gap-1.5">
-          <Clock className="h-3 w-3" />
-          Histórico recente
-        </span>
-        <ChevronDown className={`h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`} />
-      </button>
-      {open && (
-        <>
-          <ul className="mt-1 space-y-0.5">
+    <div className="mx-3 mb-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors ${
+              open
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border/50 bg-sidebar-accent/30 text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <Clock className="h-3 w-3" />
+              Histórico recente
+            </span>
+            <ChevronRight className={`h-3 w-3 transition-transform ${open ? "translate-x-0.5" : ""}`} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="right"
+          align="end"
+          sideOffset={12}
+          className="w-80 border-border/60 bg-popover/95 p-2 backdrop-blur-xl"
+        >
+          <div className="mb-2 flex items-center justify-between px-2 pt-1">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              Histórico recente
+            </div>
+            <button
+              type="button"
+              onClick={clearHistory}
+              className="rounded-md px-1.5 py-0.5 text-[10px] text-muted-foreground/80 hover:bg-sidebar-accent hover:text-foreground"
+            >
+              Limpar
+            </button>
+          </div>
+          <ul className="max-h-[60vh] space-y-0.5 overflow-y-auto">
             {recent.map((e) => {
               const Icon = PAGE_LABELS[e.page]?.icon ?? Clock;
               return (
@@ -407,12 +431,12 @@ function RecentHistory({ onNavigate }: { onNavigate: () => void }) {
                   <button
                     type="button"
                     onClick={() => handleClick(e)}
-                    className="flex w-full items-start gap-2 rounded-md px-1.5 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
+                    className="flex w-full items-start gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-sidebar-accent"
                     title={`${e.pageLabel} — ${e.summary}`}
                   >
                     <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[12px] font-medium text-sidebar-foreground">
+                      <div className="truncate text-[12px] font-medium text-foreground">
                         {e.pageLabel}
                       </div>
                       <div className="truncate text-[10px] text-muted-foreground">{e.summary}</div>
@@ -425,18 +449,12 @@ function RecentHistory({ onNavigate }: { onNavigate: () => void }) {
               );
             })}
           </ul>
-          <button
-            type="button"
-            onClick={clearHistory}
-            className="mt-1 w-full rounded-md px-1.5 py-1 text-[10px] text-muted-foreground/70 hover:bg-sidebar-accent hover:text-foreground"
-          >
-            Limpar histórico
-          </button>
-        </>
-      )}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
+
 
 function FavoritesSection({
   collapsed,
