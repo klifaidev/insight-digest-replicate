@@ -348,9 +348,36 @@ export interface TopSkuBlock extends BaseBlock {
   dataSource?: BlockDataSource;
 }
 
+export interface BridgePvmBlock extends BaseBlock {
+  kind: "bridge_pvm_block";
+  mode: "fy" | "month";
+  base: string | null;
+  comp: string | null;
+  filters: Filters;
+}
+
+export interface BudgetEvoBlock extends BaseBlock {
+  kind: "budget_evo_block";
+  start: string | null;
+  end: string | null;
+  filters: Filters;
+}
+
+export interface CoverBlock extends BaseBlock {
+  kind: "cover_block";
+  title: string;
+  subtitle?: string;
+  variant: "cover" | "divider";
+  /** Hex sem '#'. Default "C8102E". */
+  bgColor?: string;
+  /** Hex sem '#'. Default "FFFFFF". */
+  textColor?: string;
+}
+
 export type CustomBlock =
   | TitleBlock | TextBlock | KpiBlock | ImageBlock
-  | ShapeBlock | BridgeBlock | TableBlock | ChartBlock | TopSkuBlock;
+  | ShapeBlock | BridgeBlock | TableBlock | ChartBlock | TopSkuBlock
+  | BridgePvmBlock | BudgetEvoBlock | CoverBlock;
 
 export interface CustomSlideConfig {
   blocks: CustomBlock[];
