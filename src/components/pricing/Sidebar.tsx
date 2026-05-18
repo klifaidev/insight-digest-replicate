@@ -107,17 +107,20 @@ export function Sidebar() {
         <div
           className={`flex items-center gap-2.5 px-5 pb-7 pt-6 ${collapsed ? "md:px-3 md:justify-center" : ""}`}
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/30 to-accent/20 text-lg shadow-glow">
-            🍫
-          </div>
           <div
             className={`leading-tight transition-opacity duration-150 ${
               collapsed ? "md:hidden" : ""
             }`}
           >
-            <div className="text-[13px] font-semibold tracking-tight">Pricing Analytics</div>
-            <div className="text-[11px] text-muted-foreground">Harald</div>
+            <h1 className="bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-2xl font-semibold tracking-tight text-transparent">
+              OMNI4
+            </h1>
           </div>
+          {collapsed && (
+            <h1 className="hidden bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-base font-semibold tracking-tight text-transparent md:block">
+              O4
+            </h1>
+          )}
           <button
             onClick={closeMobile}
             aria-label="Fechar menu"
