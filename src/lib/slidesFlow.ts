@@ -292,6 +292,7 @@ export function computeBudgetEvoMonthly(
 // Validação leve
 // ---------------------------------------------------------------------------
 export function isItemReady(item: SlideItem): { ok: boolean; reason?: string } {
+  if (item.kind !== "custom") return { ok: true };
   if (item.config.blocks.length === 0) return { ok: false, reason: "Adicione ao menos um bloco." };
   return { ok: true };
 }
