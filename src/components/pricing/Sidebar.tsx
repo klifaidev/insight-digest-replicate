@@ -1,7 +1,7 @@
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { useSidebarState } from "@/store/sidebar";
