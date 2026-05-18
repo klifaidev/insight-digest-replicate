@@ -852,20 +852,20 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-56">
                     <ContextMenuItem onSelect={() => duplicateBlock(blk.id)}>
-                      Duplicar <ContextMenuShortcut>⌘D</ContextMenuShortcut>
+                      Duplicar <ContextMenuShortcut>Ctrl+D</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => removeBlock(blk.id)} className="text-destructive focus:text-destructive">
                       Excluir <ContextMenuShortcut>Del</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={() => bringForward(blk.id)}>
-                      Trazer para frente <ContextMenuShortcut>⌘]</ContextMenuShortcut>
+                      Trazer para frente <ContextMenuShortcut>Ctrl+]</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => bringToFront(blk.id)}>
                       Trazer para a frente de tudo
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => sendBack(blk.id)}>
-                      Enviar para trás <ContextMenuShortcut>⌘[</ContextMenuShortcut>
+                      Enviar para trás <ContextMenuShortcut>Ctrl+[</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => sendToBack(blk.id)}>
                       Enviar para o fundo
@@ -895,13 +895,13 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                       <>
                         <ContextMenuSeparator />
                         <ContextMenuItem onSelect={() => { groupBlocksAction(selectedIds); toast.success("Blocos agrupados"); }}>
-                          Agrupar <ContextMenuShortcut>⌘G</ContextMenuShortcut>
+                          Agrupar <ContextMenuShortcut>Ctrl+G</ContextMenuShortcut>
                         </ContextMenuItem>
                       </>
                     )}
                     {blk.groupId && (
                       <ContextMenuItem onSelect={() => { ungroupBlocksAction([blk.id]); toast.success("Grupo desfeito"); }}>
-                        Desagrupar <ContextMenuShortcut>⌘⇧G</ContextMenuShortcut>
+                        Desagrupar <ContextMenuShortcut>Ctrl+Shift+G</ContextMenuShortcut>
                       </ContextMenuItem>
                     )}
                   </ContextMenuContent>
@@ -1045,12 +1045,12 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
         <div className="flex shrink-0 items-center justify-center gap-1 rounded-lg border border-border/40 bg-card/40 px-2 py-1">
           <Button size="icon" variant="ghost" className="h-7 w-7"
             onClick={undoAction} disabled={!undoRedo.canUndo}
-            title={undoRedo.undoLabel ? `Desfazer: ${undoRedo.undoLabel.toLowerCase()}` : "Desfazer (⌘Z)"}>
+            title={undoRedo.undoLabel ? `Desfazer: ${undoRedo.undoLabel.toLowerCase()}` : "Desfazer (Ctrl+Z)"}>
             <Undo2 className="h-3.5 w-3.5" />
           </Button>
           <Button size="icon" variant="ghost" className="h-7 w-7"
             onClick={redoAction} disabled={!undoRedo.canRedo}
-            title={undoRedo.redoLabel ? `Refazer: ${undoRedo.redoLabel.toLowerCase()}` : "Refazer (⌘⇧Z)"}>
+            title={undoRedo.redoLabel ? `Refazer: ${undoRedo.redoLabel.toLowerCase()}` : "Refazer (Ctrl+Shift+Z)"}>
             <Redo2 className="h-3.5 w-3.5" />
           </Button>
           <Separator orientation="vertical" className="mx-1 h-5" />
@@ -2209,7 +2209,7 @@ function MultiSelectInspector({ selectedIds, blocks, hasGroup }: {
         <div className="flex gap-1">
           <Button size="icon" variant="ghost" className="h-7 w-7"
             onClick={() => duplicateBlocksAction(selectedIds)}
-            title="Duplicar todos (⌘D)">
+            title="Duplicar todos (Ctrl+D)">
             <CopyIcon className="h-3.5 w-3.5" />
           </Button>
           <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive"
@@ -2277,7 +2277,7 @@ function MultiSelectInspector({ selectedIds, blocks, hasGroup }: {
       </div>
 
       <p className="text-[10px] leading-snug text-muted-foreground">
-        Atalhos: <kbd>⌘A</kbd> selecionar tudo · <kbd>⌘G</kbd> agrupar · <kbd>⌘⇧G</kbd> desagrupar · <kbd>setas</kbd> mover (Shift = 40px)
+        Atalhos: <kbd>Ctrl+A</kbd> selecionar tudo · <kbd>Ctrl+G</kbd> agrupar · <kbd>Ctrl+Shift+G</kbd> desagrupar · <kbd>setas</kbd> mover (Shift = 40px)
       </p>
     </div>
   );
