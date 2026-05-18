@@ -939,11 +939,15 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                           enterGroupEdit(blk.id);
                         }
                       }}
-                      style={{ zIndex: isEditing ? 9999998 : blk.z }}
+                      style={{
+                        zIndex: isEditing ? 9999998 : blk.z,
+                        cursor: blk.locked ? "default" : (isSelected ? "grab" : "pointer"),
+                      }}
+                      resizeHandleStyles={blk.locked ? undefined : RESIZE_HANDLE_STYLES}
                       className={cn(
                         "group/block",
                         isSelected
-                          ? "outline outline-2 outline-offset-1 outline-primary"
+                          ? "outline outline-2 outline-offset-[1px] outline-primary shadow-[0_0_0_4px_hsl(var(--primary)/0.12)]"
                           : "outline outline-1 outline-transparent hover:outline-primary/40",
                       )}
                     >
