@@ -622,6 +622,7 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
               margin: "12px auto",
             }}
           >
+            <CanvasRulers width={CANVAS_W * scale} height={CANVAS_H * scale} scale={scale} cursor={cursorPos} />
             <div
               data-canvas-bg="true"
               style={{
