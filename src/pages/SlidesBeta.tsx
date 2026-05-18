@@ -1072,10 +1072,10 @@ function HistoryDialog({
           ) : (
             <ul className="space-y-2 pr-3">
               {[...log].reverse().map((e) => (
-                <li key={e.id} className="flex items-start gap-2 text-sm py-1.5 border-b border-border/40">
+                <li key={e.eventId} className="flex items-start gap-2 text-sm py-1.5 border-b border-border/40">
                   <div
                     className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white shrink-0"
-                    style={{ background: e.color }}
+                    style={{ background: e.userColor ?? "hsl(var(--muted-foreground))" }}
                   >
                     {initials(e.userName)}
                   </div>
