@@ -517,7 +517,7 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
             />
           </div>
           <p className="mt-2 px-2 text-[10px] leading-relaxed text-muted-foreground">
-            Atalhos: <kbd>⌘Z</kbd> desfazer · <kbd>⌘⇧Z</kbd> refazer · <kbd>Del</kbd> excluir · <kbd>⌘D</kbd> duplicar · <kbd>⌘]</kbd>/<kbd>⌘[</kbd> ordem · <kbd>setas</kbd> mover (Shift = 10px)
+            Atalhos: <kbd>Ctrl+Z</kbd> desfazer · <kbd>Ctrl+Shift+Z</kbd> refazer · <kbd>Del</kbd> excluir · <kbd>Ctrl+D</kbd> duplicar · <kbd>Ctrl+]</kbd>/<kbd>Ctrl+[</kbd> ordem · <kbd>setas</kbd> mover (Shift = 10px)
           </p>
         </div>
       </ScrollArea>
