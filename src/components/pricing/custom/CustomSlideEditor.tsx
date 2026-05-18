@@ -984,19 +984,25 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                 );
               })}
 
-              {/* Smart guides overlay (B8.3). */}
+              {/* Smart guides overlay (B8.3) — primary tinted, flash red on snap. */}
               <svg
                 data-export-hide="true"
                 width={CANVAS_W} height={CANVAS_H}
                 style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 999998 }}
               >
                 {guides.v.map((x, i) => (
-                  <line key={`gv-${i}`} x1={x} x2={x} y1={0} y2={CANVAS_H}
-                    stroke="#3B82F6" strokeWidth={1} />
+                  <g key={`gv-${i}`}>
+                    <line x1={x} x2={x} y1={0} y2={CANVAS_H}
+                      stroke={snapFlash ? "hsl(0 84% 60%)" : "hsl(var(--primary) / 0.8)"}
+                      strokeWidth={1} />
+                  </g>
                 ))}
                 {guides.h.map((y, i) => (
-                  <line key={`gh-${i}`} y1={y} y2={y} x1={0} x2={CANVAS_W}
-                    stroke="#3B82F6" strokeWidth={1} />
+                  <g key={`gh-${i}`}>
+                    <line y1={y} y2={y} x1={0} x2={CANVAS_W}
+                      stroke={snapFlash ? "hsl(0 84% 60%)" : "hsl(var(--primary) / 0.8)"}
+                      strokeWidth={1} />
+                  </g>
                 ))}
               </svg>
 
