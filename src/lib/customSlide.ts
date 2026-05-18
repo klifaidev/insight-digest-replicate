@@ -477,6 +477,22 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         autoFit: true, showOthers: false, exportNote: false,
         dataSource: "ke30",
       };
+    case "bridge_pvm_block":
+      return {
+        id, kind, z, x: 0, y: 0, w: CANVAS_W, h: CANVAS_H - FOOTER_H,
+        mode: "month", base: null, comp: null, filters: {},
+      };
+    case "budget_evo_block":
+      return {
+        id, kind, z, x: 0, y: 0, w: CANVAS_W, h: CANVAS_H - FOOTER_H,
+        start: null, end: null, filters: {},
+      };
+    case "cover_block":
+      return {
+        id, kind, z, x: 0, y: 0, w: CANVAS_W, h: CANVAS_H - FOOTER_H,
+        title: "Resultado Mensal", subtitle: "", variant: "cover",
+        bgColor: "C8102E", textColor: "FFFFFF",
+      };
   }
 }
 
