@@ -148,7 +148,7 @@ export function Sidebar() {
                 collapsed ? "md:hidden" : "md:inline-block"
               }`}
             >
-              ⌘K
+              Ctrl+K
             </kbd>
           </button>
         </div>
