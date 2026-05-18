@@ -8,6 +8,7 @@ import { useSidebarState } from "@/store/sidebar";
 import { useHistory } from "@/store/history";
 import { useBookmarks } from "@/store/bookmarks";
 import { PAGE_LABELS } from "@/lib/pageMeta";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useHasActiveFilters } from "./ActiveFiltersBar";
 import {
   AlertTriangle,
