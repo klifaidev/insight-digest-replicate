@@ -30,7 +30,13 @@ import {
 // ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
-export type SlideKind = "custom";
+/**
+ * O único SlideKind canônico é "custom". Os valores legados
+ * ("bridge_pvm" | "budget_evo" | "cover") permanecem no union apenas como
+ * compatibilidade para código UI que ainda não foi migrado.
+ * @deprecated valores legados — todos os slides novos devem usar "custom".
+ */
+export type SlideKind = "custom" | "bridge_pvm" | "budget_evo" | "cover";
 
 export interface BaseSlideItem {
   id: string;
