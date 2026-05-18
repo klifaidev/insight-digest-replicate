@@ -1000,34 +1000,61 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-56">
                     <ContextMenuItem onSelect={() => duplicateBlock(blk.id)}>
+                      <CopyIcon className="mr-2 h-3.5 w-3.5" />
                       Duplicar <ContextMenuShortcut>⌘D</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => removeBlock(blk.id)} className="text-destructive focus:text-destructive">
+                      <Trash2 className="mr-2 h-3.5 w-3.5" />
                       Excluir <ContextMenuShortcut>Del</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={() => bringForward(blk.id)}>
+                      <ChevronUp className="mr-2 h-3.5 w-3.5" />
                       Trazer para frente <ContextMenuShortcut>⌘]</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => bringToFront(blk.id)}>
+                      <ChevronsUp className="mr-2 h-3.5 w-3.5" />
                       Trazer para a frente de tudo
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => sendBack(blk.id)}>
+                      <ArrowDown className="mr-2 h-3.5 w-3.5" />
                       Enviar para trás <ContextMenuShortcut>⌘[</ContextMenuShortcut>
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => sendToBack(blk.id)}>
+                      <ChevronsDown className="mr-2 h-3.5 w-3.5" />
                       Enviar para o fundo
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={() => toggleLock(blk.id)}>
+                      {blk.locked
+                        ? <Unlock className="mr-2 h-3.5 w-3.5" />
+                        : <Lock className="mr-2 h-3.5 w-3.5" />}
                       {blk.locked ? "Desbloquear posição" : "Bloquear posição"}
                     </ContextMenuItem>
+                    {blk.kind === "image" && (blk as unknown as { src?: string }).src && (
+                      <>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => {
+                          const src = (blk as unknown as { src?: string }).src;
+                          if (src) {
+                            setBackgroundAction("transparent");
+                            // Patch background image via onChange surface.
+                            onChange({ ...config, backgroundImage: src });
+                            toast.success("Imagem definida como fundo");
+                          }
+                        }}>
+                          <ImageIcon className="mr-2 h-3.5 w-3.5" />
+                          Definir como fundo
+                        </ContextMenuItem>
+                      </>
+                    )}
                     {blk.kind === "chart" && (
                       <>
                         <ContextMenuSeparator />
                         <ContextMenuItem onSelect={() => {
                           if (copyChartStyleAction(blk.id)) toast.success("Estilo copiado");
                         }}>
+                          <Paintbrush className="mr-2 h-3.5 w-3.5" />
                           Copiar estilo
                         </ContextMenuItem>
                         <ContextMenuItem
@@ -1035,6 +1062,7 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                           onSelect={() => {
                             if (pasteChartStyleAction(blk.id)) toast.success("Estilo colado");
                           }}>
+                          <Paintbrush className="mr-2 h-3.5 w-3.5" />
                           Colar estilo
                         </ContextMenuItem>
                       </>
@@ -1043,12 +1071,14 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                       <>
                         <ContextMenuSeparator />
                         <ContextMenuItem onSelect={() => { groupBlocksAction(selectedIds); toast.success("Blocos agrupados"); }}>
+                          <GroupIcon className="mr-2 h-3.5 w-3.5" />
                           Agrupar <ContextMenuShortcut>⌘G</ContextMenuShortcut>
                         </ContextMenuItem>
                       </>
                     )}
                     {blk.groupId && (
                       <ContextMenuItem onSelect={() => { ungroupBlocksAction([blk.id]); toast.success("Grupo desfeito"); }}>
+                        <UngroupIcon className="mr-2 h-3.5 w-3.5" />
                         Desagrupar <ContextMenuShortcut>⌘⇧G</ContextMenuShortcut>
                       </ContextMenuItem>
                     )}
