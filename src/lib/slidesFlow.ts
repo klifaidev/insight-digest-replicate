@@ -106,8 +106,14 @@ export const BLOCK_CATALOG: readonly BlockCatalogEntry[] = [
   { kind: "shape",  group: "content", title: "Forma",   icon: "Square" },
 ] as const;
 
-/** @deprecated Use BLOCK_CATALOG. Mantido apenas para compat. */
-export const SLIDE_CATALOG: readonly BlockCatalogEntry[] = BLOCK_CATALOG;
+/** @deprecated Catálogo legado de slides (pré-refatoração canvas-only).
+ *  Use BLOCK_CATALOG. Mantido apenas para compatibilidade com UI antiga. */
+export const SLIDE_CATALOG: readonly SlideTypeMeta[] = [
+  { kind: "bridge_pvm", title: "Bridge",           description: "Decomposição de variação de margem.",       icon: "GitBranch",      accent: "blue",    supportsFilters: true  },
+  { kind: "budget_evo", title: "Budget Evolutivo", description: "Real vs Budget mês a mês.",                 icon: "Target",         accent: "amber",   supportsFilters: true  },
+  { kind: "cover",      title: "Capa / Divisor",   description: "Slide de abertura ou divisor.",             icon: "BookOpen",       accent: "neutral", supportsFilters: false },
+  { kind: "custom",     title: "Personalizado",    description: "Monte seu próprio slide com blocos.",       icon: "LayoutTemplate", accent: "neutral", supportsFilters: false },
+];
 
 export interface SlideTypeMeta {
   kind: SlideKind;
