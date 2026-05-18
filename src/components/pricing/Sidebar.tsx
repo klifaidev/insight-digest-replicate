@@ -60,8 +60,6 @@ const workItems = [
 ] as { to: string; label: string; icon: typeof KanbanSquare; alertBadge?: boolean }[];
 
 export function Sidebar() {
-  const metric = usePricing((s) => s.metric);
-  const setMetric = usePricing((s) => s.setMetric);
   const missing = usePricing((s) => s.missing);
   const monthsCount = useMonthsInfo().length;
   const hasFilters = useHasActiveFilters();
@@ -74,7 +72,6 @@ export function Sidebar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const openCommandPalette = useCommandPalette((s) => s.setOpen);
 
-  const cm = useMemo(() => metric === "cm", [metric]);
   const missingCount = useMemo(
     () => missing.skus.length + missing.canais.length + missing.regioes.length + missing.ufs.length,
     [missing],
