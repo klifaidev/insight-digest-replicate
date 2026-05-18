@@ -146,6 +146,123 @@ const ELEMENT_PALETTE: { id: string; kind: CustomBlockKind; label: string; icon:
   { id: "topSku", kind: "topSku", label: "Top Ranking", icon: Trophy },
 ];
 
+/**
+ * Rulers around the scaled canvas — horizontal (top) + vertical (left).
+ * Marks every 100px with a label and every 50px with a smaller tick.
+ * Also shows the current cursor coordinate (canvas-space) at bottom-right.
+ */
+function CanvasRulers({ width, height, scale, cursor }: {
+  width: number;
+  height: number;
+  scale: number;
+  cursor: { x: number; y: number } | null;
+}) {
+  const ticksH: React.ReactNode[] = [];
+  for (let x = 0; x <= CANVAS_W; x += 50) {
+    const left = x * scale;
+    const major = x % 100 === 0;
+    ticksH.push(
+      <div key={`th-${x}`} style={{
+        position: "absolute", left, bottom: 0,
+        width: 1, height: major ? 8 : 4,
+        background: "hsl(var(--muted-foreground) / 0.5)",
+      }} />,
+    );
+    if (major) {
+      ticksH.push(
+        <div key={`tl-${x}`} style={{
+          position: "absolute", left: left + 2, bottom: 8,
+          fontSize: 9, lineHeight: 1,
+          color: "hsl(var(--muted-foreground) / 0.7)",
+          fontVariantNumeric: "tabular-nums",
+        }}>{x}</div>,
+      );
+    }
+  }
+  const ticksV: React.ReactNode[] = [];
+  for (let y = 0; y <= CANVAS_H; y += 50) {
+    const top = y * scale;
+    const major = y % 100 === 0;
+    ticksV.push(
+      <div key={`tv-${y}`} style={{
+        position: "absolute", top, right: 0,
+        height: 1, width: major ? 8 : 4,
+        background: "hsl(var(--muted-foreground) / 0.5)",
+      }} />,
+    );
+    if (major) {
+      ticksV.push(
+        <div key={`tvl-${y}`} style={{
+          position: "absolute", top: top + 2, right: 10,
+          fontSize: 9, lineHeight: 1,
+          color: "hsl(var(--muted-foreground) / 0.7)",
+          fontVariantNumeric: "tabular-nums",
+          transform: "rotate(-90deg)", transformOrigin: "right top",
+        }}>{y}</div>,
+      );
+    }
+  }
+  return (
+    <>
+      <div
+        data-export-hide="true"
+        style={{
+          position: "absolute", left: 0, top: -20,
+          width, height: 20,
+          background: "hsl(var(--card) / 0.6)",
+          borderBottom: "1px solid hsl(var(--border) / 0.4)",
+          pointerEvents: "none",
+        }}
+      >
+        {ticksH}
+        {/* Cursor X indicator */}
+        {cursor && (
+          <div style={{
+            position: "absolute", left: cursor.x * scale, top: 0,
+            width: 1, height: 20, background: "hsl(var(--primary) / 0.8)",
+          }} />
+        )}
+      </div>
+      <div
+        data-export-hide="true"
+        style={{
+          position: "absolute", top: 0, left: -20,
+          height, width: 20,
+          background: "hsl(var(--card) / 0.6)",
+          borderRight: "1px solid hsl(var(--border) / 0.4)",
+          pointerEvents: "none",
+        }}
+      >
+        {ticksV}
+        {cursor && (
+          <div style={{
+            position: "absolute", top: cursor.y * scale, left: 0,
+            height: 1, width: 20, background: "hsl(var(--primary) / 0.8)",
+          }} />
+        )}
+      </div>
+      {/* Coord readout */}
+      {cursor && (
+        <div
+          data-export-hide="true"
+          style={{
+            position: "absolute", right: 4, bottom: 4,
+            padding: "2px 6px", borderRadius: 4,
+            background: "hsl(var(--card) / 0.85)",
+            border: "1px solid hsl(var(--border) / 0.6)",
+            fontSize: 10, lineHeight: 1.2,
+            color: "hsl(var(--muted-foreground))",
+            fontVariantNumeric: "tabular-nums",
+            pointerEvents: "none", zIndex: 10,
+          }}
+        >
+          {cursor.x} · {cursor.y}
+        </div>
+      )}
+    </>
+  );
+}
+
 interface Props {
   /** ID estável do slide — usado para registrar o canvas no exporter */
   slideId?: string;
