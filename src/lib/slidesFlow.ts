@@ -152,7 +152,9 @@ export function defaultItem(_kind: SlideKind = "custom"): SlideItem {
 // ---------------------------------------------------------------------------
 // Conveniência: cria slides custom já com um bloco especial ocupando o canvas
 // ---------------------------------------------------------------------------
-function blankCustomSlide(label: string): SlideItem {
+type CustomSlideItem = BaseSlideItem & { kind: "custom"; config: CustomSlideConfig };
+
+function blankCustomSlide(label: string): CustomSlideItem {
   return {
     id: newId(),
     kind: "custom",
@@ -203,8 +205,14 @@ export interface BuildContext {
 }
 
 export function itemToFlow(item: SlideItem, _ctx: BuildContext): SlideFlowItem {
-  const cfg = item.config;
   const id = item.id;
+  // Apenas slides "custom" são exportados pelo novo caminho.
+  // Itens legados (bridge_pvm/budget_evo/cover) ficam vazios — devem ser
+  // migrados via createBridgePvmSlide/createBudgetEvoSlide/createCoverSlide.
+  if (item.kind !== "custom") {
+    return { build: async () => { /* legacy item — no-op */ } };
+  }
+  const cfg = item.config;
   return {
     build: async (pptx) => {
       await addCustomSlide(pptx, cfg, { slideId: id });
