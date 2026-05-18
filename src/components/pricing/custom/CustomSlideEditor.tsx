@@ -431,6 +431,19 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
     const others = boundsOf(config.blocks, excl);
     const snap = computeSnap({ x, y, w, h }, others);
     setGuides(snap.guides);
+    // Magnetic-snap feedback: flash + haptic when a new guide line engages.
+    const key = `${snap.guides.v.join(",")}|${snap.guides.h.join(",")}`;
+    const hasGuide = snap.guides.v.length > 0 || snap.guides.h.length > 0;
+    if (hasGuide && key !== lastGuideKey.current) {
+      setSnapFlash(true);
+      window.setTimeout(() => setSnapFlash(false), 100);
+      try {
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          (navigator as Navigator & { vibrate?: (p: number) => boolean }).vibrate?.(10);
+        }
+      } catch { /* ignore */ }
+    }
+    lastGuideKey.current = hasGuide ? key : "";
     return snap;
   }, [config.blocks]);
 
