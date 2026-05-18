@@ -125,7 +125,9 @@ export interface SlideTypeMeta {
 }
 
 /** Metadata único — todos os slides são "custom". */
-export function metaOf(_kind: SlideKind = "custom"): SlideTypeMeta {
+export function metaOf(kind: SlideKind = "custom"): SlideTypeMeta {
+  const found = SLIDE_CATALOG.find((s) => s.kind === kind);
+  if (found) return found;
   return {
     kind: "custom",
     title: "Slide",
