@@ -1846,7 +1846,7 @@ export default function SlidesBeta() {
         </main>
 
         {/* ===== Coluna direita: inspector (recolhível) ===== */}
-        <aside className="relative flex min-h-0 flex-col overflow-hidden border-l border-border/40 bg-sidebar/40">
+        <aside className="relative flex min-h-0 flex-col border-l border-border/40 bg-sidebar/40">
           <button
             type="button"
             onClick={() => setInspectorOpen((v) => !v)}
