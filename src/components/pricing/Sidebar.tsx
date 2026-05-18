@@ -105,7 +105,7 @@ export function Sidebar() {
       >
         {/* Logo + mobile close */}
         <div
-          className={`flex items-center gap-2.5 px-5 pb-7 pt-6 ${collapsed ? "md:px-3 md:justify-center" : ""}`}
+          className={`flex items-center justify-center px-5 pb-7 pt-6 ${collapsed ? "md:px-3" : ""}`}
         >
           <div
             className={`leading-tight transition-opacity duration-150 ${
