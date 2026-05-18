@@ -300,7 +300,7 @@ function ThemeToggle({ collapsed }: { collapsed: boolean }) {
   ];
   return (
     <div
-      className={`mx-3 mb-2 flex items-center gap-1 rounded-lg border border-border/50 bg-sidebar-accent/30 p-1 ${
+      className={`mx-3 mb-2 flex items-center gap-1 overflow-hidden rounded-lg border border-border/50 bg-sidebar-accent/30 p-1 ${
         collapsed ? "md:flex-col" : ""
       }`}
     >
