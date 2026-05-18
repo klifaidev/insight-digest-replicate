@@ -547,6 +547,9 @@ export const BLOCK_LABELS: Record<CustomBlockKind, string> = {
   table: "Tabela",
   chart: "Linha",
   topSku: "Top Ranking",
+  bridge_pvm_block: "Bridge PVM",
+  budget_evo_block: "Budget Evolutivo",
+  cover_block: "Capa / Divisor",
 };
 
 // ---------------------------------------------------------------------------
