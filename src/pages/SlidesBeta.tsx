@@ -126,9 +126,9 @@ export default function SlidesBeta() {
   const pricingRows = usePricing((s) => s.rows);
   const budgetRows = useBudget((s) => s.rows);
   const metric = usePricing((s) => s.metric);
-  const months = useMonthsInfo(pricingRows);
-  const fys = useFyList(pricingRows);
-  const budgetMonths = useMonthsInfo(budgetRows as never);
+  const months = useMonthsInfo();
+  const fys = useFyList();
+  const budgetMonths = useMonthsInfo();
 
   // Deck name
   const [deckName, setDeckName] = useState<string>(() =>
