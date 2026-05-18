@@ -667,10 +667,13 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
                 }
               }}
               onMouseMove={(e) => {
-                if (!onCursorMove) return;
                 const pos = clientToCanvas(canvasRef.current, e.clientX, e.clientY, scaleRef.current);
-                if (pos) onCursorMove(pos.x, pos.y);
+                if (pos) {
+                  setCursorPos({ x: Math.round(pos.x), y: Math.round(pos.y) });
+                  onCursorMove?.(pos.x, pos.y);
+                }
               }}
+              onMouseLeave={() => setCursorPos(null)}
             >
               {/* Snap-to-grid background — dot pattern, behind blocks. */}
               {prefs.gridEnabled && (
