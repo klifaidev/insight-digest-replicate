@@ -272,29 +272,6 @@ export function Sidebar() {
         {/* Histórico recente — oculto quando sidebar está colapsada */}
         {!collapsed && <RecentHistory onNavigate={closeMobile} />}
 
-        {/* Metric toggle (oculto quando colapsado em desktop) */}
-        <div
-          className={`m-3 rounded-xl border border-border/50 bg-sidebar-accent/40 p-3 ${
-            collapsed ? "md:hidden" : ""
-          }`}
-        >
-          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Métrica
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <span className={`text-xs font-medium ${!cm ? "text-foreground" : "text-muted-foreground"}`}>
-              Margem Bruta
-            </span>
-            <Switch
-              checked={cm}
-              onCheckedChange={(c) => setMetric(c ? "cm" : "mb")}
-              aria-label="Alternar métrica entre Margem Bruta e Contribuição Marginal"
-            />
-            <span className={`text-xs font-medium ${cm ? "text-primary" : "text-muted-foreground"}`}>
-              Contrib. Marg.
-            </span>
-          </div>
-        </div>
 
         {/* Theme toggle */}
         <ThemeToggle collapsed={collapsed} />
