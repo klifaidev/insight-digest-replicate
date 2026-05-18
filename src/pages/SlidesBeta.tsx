@@ -1850,7 +1850,7 @@ export default function SlidesBeta() {
           <button
             type="button"
             onClick={() => setInspectorOpen((v) => !v)}
-            className="absolute left-0 top-20 z-10 flex h-9 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground shadow-md transition-all hover:scale-105 hover:text-foreground"
+            className="absolute left-0 top-1/2 z-10 flex h-9 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground shadow-md transition-all hover:scale-105 hover:text-foreground"
             aria-label={inspectorOpen ? "Recolher painel" : "Expandir painel"}
             title={inspectorOpen ? "Recolher prévia e filtros" : "Expandir prévia e filtros"}
           >
