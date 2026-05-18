@@ -155,9 +155,11 @@ interface Props {
   collaborators?: import("@/lib/collaboration").CollabUser[];
   /** Callback de mouse-move em coordenadas do canvas (1280x720) */
   onCursorMove?: (x: number, y: number) => void;
+  /** Factor externo (Figma-style) — se omitido, calculado internamente via ResizeObserver. */
+  factor?: number;
 }
 
-export function CustomSlideEditor({ slideId, config, onChange, collaborators, onCursorMove }: Props) {
+export function CustomSlideEditor({ slideId, config, onChange, collaborators, onCursorMove, factor }: Props) {
   // Bind the parent's config <-> internal Zustand+temporal store first so
   // selection store reflects the right slide on initial render.
   useEditorBinding(config, onChange, slideId);
@@ -172,6 +174,10 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
   const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
   const [manualScale, setManualScale] = useState(1);
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
+  const [snapFlash, setSnapFlash] = useState(false);
+  const lastGuideKey = useRef<string>("");
+  // Cursor coordinates (canvas-space) for ruler readout.
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   // Marquee selection rectangle (canvas-space coords).
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   // Inline text editing (double-click no bloco title/text).
@@ -189,7 +195,9 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
   const scaleRef = useRef(1);
 
   // Calcula a escala para caber no contêiner mantendo a proporção 16:9
+  // (somente quando `factor` externo não é fornecido).
   useEffect(() => {
+    if (factor !== undefined) return;
     function compute() {
       const el = wrapperRef.current;
       if (!el) return;
@@ -203,7 +211,7 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
     const ro = new ResizeObserver(compute);
     if (wrapperRef.current) ro.observe(wrapperRef.current);
     return () => ro.disconnect();
-  }, []);
+  }, [factor]);
 
   useEffect(() => {
     if (!slideId) return;
@@ -211,11 +219,17 @@ export function CustomSlideEditor({ slideId, config, onChange, collaborators, on
     return () => registerCustomCanvas(slideId, null);
   }, [slideId]);
 
-  const scale = zoomMode === "fit" ? fitScale : manualScale;
+  // Effective scale = (external factor || fit) × manual zoom (when manual mode).
+  const baseScale = factor !== undefined ? factor : fitScale;
+  const scale = zoomMode === "fit"
+    ? baseScale * (prefs.zoom || 1)
+    : manualScale;
   scaleRef.current = scale;
   const setZoom = (s: number) => {
+    const clamped = Math.max(0.1, Math.min(3, s));
     setZoomMode("manual");
-    setManualScale(Math.max(0.1, Math.min(3, s)));
+    setManualScale(clamped);
+    prefs.setZoom(Math.max(0.5, Math.min(1.5, clamped / Math.max(baseScale, 0.0001))));
   };
 
   const selected = selectedIds.length === 1
