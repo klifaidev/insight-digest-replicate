@@ -69,7 +69,11 @@ export interface CoverSlideConfig {
   speakerNotes?: string;
 }
 
-export type SlideItem = BaseSlideItem & { kind: "custom"; config: CustomSlideConfig };
+export type SlideItem =
+  | (BaseSlideItem & { kind: "custom"; config: CustomSlideConfig })
+  /** @deprecated */ | (BaseSlideItem & { kind: "bridge_pvm"; config: BridgePvmSlideConfig })
+  /** @deprecated */ | (BaseSlideItem & { kind: "budget_evo"; config: BudgetEvoSlideConfig })
+  /** @deprecated */ | (BaseSlideItem & { kind: "cover"; config: CoverSlideConfig });
 
 // ---------------------------------------------------------------------------
 // Catálogo de BLOCOS (substitui o antigo catálogo de slides)
