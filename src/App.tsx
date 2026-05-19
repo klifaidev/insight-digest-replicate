@@ -11,6 +11,7 @@ import Canais from "./pages/Canais.tsx";
 import Custos from "./pages/Custos.tsx";
 import Budget from "./pages/Budget.tsx";
 import SlidesBeta from "./pages/SlidesBeta.tsx";
+import Slides2 from "./slides2/Slides2";
 import Abc from "./pages/Abc.tsx";
 import Detalhe from "./pages/Detalhe.tsx";
 import Upload from "./pages/Upload.tsx";
