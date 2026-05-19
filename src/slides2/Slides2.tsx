@@ -334,28 +334,7 @@ function Inspector({ slideId }: { slideId: string | null }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Welcome screen
-// ---------------------------------------------------------------------------
-function WelcomeScreen({ onTemplate, onBlank }: { onTemplate: () => void; onBlank: () => void }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <PresentationIcon className="h-12 w-12 text-primary/40" />
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold">Seu próximo deck começa aqui</h2>
-        <p className="text-sm text-muted-foreground">
-          Escolha um template ou comece com um slide em branco
-        </p>
-      </div>
-      <div className="flex gap-2">
-        <Button onClick={onTemplate} className="gap-1.5">
-          <Sparkles className="h-4 w-4" /> Escolher template
-        </Button>
-        <Button variant="outline" onClick={onBlank}>Slide em branco</Button>
-      </div>
-    </div>
-  );
-}
+// (WelcomeScreen extracted to ./components/WelcomeScreen.tsx)
 
 // ---------------------------------------------------------------------------
 // Main page
