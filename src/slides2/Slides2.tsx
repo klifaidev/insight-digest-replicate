@@ -512,6 +512,7 @@ export default function Slides2() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
+        {exporting && <div className="s2-export-bar s2-shimmer" />}
         <Toolbar
           deckName={deckName}
           setDeckName={setDeckName}
