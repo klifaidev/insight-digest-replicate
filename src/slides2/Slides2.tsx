@@ -622,7 +622,7 @@ export default function Slides2() {
 
                 {/* Block palette flutuante */}
                 <div
-                  className="absolute flex w-10 flex-col gap-0.5 rounded-2xl border border-border/40 bg-card/90 p-1.5 backdrop-blur-xl"
+                  className="s2-palette-in absolute flex w-10 flex-col gap-0.5 rounded-2xl border border-border/40 bg-card/90 p-1.5 backdrop-blur-xl"
                   style={{ left: 12, top: "50%", transform: "translateY(-50%)" }}
                 >
                   <PaletteBtn icon={GitBranch} label="Bridge PVM" onClick={() => addKindSlide("bridge_pvm")} />
