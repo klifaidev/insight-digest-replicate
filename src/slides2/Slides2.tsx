@@ -233,7 +233,7 @@ function PaletteBtn({
         <button
           type="button"
           onClick={onClick}
-          className="flex h-8 w-8 items-center justify-center rounded-md transition-all hover:scale-110 hover:bg-primary/10"
+          className="s2-palette-btn flex h-8 w-8 items-center justify-center rounded-md hover:bg-primary/10"
         >
           <Icon className="h-3.5 w-3.5" />
         </button>
