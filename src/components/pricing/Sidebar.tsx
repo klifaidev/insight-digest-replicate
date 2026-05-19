@@ -59,6 +59,7 @@ const workItems = [
   { to: "/alertas", label: "Alertas", icon: BellRing, alertBadge: true },
   { to: "/atividades", label: "Atividades", icon: KanbanSquare },
   { to: "/slides", label: "Slides", icon: Presentation },
+  { to: "/slides2", label: "Slides 2.0", icon: Layers },
 ] as { to: string; label: string; icon: typeof KanbanSquare; alertBadge?: boolean }[];
 
 export function Sidebar() {
