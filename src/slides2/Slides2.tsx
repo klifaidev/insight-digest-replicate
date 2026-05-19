@@ -68,6 +68,8 @@ import type { SlideTemplate } from "@/lib/slideTemplates";
 
 // Lazy import to keep editor flexible — typed locally.
 import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor";
+import { WelcomeScreen } from "@/slides2/components/WelcomeScreen";
+import "./slides2.css";
 
 // ---------------------------------------------------------------------------
 // Toolbar
