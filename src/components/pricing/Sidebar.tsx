@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
   Home,
   KanbanSquare,
+  Layers,
   LineChart,
   Monitor,
   Moon,
