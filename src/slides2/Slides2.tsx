@@ -578,8 +578,8 @@ export default function Slides2() {
           >
             {items.length === 0 ? (
               <WelcomeScreen
-                onTemplate={() => setGalleryOpen(true)}
-                onBlank={() => addKindSlide("custom")}
+                onOpenGallery={() => setGalleryOpen(true)}
+                onNewBlankSlide={() => addKindSlide("custom")}
               />
             ) : currentItem ? (
               <>
