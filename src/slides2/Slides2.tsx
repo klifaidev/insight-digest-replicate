@@ -68,6 +68,8 @@ import type { SlideTemplate } from "@/lib/slideTemplates";
 
 // Lazy import to keep editor flexible — typed locally.
 import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor";
+import { WelcomeScreen } from "@/slides2/components/WelcomeScreen";
+import "./slides2.css";
 
 // ---------------------------------------------------------------------------
 // Toolbar
@@ -186,11 +188,10 @@ function StripThumb({
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, animationDelay: `${index * 40}ms` }}
       onClick={onSelect}
       className={cn(
-        "group relative mx-auto cursor-pointer rounded-md transition-all",
-        "hover:scale-[1.02]",
+        "s2-strip-thumb s2-thumb-in group relative mx-auto cursor-pointer rounded-md",
       )}
     >
       <div
@@ -232,7 +233,7 @@ function PaletteBtn({
         <button
           type="button"
           onClick={onClick}
-          className="flex h-8 w-8 items-center justify-center rounded-md transition-all hover:scale-110 hover:bg-primary/10"
+          className="s2-palette-btn flex h-8 w-8 items-center justify-center rounded-md hover:bg-primary/10"
         >
           <Icon className="h-3.5 w-3.5" />
         </button>
@@ -272,7 +273,7 @@ function Inspector({ slideId }: { slideId: string | null }) {
       style={{ width: open ? 300 : 0 }}
     >
       {open && selBlock && (
-        <div className="flex h-full w-[300px] flex-col">
+        <div className="s2-inspector-in flex h-full w-[300px] flex-col">
           <div className="flex h-8 items-center justify-between border-b border-border/40 px-3">
             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {BLOCK_LABELS[selBlock.kind] ?? selBlock.kind}
@@ -332,28 +333,7 @@ function Inspector({ slideId }: { slideId: string | null }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Welcome screen
-// ---------------------------------------------------------------------------
-function WelcomeScreen({ onTemplate, onBlank }: { onTemplate: () => void; onBlank: () => void }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <PresentationIcon className="h-12 w-12 text-primary/40" />
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold">Seu próximo deck começa aqui</h2>
-        <p className="text-sm text-muted-foreground">
-          Escolha um template ou comece com um slide em branco
-        </p>
-      </div>
-      <div className="flex gap-2">
-        <Button onClick={onTemplate} className="gap-1.5">
-          <Sparkles className="h-4 w-4" /> Escolher template
-        </Button>
-        <Button variant="outline" onClick={onBlank}>Slide em branco</Button>
-      </div>
-    </div>
-  );
-}
+// (WelcomeScreen extracted to ./components/WelcomeScreen.tsx)
 
 // ---------------------------------------------------------------------------
 // Main page
@@ -532,6 +512,7 @@ export default function Slides2() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
+        {exporting && <div className="s2-export-bar s2-shimmer" />}
         <Toolbar
           deckName={deckName}
           setDeckName={setDeckName}
@@ -593,12 +574,12 @@ export default function Slides2() {
           {/* Canvas area */}
           <div
             ref={canvasAreaRef}
-            className="group relative flex-1 overflow-hidden bg-background/50"
+            className="s2-canvas-area group relative flex-1 overflow-hidden bg-background/50"
           >
             {items.length === 0 ? (
               <WelcomeScreen
-                onTemplate={() => setGalleryOpen(true)}
-                onBlank={() => addKindSlide("custom")}
+                onOpenGallery={() => setGalleryOpen(true)}
+                onNewBlankSlide={() => addKindSlide("custom")}
               />
             ) : currentItem ? (
               <>
@@ -642,7 +623,7 @@ export default function Slides2() {
 
                 {/* Block palette flutuante */}
                 <div
-                  className="absolute flex w-10 flex-col gap-0.5 rounded-2xl border border-border/40 bg-card/90 p-1.5 backdrop-blur-xl"
+                  className="s2-palette-in absolute flex w-10 flex-col gap-0.5 rounded-2xl border border-border/40 bg-card/90 p-1.5 backdrop-blur-xl"
                   style={{ left: 12, top: "50%", transform: "translateY(-50%)" }}
                 >
                   <PaletteBtn icon={GitBranch} label="Bridge PVM" onClick={() => addKindSlide("bridge_pvm")} />
@@ -684,7 +665,7 @@ export default function Slides2() {
                 {currentIdx > 0 && (
                   <button
                     onClick={goPrev}
-                    className="absolute top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/40 bg-card/70 opacity-0 backdrop-blur transition-opacity duration-150 hover:bg-card group-hover:opacity-100"
+                    className="s2-nav-arrow absolute top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/40 bg-card/70 backdrop-blur hover:bg-card"
                     style={{ left: 72 }}
                     aria-label="Slide anterior"
                   >
@@ -694,7 +675,7 @@ export default function Slides2() {
                 {currentIdx < items.length - 1 && (
                   <button
                     onClick={goNext}
-                    className="absolute top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/40 bg-card/70 opacity-0 backdrop-blur transition-opacity duration-150 hover:bg-card group-hover:opacity-100"
+                    className="s2-nav-arrow absolute top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/40 bg-card/70 backdrop-blur hover:bg-card"
                     style={{ right: 16 }}
                     aria-label="Próximo slide"
                   >
