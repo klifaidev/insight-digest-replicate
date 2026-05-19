@@ -188,11 +188,10 @@ function StripThumb({
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, animationDelay: `${index * 40}ms` }}
       onClick={onSelect}
       className={cn(
-        "group relative mx-auto cursor-pointer rounded-md transition-all",
-        "hover:scale-[1.02]",
+        "s2-strip-thumb s2-thumb-in group relative mx-auto cursor-pointer rounded-md",
       )}
     >
       <div
