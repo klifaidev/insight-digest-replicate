@@ -273,7 +273,7 @@ function Inspector({ slideId }: { slideId: string | null }) {
       style={{ width: open ? 300 : 0 }}
     >
       {open && selBlock && (
-        <div className="flex h-full w-[300px] flex-col">
+        <div className="s2-inspector-in flex h-full w-[300px] flex-col">
           <div className="flex h-8 items-center justify-between border-b border-border/40 px-3">
             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {BLOCK_LABELS[selBlock.kind] ?? selBlock.kind}
