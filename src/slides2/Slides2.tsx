@@ -573,7 +573,7 @@ export default function Slides2() {
           {/* Canvas area */}
           <div
             ref={canvasAreaRef}
-            className="group relative flex-1 overflow-hidden bg-background/50"
+            className="s2-canvas-area group relative flex-1 overflow-hidden bg-background/50"
           >
             {items.length === 0 ? (
               <WelcomeScreen
