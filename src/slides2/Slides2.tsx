@@ -664,7 +664,7 @@ export default function Slides2() {
                 {currentIdx > 0 && (
                   <button
                     onClick={goPrev}
-                    className="absolute top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/40 bg-card/70 opacity-0 backdrop-blur transition-opacity duration-150 hover:bg-card group-hover:opacity-100"
+                    className="s2-nav-arrow absolute top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border/40 bg-card/70 backdrop-blur hover:bg-card"
                     style={{ left: 72 }}
                     aria-label="Slide anterior"
                   >
