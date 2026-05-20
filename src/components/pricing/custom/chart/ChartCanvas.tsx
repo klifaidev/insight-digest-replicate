@@ -1583,7 +1583,14 @@ function WaterfallChart({
 
   const wfMode = style.waterfall.mode ?? "pvm";
   const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, decomposition: "effects", topN: 6, comparisonMode: "prev-month" as const };
-  const decomposition = pvmCfg.decomposition ?? "effects";
+  const VALID_DECOMPOSITIONS = new Set([
+    "marca", "categoria", "subcategoria", "formato",
+    "canal", "canalAjustado", "mercado", "regional", "uf",
+    "sku", "skuDesc",
+  ]);
+  const decomposition = VALID_DECOMPOSITIONS.has(pvmCfg.decomposition ?? "")
+    ? pvmCfg.decomposition!
+    : "effects";
   const topN = pvmCfg.topN ?? 6;
   const comparisonMode = pvmCfg.comparisonMode ?? "prev-month";
 
@@ -1662,7 +1669,9 @@ function WaterfallChart({
         const baseAgg = new Map<string, number>();
         const compAgg = new Map<string, number>();
         for (const row of filtered) {
-          const dimVal = String((row as unknown as Record<string, unknown>)[decomposition] ?? "—") || "—";
+          const rawVal = (row as unknown as Record<string, unknown>)[decomposition];
+          if (typeof rawVal === "number") continue;
+          const dimVal = (typeof rawVal === "string" && rawVal.trim()) ? rawVal.trim() : "—";
           const k = keyOf(row);
           if (k === baseKey) baseAgg.set(dimVal, (baseAgg.get(dimVal) ?? 0) + margemOf(row));
           else if (k === compKey) compAgg.set(dimVal, (compAgg.get(dimVal) ?? 0) + margemOf(row));
