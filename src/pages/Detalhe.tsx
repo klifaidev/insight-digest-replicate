@@ -7,7 +7,8 @@ import { useBudget } from "@/store/budget";
 import { applyFilters } from "@/lib/analytics";
 import { applyBudgetFilters } from "@/lib/budget";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MoveHorizontal } from "lucide-react";
+import { MoveHorizontal, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/hooks/use-page-title";
 
@@ -96,6 +97,23 @@ export default function Detalhe() {
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
   const budgetRows = useBudget((s) => s.rows);
+  const [exportFn, setExportFn] = useState<(() => void) | null>(null);
+  const exportFnRef = useRef<(() => void) | null>(null);
+  exportFnRef.current = exportFn;
+  const handleExportReady = useMemo(
+    () => (fn: () => void) => setExportFn(() => fn),
+    [],
+  );
+  const excelAction = exportFn ? (
+    <Button
+      size="sm"
+      onClick={() => exportFnRef.current?.()}
+      className="h-9 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+    >
+      <FileSpreadsheet className="h-4 w-4" />
+      Exportar Excel
+    </Button>
+  ) : null;
 
   const filteredReal = useMemo(
     () => applyFilters(realRows, filters, selected),
@@ -122,11 +140,16 @@ export default function Detalhe() {
       <Topbar
         title="Tabela Dinâmica"
         subtitle={`${filteredReal.length.toLocaleString("pt-BR")} linhas Real · ${filteredBudget.length.toLocaleString("pt-BR")} linhas Budget`}
+        actions={excelAction}
       />
       <div className="px-8 py-6">
         <GlassCard>
           <HorizontalScrollWrap>
-            <PivotBuilder realRows={filteredReal} budgetRows={filteredBudget} />
+            <PivotBuilder
+              realRows={filteredReal}
+              budgetRows={filteredBudget}
+              onExportReady={handleExportReady}
+            />
           </HorizontalScrollWrap>
         </GlassCard>
       </div>

@@ -253,9 +253,11 @@ const MODE_LABEL: Record<PivotMode, string> = {
 export function PivotBuilder({
   realRows,
   budgetRows,
+  onExportReady,
 }: {
   realRows: PricingRow[];
   budgetRows: BudgetRow[];
+  onExportReady?: (fn: () => void) => void;
 }) {
   const [mode, setMode] = useState<PivotMode>("real");
   const [rowsDims, setRowsDims] = useState<string[]>(["marca"]);
@@ -513,6 +515,7 @@ export function PivotBuilder({
             dimMap={dimMap}
             tableRef={tableRef}
             modeLabel={MODE_LABEL[mode]}
+            onExportReady={onExportReady}
           />
 
           <Button
@@ -1383,6 +1386,7 @@ function ExportMenu({
   dimMap,
   tableRef,
   modeLabel,
+  onExportReady,
 }: {
   pivot: ReturnType<typeof computePivot>;
   measures: PivotMeasure[];
@@ -1391,6 +1395,7 @@ function ExportMenu({
   dimMap: Map<string, DimMeta>;
   tableRef: React.RefObject<HTMLDivElement>;
   modeLabel: string;
+  onExportReady?: (fn: () => void) => void;
 }) {
   const exportXlsx = () => {
     const cols = colDims.length > 0 && pivot.colHeaders.length > 0
@@ -1420,6 +1425,11 @@ function ExportMenu({
     XLSX.utils.book_append_sheet(wb, ws, "Pivot");
     XLSX.writeFile(wb, `pivot_${modeLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
+
+
+  useEffect(() => {
+    if (onExportReady) onExportReady(exportXlsx);
+  }, [onExportReady, pivot, measures, rowDims, colDims, dimMap, modeLabel]);
 
   const exportPng = async () => {
     if (!tableRef.current) return;
