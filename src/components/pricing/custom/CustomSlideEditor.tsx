@@ -1999,11 +1999,12 @@ function TableBlockEditor({ block, onChange }: {
                         className="h-5 w-8 cursor-pointer rounded border-0 p-0" />
                     </div>
                     <Select value={rule.scope ?? "table"}
-                      onValueChange={(v) => setRule({ scope: v as "table" | "column" })}>
+                      onValueChange={(v) => setRule({ scope: v as "table" | "column" | "row" })}>
                       <SelectTrigger className="h-6 text-[10px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="table">Escala global (tabela inteira)</SelectItem>
                         <SelectItem value="column">Escala por coluna</SelectItem>
+                        <SelectItem value="row">Escala por linha</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
