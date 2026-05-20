@@ -299,6 +299,100 @@ function TableRender({ block: b }: { block: TableBlock }) {
     return acc;
   })() : null;
 
+  // ---------- Formatação condicional ----------
+  const valueAlign = b.valueAlign ?? "right";
+  const cellValDyn: React.CSSProperties = { ...cellVal, textAlign: valueAlign };
+
+  const getValueFor = (rhKey: string, colKey: string, mId: string): number => {
+    if (showCols && colKey !== "__row__") {
+      return result.cells.get(rhKey)?.get(colKey)?.[mId] ?? 0;
+    }
+    return result.rowTotals.get(rhKey)?.[mId] ?? 0;
+  };
+
+  // Pré-computa pools de valores por (medida, escopo-key) p/ heatmap/avg/data_bar
+  const cfPoolCache = new Map<string, number[]>();
+  const getPool = (mId: string, colKey: string, scope: "column" | "table"): number[] => {
+    const cacheKey = `${mId}::${scope}::${scope === "column" ? colKey : "_"}`;
+    const cached = cfPoolCache.get(cacheKey);
+    if (cached) return cached;
+    const out: number[] = [];
+    const rowSet = visibleHeaders;
+    if (scope === "column") {
+      for (const rh of rowSet) {
+        const v = getValueFor(rh.key, colKey, mId);
+        if (v > 0) out.push(v);
+      }
+    } else {
+      for (const rh of rowSet) {
+        if (showCols) {
+          for (const c of cols) {
+            const v = getValueFor(rh.key, c.key, mId);
+            if (v > 0) out.push(v);
+          }
+        } else {
+          const v = getValueFor(rh.key, "__row__", mId);
+          if (v > 0) out.push(v);
+        }
+      }
+    }
+    cfPoolCache.set(cacheKey, out);
+    return out;
+  };
+
+  const lerpColor = (a: string, b2: string, t: number): string => {
+    const r1 = parseInt(a.slice(0, 2), 16), g1 = parseInt(a.slice(2, 4), 16), bb1 = parseInt(a.slice(4, 6), 16);
+    const r2 = parseInt(b2.slice(0, 2), 16), g2 = parseInt(b2.slice(2, 4), 16), bb2 = parseInt(b2.slice(4, 6), 16);
+    const r = Math.round(r1 + (r2 - r1) * t).toString(16).padStart(2, "0");
+    const g = Math.round(g1 + (g2 - g1) * t).toString(16).padStart(2, "0");
+    const bx = Math.round(bb1 + (bb2 - bb1) * t).toString(16).padStart(2, "0");
+    return r + g + bx;
+  };
+  const luminanceOf = (hex: string): number => {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const bb = parseInt(hex.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * bb) / 255;
+  };
+
+  const getConditionalStyle = (mId: string, value: number, colKey: string): React.CSSProperties => {
+    const rule = b.conditionalFormats?.[mId];
+    if (!rule || rule.mode === "none") return {};
+    const scope = rule.scope ?? "table";
+    const pool = getPool(mId, colKey, scope);
+    if (pool.length === 0) return {};
+    const min = Math.min(...pool);
+    const max = Math.max(...pool);
+    const t = max === min ? 0.5 : Math.max(0, Math.min(1, (value - min) / (max - min)));
+
+    if (rule.mode === "heatmap") {
+      const cMin = rule.colorMin ?? "F8696B";
+      const cMax = rule.colorMax ?? "63BE7B";
+      const cMid = rule.colorMid;
+      let bgHex: string;
+      if (cMid) {
+        bgHex = t < 0.5 ? lerpColor(cMin, cMid, t * 2) : lerpColor(cMid, cMax, (t - 0.5) * 2);
+      } else {
+        bgHex = lerpColor(cMin, cMax, t);
+      }
+      return {
+        backgroundColor: `#${bgHex}`,
+        color: luminanceOf(bgHex) > 0.6 ? "#1C2430" : "#FFFFFF",
+      };
+    }
+    if (rule.mode === "above_avg") {
+      const avg = pool.reduce((s, x) => s + x, 0) / pool.length;
+      if (value > avg) return { backgroundColor: "#D1FAE5", color: "#065F46" };
+      if (value < avg) return { backgroundColor: "#FEE2E2", color: "#991B1B" };
+      return {};
+    }
+    if (rule.mode === "data_bar") {
+      const pct = Math.round(t * 100);
+      return { background: `linear-gradient(90deg, #BFDBFE ${pct}%, transparent ${pct}%)` };
+    }
+    return {};
+  };
+
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", fontFamily: "Calibri", fontSize: 12 }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -319,11 +413,11 @@ function TableRender({ block: b }: { block: TableBlock }) {
               {showCols
                 ? cols.flatMap((c) => measures.map((m) => {
                     const v = result.cells.get(rh.key)?.get(c.key)?.[m.id] ?? 0;
-                    return <td key={`${c.key}-${m.id}`} style={cellVal}>{fmtMeasure(m, v)}</td>;
+                    return <td key={`${c.key}-${m.id}`} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, c.key) }}>{fmtMeasure(m, v)}</td>;
                   }))
                 : measures.map((m) => {
                     const v = result.rowTotals.get(rh.key)?.[m.id] ?? 0;
-                    return <td key={m.id} style={cellVal}>{fmtMeasure(m, v)}</td>;
+                    return <td key={m.id} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, "__row__") }}>{fmtMeasure(m, v)}</td>;
                   })}
             </tr>
           ))}
@@ -334,12 +428,12 @@ function TableRender({ block: b }: { block: TableBlock }) {
               </td>
               {showCols
                 ? cols.flatMap((c) => measures.map((m) => (
-                    <td key={`oth-${c.key}-${m.id}`} style={{ ...cellVal, fontStyle: "italic" }}>
+                    <td key={`oth-${c.key}-${m.id}`} style={{ ...cellValDyn, fontStyle: "italic" }}>
                       {fmtMeasure(m, othersRow[c.key][m.id])}
                     </td>
                   )))
                 : measures.map((m) => (
-                    <td key={`oth-${m.id}`} style={{ ...cellVal, fontStyle: "italic" }}>
+                    <td key={`oth-${m.id}`} style={{ ...cellValDyn, fontStyle: "italic" }}>
                       {fmtMeasure(m, othersRow.__row__[m.id])}
                     </td>
                   ))}

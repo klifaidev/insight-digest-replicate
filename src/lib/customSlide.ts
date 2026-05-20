@@ -264,6 +264,24 @@ export interface TableBlock extends BaseBlock {
   exportNote?: boolean;
   /** Medida usada para ordenar/ranquear linhas. Default: primeira de measures. */
   sortMeasure?: string;
+  /** Alinhamento das células de valor. Default "right". */
+  valueAlign?: "left" | "center" | "right";
+  /** Formatação condicional por medida. Chave = id da medida. */
+  conditionalFormats?: Record<string, ConditionalFormatRule>;
+}
+
+export type ConditionalFormatMode = "none" | "heatmap" | "above_avg" | "data_bar";
+
+export interface ConditionalFormatRule {
+  mode: ConditionalFormatMode;
+  /** Para heatmap: cor do valor mínimo (hex sem #). Default "F8696B". */
+  colorMin?: string;
+  /** Para heatmap: cor do valor máximo (hex sem #). Default "63BE7B". */
+  colorMax?: string;
+  /** Para heatmap: cor do meio (hex sem #). Se definido, cria gradiente 3 pontos. */
+  colorMid?: string;
+  /** Escopo do cálculo: "column" ou "table". Default "table". */
+  scope?: "column" | "table";
 }
 
 // ---------------------------------------------------------------------------
