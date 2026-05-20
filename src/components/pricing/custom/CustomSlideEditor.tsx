@@ -1938,6 +1938,81 @@ function TableBlockEditor({ block, onChange }: {
         </div>
       )}
 
+      <div>
+        <Label className="text-[10px] uppercase text-muted-foreground">Alinhamento dos valores</Label>
+        <div className="mt-1 flex gap-1">
+          {(["left", "center", "right"] as const).map((a) => (
+            <Button
+              key={a}
+              size="sm"
+              variant={(block.valueAlign ?? "right") === a ? "default" : "outline"}
+              className="h-6 flex-1 text-[10px]"
+              onClick={() => onChange({ valueAlign: a } as never)}
+            >
+              {a === "left" ? "←" : a === "center" ? "↔" : "→"}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {block.measures.length > 0 && (
+        <div>
+          <Label className="text-[10px] uppercase text-muted-foreground">Formatação condicional</Label>
+          {CUSTOM_TABLE_MEASURES.filter((m) => block.measures.includes(m.id)).map((m) => {
+            const rule = block.conditionalFormats?.[m.id] ?? { mode: "none" as ConditionalFormatMode };
+            const setRule = (patch: Partial<ConditionalFormatRule>) =>
+              onChange({
+                conditionalFormats: {
+                  ...block.conditionalFormats,
+                  [m.id]: { ...rule, ...patch },
+                },
+              } as never);
+            return (
+              <div key={m.id} className="mt-1.5 space-y-1.5 rounded border border-border/30 p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium">{m.label}</span>
+                  <Select value={rule.mode} onValueChange={(v) => setRule({ mode: v as ConditionalFormatMode })}>
+                    <SelectTrigger className="h-6 w-28 text-[10px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      <SelectItem value="heatmap">Heatmap</SelectItem>
+                      <SelectItem value="above_avg">Acima/Abaixo da média</SelectItem>
+                      <SelectItem value="data_bar">Barra de dados</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {rule.mode === "heatmap" && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-8 text-[10px] text-muted-foreground">Mín</span>
+                      <input type="color" value={`#${rule.colorMin ?? "F8696B"}`}
+                        onChange={(e) => setRule({ colorMin: e.target.value.slice(1) })}
+                        className="h-5 w-8 cursor-pointer rounded border-0 p-0" />
+                      <span className="w-8 text-[10px] text-muted-foreground">Meio</span>
+                      <input type="color" value={`#${rule.colorMid ?? "FFEB84"}`}
+                        onChange={(e) => setRule({ colorMid: e.target.value.slice(1) })}
+                        className="h-5 w-8 cursor-pointer rounded border-0 p-0" />
+                      <span className="w-8 text-[10px] text-muted-foreground">Máx</span>
+                      <input type="color" value={`#${rule.colorMax ?? "63BE7B"}`}
+                        onChange={(e) => setRule({ colorMax: e.target.value.slice(1) })}
+                        className="h-5 w-8 cursor-pointer rounded border-0 p-0" />
+                    </div>
+                    <Select value={rule.scope ?? "table"}
+                      onValueChange={(v) => setRule({ scope: v as "table" | "column" })}>
+                      <SelectTrigger className="h-6 text-[10px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="table">Escala global (tabela inteira)</SelectItem>
+                        <SelectItem value="column">Escala por coluna</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <Separator />
       <div className="space-y-1.5">
         <ToggleRow label="Auto-ajustar ao tamanho"
