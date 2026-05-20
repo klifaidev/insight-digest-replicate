@@ -253,9 +253,11 @@ const MODE_LABEL: Record<PivotMode, string> = {
 export function PivotBuilder({
   realRows,
   budgetRows,
+  onExportReady,
 }: {
   realRows: PricingRow[];
   budgetRows: BudgetRow[];
+  onExportReady?: (fn: () => void) => void;
 }) {
   const [mode, setMode] = useState<PivotMode>("real");
   const [rowsDims, setRowsDims] = useState<string[]>(["marca"]);
