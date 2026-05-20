@@ -365,11 +365,11 @@ function TableRender({ block: b }: { block: TableBlock }) {
     return (0.299 * r + 0.587 * g + 0.114 * bb) / 255;
   };
 
-  const getConditionalStyle = (mId: string, value: number, colKey: string): React.CSSProperties => {
+  const getConditionalStyle = (mId: string, value: number, colKey: string, rowKey: string): React.CSSProperties => {
     const rule = b.conditionalFormats?.[mId];
     if (!rule || rule.mode === "none") return {};
     const scope = rule.scope ?? "table";
-    const pool = getPool(mId, colKey, scope);
+    const pool = getPool(mId, colKey, rowKey, scope);
     if (pool.length === 0) return {};
     const min = Math.min(...pool);
     const max = Math.max(...pool);
