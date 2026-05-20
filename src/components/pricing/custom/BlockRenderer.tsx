@@ -312,8 +312,8 @@ function TableRender({ block: b }: { block: TableBlock }) {
 
   // Pré-computa pools de valores por (medida, escopo-key) p/ heatmap/avg/data_bar
   const cfPoolCache = new Map<string, number[]>();
-  const getPool = (mId: string, colKey: string, scope: "column" | "table"): number[] => {
-    const cacheKey = `${mId}::${scope}::${scope === "column" ? colKey : "_"}`;
+  const getPool = (mId: string, colKey: string, rowKey: string, scope: "column" | "table" | "row"): number[] => {
+    const cacheKey = `${mId}::${scope}::${scope === "column" ? colKey : scope === "row" ? rowKey : "_"}`;
     const cached = cfPoolCache.get(cacheKey);
     if (cached) return cached;
     const out: number[] = [];
@@ -321,6 +321,16 @@ function TableRender({ block: b }: { block: TableBlock }) {
     if (scope === "column") {
       for (const rh of rowSet) {
         const v = getValueFor(rh.key, colKey, mId);
+        if (v > 0) out.push(v);
+      }
+    } else if (scope === "row") {
+      if (showCols) {
+        for (const c of cols) {
+          const v = getValueFor(rowKey, c.key, mId);
+          if (v > 0) out.push(v);
+        }
+      } else {
+        const v = getValueFor(rowKey, "__row__", mId);
         if (v > 0) out.push(v);
       }
     } else {
@@ -355,11 +365,11 @@ function TableRender({ block: b }: { block: TableBlock }) {
     return (0.299 * r + 0.587 * g + 0.114 * bb) / 255;
   };
 
-  const getConditionalStyle = (mId: string, value: number, colKey: string): React.CSSProperties => {
+  const getConditionalStyle = (mId: string, value: number, colKey: string, rowKey: string): React.CSSProperties => {
     const rule = b.conditionalFormats?.[mId];
     if (!rule || rule.mode === "none") return {};
     const scope = rule.scope ?? "table";
-    const pool = getPool(mId, colKey, scope);
+    const pool = getPool(mId, colKey, rowKey, scope);
     if (pool.length === 0) return {};
     const min = Math.min(...pool);
     const max = Math.max(...pool);
@@ -413,11 +423,11 @@ function TableRender({ block: b }: { block: TableBlock }) {
               {showCols
                 ? cols.flatMap((c) => measures.map((m) => {
                     const v = result.cells.get(rh.key)?.get(c.key)?.[m.id] ?? 0;
-                    return <td key={`${c.key}-${m.id}`} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, c.key) }}>{fmtMeasure(m, v)}</td>;
+                    return <td key={`${c.key}-${m.id}`} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, c.key, rh.key) }}>{fmtMeasure(m, v)}</td>;
                   }))
                 : measures.map((m) => {
                     const v = result.rowTotals.get(rh.key)?.[m.id] ?? 0;
-                    return <td key={m.id} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, "__row__") }}>{fmtMeasure(m, v)}</td>;
+                    return <td key={m.id} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, "__row__", rh.key) }}>{fmtMeasure(m, v)}</td>;
                   })}
             </tr>
           ))}

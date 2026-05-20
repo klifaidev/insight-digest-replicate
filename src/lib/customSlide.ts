@@ -281,7 +281,7 @@ export interface ConditionalFormatRule {
   /** Para heatmap: cor do meio (hex sem #). Se definido, cria gradiente 3 pontos. */
   colorMid?: string;
   /** Escopo do cálculo: "column" ou "table". Default "table". */
-  scope?: "column" | "table";
+  scope?: "column" | "table" | "row";
 }
 
 // ---------------------------------------------------------------------------
