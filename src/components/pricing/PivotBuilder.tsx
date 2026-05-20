@@ -1426,6 +1426,11 @@ function ExportMenu({
     XLSX.writeFile(wb, `pivot_${modeLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+
+  useEffect(() => {
+    if (onExportReady) onExportReady(exportXlsx);
+  }, [onExportReady, pivot, measures, rowDims, colDims, dimMap, modeLabel]);
+
   const exportPng = async () => {
     if (!tableRef.current) return;
     try {
