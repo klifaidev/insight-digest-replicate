@@ -312,8 +312,8 @@ function TableRender({ block: b }: { block: TableBlock }) {
 
   // Pré-computa pools de valores por (medida, escopo-key) p/ heatmap/avg/data_bar
   const cfPoolCache = new Map<string, number[]>();
-  const getPool = (mId: string, colKey: string, scope: "column" | "table"): number[] => {
-    const cacheKey = `${mId}::${scope}::${scope === "column" ? colKey : "_"}`;
+  const getPool = (mId: string, colKey: string, rowKey: string, scope: "column" | "table" | "row"): number[] => {
+    const cacheKey = `${mId}::${scope}::${scope === "column" ? colKey : scope === "row" ? rowKey : "_"}`;
     const cached = cfPoolCache.get(cacheKey);
     if (cached) return cached;
     const out: number[] = [];
@@ -321,6 +321,16 @@ function TableRender({ block: b }: { block: TableBlock }) {
     if (scope === "column") {
       for (const rh of rowSet) {
         const v = getValueFor(rh.key, colKey, mId);
+        if (v > 0) out.push(v);
+      }
+    } else if (scope === "row") {
+      if (showCols) {
+        for (const c of cols) {
+          const v = getValueFor(rowKey, c.key, mId);
+          if (v > 0) out.push(v);
+        }
+      } else {
+        const v = getValueFor(rowKey, "__row__", mId);
         if (v > 0) out.push(v);
       }
     } else {
