@@ -1293,7 +1293,6 @@ function Wrapper({ children, style, hasIncoming }: {
   return (
     <div
       data-chart-canvas=""
-      onMouseDown={(e) => e.stopPropagation()}
       style={{
       width: "100%", height: "100%", display: "flex", flexDirection: "column",
       background: style.general.background === "transparent" ? "transparent" : style.general.background,
