@@ -515,6 +515,7 @@ export function PivotBuilder({
             dimMap={dimMap}
             tableRef={tableRef}
             modeLabel={MODE_LABEL[mode]}
+            onExportReady={onExportReady}
           />
 
           <Button
