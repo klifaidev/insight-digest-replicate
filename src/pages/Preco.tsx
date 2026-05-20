@@ -25,7 +25,6 @@ import {
   BookOpen,
   Calendar,
   CalendarDays,
-  DollarSign,
   Info,
   TrendingDown,
   TrendingUp,
