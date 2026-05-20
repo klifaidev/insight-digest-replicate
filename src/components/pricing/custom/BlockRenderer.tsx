@@ -423,11 +423,11 @@ function TableRender({ block: b }: { block: TableBlock }) {
               {showCols
                 ? cols.flatMap((c) => measures.map((m) => {
                     const v = result.cells.get(rh.key)?.get(c.key)?.[m.id] ?? 0;
-                    return <td key={`${c.key}-${m.id}`} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, c.key) }}>{fmtMeasure(m, v)}</td>;
+                    return <td key={`${c.key}-${m.id}`} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, c.key, rh.key) }}>{fmtMeasure(m, v)}</td>;
                   }))
                 : measures.map((m) => {
                     const v = result.rowTotals.get(rh.key)?.[m.id] ?? 0;
-                    return <td key={m.id} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, "__row__") }}>{fmtMeasure(m, v)}</td>;
+                    return <td key={m.id} style={{ ...cellValDyn, ...getConditionalStyle(m.id, v, "__row__", rh.key) }}>{fmtMeasure(m, v)}</td>;
                   })}
             </tr>
           ))}
