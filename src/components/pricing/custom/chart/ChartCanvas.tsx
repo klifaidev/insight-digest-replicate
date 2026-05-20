@@ -1669,7 +1669,9 @@ function WaterfallChart({
         const baseAgg = new Map<string, number>();
         const compAgg = new Map<string, number>();
         for (const row of filtered) {
-          const dimVal = String((row as unknown as Record<string, unknown>)[decomposition] ?? "—") || "—";
+          const rawVal = (row as unknown as Record<string, unknown>)[decomposition];
+          if (typeof rawVal === "number") continue;
+          const dimVal = (typeof rawVal === "string" && rawVal.trim()) ? rawVal.trim() : "—";
           const k = keyOf(row);
           if (k === baseKey) baseAgg.set(dimVal, (baseAgg.get(dimVal) ?? 0) + margemOf(row));
           else if (k === compKey) compAgg.set(dimVal, (compAgg.get(dimVal) ?? 0) + margemOf(row));
