@@ -16,9 +16,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 interface TopbarProps {
   title: string;
   subtitle?: string;
+  actions?: React.ReactNode;
 }
 
-export function Topbar({ title, subtitle }: TopbarProps) {
+export function Topbar({ title, subtitle, actions }: TopbarProps) {
   const months = useMonthsInfo();
   const selected = usePricing((s) => s.selectedPeriods);
   const togglePeriod = usePricing((s) => s.togglePeriod);
