@@ -226,7 +226,7 @@ function BridgeRender({ block: b }: { block: BridgeBlock }) {
   }
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>
-      <Waterfall data={pvm} height={Math.max(220, b.h - 4)} />
+      <Waterfall data={pvm} height={Math.max(220, b.h - 4)} labelAngle={-35} />
     </div>
   );
 }

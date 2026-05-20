@@ -241,7 +241,7 @@ export default function BridgePvm() {
                   Exportar CSV (auditoria)
                 </Button>
               </header>
-              <Waterfall data={result} />
+              <Waterfall data={result} labelAngle={-35} />
             </GlassCard>
 
             <PvmReadingCard result={result} />
