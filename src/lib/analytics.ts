@@ -712,3 +712,140 @@ export function generateAlerts(
   const order = { high: 0, medium: 1, low: 2 } as const;
   return alerts.sort((a, b) => order[a.severity] - order[b.severity]);
 }
+
+// ---------------------------------------------------------------------------
+// Price decomposition: pure-price vs. mix effect on average price (R$/kg)
+// ---------------------------------------------------------------------------
+
+export interface PriceDecompositionSku {
+  sku: string;
+  skuDesc: string;
+  precoBase: number;
+  precoComp: number;
+  deltaPreco: number;
+  deltaPrecoRs: number;
+  shareBase: number;
+  shareComp: number;
+  deltaMixShare: number;
+  efeitoMixRs: number;
+  volumeBase: number;
+  volumeComp: number;
+}
+
+export interface PriceDecompositionResult {
+  baseLabel: string;
+  compLabel: string;
+  precoMedioBase: number;
+  precoMedioComp: number;
+  variacaoTotal: number;
+  variacaoPct: number;
+  efeitoPrecoRs: number;
+  efeitoMixRs: number;
+  efeitoPrecoRsKg: number;
+  efeitoMixRsKg: number;
+  pctPreco: number;
+  pctMix: number;
+  skus: PriceDecompositionSku[];
+}
+
+export function computePriceDecomposition(
+  rows: PricingRow[],
+  baseKey: string,
+  compKey: string,
+  periodMode: "month" | "fy",
+  labels?: { base: string; comp: string },
+): PriceDecompositionResult | null {
+  if (!baseKey || !compKey || baseKey === compKey) return null;
+  const keyOf = (r: PricingRow) => (periodMode === "fy" ? r.fy : r.periodo);
+
+  interface Agg { vol: number; rol: number; desc: string }
+  const aggBase = new Map<string, Agg>();
+  const aggComp = new Map<string, Agg>();
+  let volTotalBase = 0, volTotalComp = 0, rolTotalBase = 0, rolTotalComp = 0;
+
+  for (const r of rows) {
+    const k = keyOf(r);
+    const skuKey = r.sku || r.skuDesc || "—";
+    const target = k === baseKey ? aggBase : k === compKey ? aggComp : null;
+    if (!target) continue;
+    const cur = target.get(skuKey) ?? { vol: 0, rol: 0, desc: r.skuDesc || skuKey };
+    cur.vol += r.volumeKg;
+    cur.rol += r.rol;
+    if (r.skuDesc && !cur.desc) cur.desc = r.skuDesc;
+    target.set(skuKey, cur);
+    if (k === baseKey) { volTotalBase += r.volumeKg; rolTotalBase += r.rol; }
+    else { volTotalComp += r.volumeKg; rolTotalComp += r.rol; }
+  }
+
+  if (volTotalBase <= 0 || volTotalComp <= 0) return null;
+
+  const precoMedioBase = rolTotalBase / volTotalBase;
+  const precoMedioComp = rolTotalComp / volTotalComp;
+  const variacaoTotal = precoMedioComp - precoMedioBase;
+  const variacaoPct = precoMedioBase !== 0 ? variacaoTotal / precoMedioBase : 0;
+
+  const skuKeys = new Set([...aggBase.keys(), ...aggComp.keys()]);
+  const skus: PriceDecompositionSku[] = [];
+  let efeitoPrecoRs = 0, efeitoMixRs = 0;
+
+  for (const k of skuKeys) {
+    const a = aggBase.get(k);
+    const b = aggComp.get(k);
+    const volumeBase = a?.vol ?? 0;
+    const volumeComp = b?.vol ?? 0;
+    if (volumeBase === 0 && volumeComp === 0) continue;
+    const precoBase = volumeBase > 0 ? (a!.rol / volumeBase) : 0;
+    const precoComp = volumeComp > 0 ? (b!.rol / volumeComp) : 0;
+    const shareBase = volTotalBase > 0 ? volumeBase / volTotalBase : 0;
+    const shareComp = volTotalComp > 0 ? volumeComp / volTotalComp : 0;
+    const deltaMixShare = shareComp - shareBase;
+
+    // Price effect: only meaningful when SKU has volume in both periods.
+    const deltaPreco = volumeBase > 0 && volumeComp > 0 ? (precoComp - precoBase) : 0;
+    const deltaPrecoRs = deltaPreco * volumeComp;
+
+    // Mix effect: uses base price as anchor; for new SKUs (no base), use comp price as proxy.
+    const anchorPrice = volumeBase > 0 ? precoBase : precoComp;
+    const efeitoMixI = deltaMixShare * anchorPrice * volTotalComp;
+
+    efeitoPrecoRs += deltaPrecoRs;
+    efeitoMixRs += efeitoMixI;
+
+    skus.push({
+      sku: k,
+      skuDesc: (b?.desc || a?.desc || k),
+      precoBase,
+      precoComp,
+      deltaPreco,
+      deltaPrecoRs,
+      shareBase,
+      shareComp,
+      deltaMixShare,
+      efeitoMixRs: efeitoMixI,
+      volumeBase,
+      volumeComp,
+    });
+  }
+
+  const efeitoPrecoRsKg = volTotalComp > 0 ? efeitoPrecoRs / volTotalComp : 0;
+  const efeitoMixRsKg = volTotalComp > 0 ? efeitoMixRs / volTotalComp : 0;
+  const sumAbs = Math.abs(efeitoPrecoRs) + Math.abs(efeitoMixRs);
+  const pctPreco = sumAbs > 0 ? efeitoPrecoRs / sumAbs : 0;
+  const pctMix = sumAbs > 0 ? efeitoMixRs / sumAbs : 0;
+
+  return {
+    baseLabel: labels?.base ?? baseKey,
+    compLabel: labels?.comp ?? compKey,
+    precoMedioBase,
+    precoMedioComp,
+    variacaoTotal,
+    variacaoPct,
+    efeitoPrecoRs,
+    efeitoMixRs,
+    efeitoPrecoRsKg,
+    efeitoMixRsKg,
+    pctPreco,
+    pctMix,
+    skus,
+  };
+}

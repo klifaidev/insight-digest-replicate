@@ -6,6 +6,7 @@ import AppShell from "./layouts/AppShell";
 import Index from "./pages/Index.tsx";
 import VisaoGeral from "./pages/VisaoGeral.tsx";
 import BridgePvm from "./pages/BridgePvm.tsx";
+import Preco from "./pages/Preco.tsx";
 import Dre from "./pages/Dre.tsx";
 import Canais from "./pages/Canais.tsx";
 import Custos from "./pages/Custos.tsx";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/visao-geral" element={<VisaoGeral />} />
           <Route path="/bridge-pvm" element={<BridgePvm />} />
+          <Route path="/preco" element={<Preco />} />
           <Route path="/dre" element={<Dre />} />
           <Route path="/canais" element={<Canais />} />
           <Route path="/custos" element={<Custos />} />
