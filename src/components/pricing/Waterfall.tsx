@@ -146,16 +146,31 @@ export function Waterfall({ data, height = 360, labelAngle = 0 }: WaterfallProps
                   `${c.value >= 0 ? "+" : ""}${formatBRL(c.value, { compact: true })}`}
               </text>
               {/* Label */}
-              <text
-                x={x + barW / 2}
-                y={H - padB + 18}
-                fontSize="11"
-                textAnchor="middle"
-                fill="hsl(var(--muted-foreground))"
-                fontWeight="500"
-              >
-                {s.label}
-              </text>
+              {labelAngle === 0 ? (
+                <text
+                  x={x + barW / 2}
+                  y={H - padB + 18}
+                  fontSize="11"
+                  textAnchor="middle"
+                  fill="hsl(var(--muted-foreground))"
+                  fontWeight="500"
+                >
+                  {s.label}
+                </text>
+              ) : (
+                <text
+                  x={x + barW / 2}
+                  y={H - padB + 14}
+                  fontSize="11"
+                  textAnchor="end"
+                  dominantBaseline="middle"
+                  fill="hsl(var(--muted-foreground))"
+                  fontWeight="500"
+                  transform={`rotate(${labelAngle}, ${x + barW / 2}, ${H - padB + 14})`}
+                >
+                  {s.label}
+                </text>
+              )}
             </g>
           );
         })}
