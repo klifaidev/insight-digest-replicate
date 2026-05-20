@@ -47,6 +47,7 @@ import {
   type KpiBlock, type ChartBlock, type TopSkuBlock, type ShapeBlock,
   type TitleBlock, type TextBlock,
   isLineFamily,
+  type ConditionalFormatMode, type ConditionalFormatRule,
 } from "@/lib/customSlide";
 import { ShapeHandleOverlay } from "./ShapeHandleOverlay";
 import { BlockRenderer, CUSTOM_TABLE_MEASURES, CUSTOM_TABLE_DIMS } from "./BlockRenderer";
