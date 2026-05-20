@@ -101,10 +101,29 @@ function buildHeaders(
     const key = vals.join("∥");
     if (!set.has(key)) set.set(key, vals);
   }
-  // ordenar por valores
+  // ordenar por valores (com ordenação cronológica para dimensões temporais)
+  const MES_ORDER: Record<string, number> = {
+    jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6,
+    jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12,
+  };
+  const mesLabelKey = (v: string): number => {
+    const m = v.match(/^([A-Za-zçÇ]{3})\/(\d{2})$/);
+    if (!m) return Number.MAX_SAFE_INTEGER;
+    const mn = MES_ORDER[m[1].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
+    if (!mn) return Number.MAX_SAFE_INTEGER;
+    const yy = parseInt(m[2], 10);
+    const yyyy = yy >= 50 ? 1900 + yy : 2000 + yy;
+    return yyyy * 100 + mn;
+  };
+  const cmpAt = (dim: string, av: string, bv: string): number => {
+    if (dim === "mesLabel") {
+      return mesLabelKey(av) - mesLabelKey(bv);
+    }
+    return av.localeCompare(bv, "pt-BR", { numeric: true });
+  };
   const sorted = Array.from(set.entries()).sort(([, a], [, b]) => {
     for (let i = 0; i < a.length; i++) {
-      const cmp = a[i].localeCompare(b[i], "pt-BR", { numeric: true });
+      const cmp = cmpAt(dims[i], a[i], b[i]);
       if (cmp !== 0) return cmp;
     }
     return 0;
