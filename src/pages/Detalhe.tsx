@@ -97,6 +97,23 @@ export default function Detalhe() {
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
   const budgetRows = useBudget((s) => s.rows);
+  const [exportFn, setExportFn] = useState<(() => void) | null>(null);
+  const exportFnRef = useRef<(() => void) | null>(null);
+  exportFnRef.current = exportFn;
+  const handleExportReady = useMemo(
+    () => (fn: () => void) => setExportFn(() => fn),
+    [],
+  );
+  const excelAction = exportFn ? (
+    <Button
+      size="sm"
+      onClick={() => exportFnRef.current?.()}
+      className="h-9 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+    >
+      <FileSpreadsheet className="h-4 w-4" />
+      Exportar Excel
+    </Button>
+  ) : null;
 
   const filteredReal = useMemo(
     () => applyFilters(realRows, filters, selected),
