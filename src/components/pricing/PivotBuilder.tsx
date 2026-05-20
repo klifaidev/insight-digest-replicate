@@ -1386,6 +1386,7 @@ function ExportMenu({
   dimMap,
   tableRef,
   modeLabel,
+  onExportReady,
 }: {
   pivot: ReturnType<typeof computePivot>;
   measures: PivotMeasure[];
@@ -1394,6 +1395,7 @@ function ExportMenu({
   dimMap: Map<string, DimMeta>;
   tableRef: React.RefObject<HTMLDivElement>;
   modeLabel: string;
+  onExportReady?: (fn: () => void) => void;
 }) {
   const exportXlsx = () => {
     const cols = colDims.length > 0 && pivot.colHeaders.length > 0
