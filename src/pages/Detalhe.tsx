@@ -140,11 +140,16 @@ export default function Detalhe() {
       <Topbar
         title="Tabela Dinâmica"
         subtitle={`${filteredReal.length.toLocaleString("pt-BR")} linhas Real · ${filteredBudget.length.toLocaleString("pt-BR")} linhas Budget`}
+        actions={excelAction}
       />
       <div className="px-8 py-6">
         <GlassCard>
           <HorizontalScrollWrap>
-            <PivotBuilder realRows={filteredReal} budgetRows={filteredBudget} />
+            <PivotBuilder
+              realRows={filteredReal}
+              budgetRows={filteredBudget}
+              onExportReady={handleExportReady}
+            />
           </HorizontalScrollWrap>
         </GlassCard>
       </div>
