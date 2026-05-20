@@ -20,6 +20,7 @@ import {
   Clock,
   Coins,
   Database,
+  DollarSign,
   FileSpreadsheet,
   Home,
   KanbanSquare,
