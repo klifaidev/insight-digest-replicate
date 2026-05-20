@@ -16,7 +16,7 @@ interface Step {
   color: string;
 }
 
-export function Waterfall({ data, height = 360 }: WaterfallProps) {
+export function Waterfall({ data, height = 360, labelAngle = 0 }: WaterfallProps) {
   const steps: Step[] = useMemo(
     () => [
       { label: data.baseLabel, delta: data.base, total: true, color: "hsl(var(--pvm-base))" },
