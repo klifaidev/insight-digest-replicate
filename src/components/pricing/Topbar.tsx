@@ -130,6 +130,7 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
               </Tooltip>
             </TooltipProvider>
           )}
+          {actions}
           <BookmarkButton />
           <ShareButton />
           <NotificationsBell />
