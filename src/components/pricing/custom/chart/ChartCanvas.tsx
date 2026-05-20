@@ -1583,7 +1583,14 @@ function WaterfallChart({
 
   const wfMode = style.waterfall.mode ?? "pvm";
   const pvmCfg = style.waterfall.pvm ?? { base: null, comp: null, periodMode: "month" as const, decomposition: "effects", topN: 6, comparisonMode: "prev-month" as const };
-  const decomposition = pvmCfg.decomposition ?? "effects";
+  const VALID_DECOMPOSITIONS = new Set([
+    "marca", "categoria", "subcategoria", "formato",
+    "canal", "canalAjustado", "mercado", "regional", "uf",
+    "sku", "skuDesc",
+  ]);
+  const decomposition = VALID_DECOMPOSITIONS.has(pvmCfg.decomposition ?? "")
+    ? pvmCfg.decomposition!
+    : "effects";
   const topN = pvmCfg.topN ?? 6;
   const comparisonMode = pvmCfg.comparisonMode ?? "prev-month";
 
