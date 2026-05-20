@@ -60,7 +60,7 @@ export function Waterfall({ data, height = 360, labelAngle = 0 }: WaterfallProps
   const padL = 60;
   const padR = 30;
   const padT = 30;
-  const padB = 50;
+  const padB = labelAngle === 0 ? 50 : 80;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
