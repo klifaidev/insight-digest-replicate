@@ -5,6 +5,8 @@ import { useMemo } from "react";
 interface WaterfallProps {
   data: PVMResult;
   height?: number;
+  /** Ângulo de inclinação dos labels do eixo X. 0 = horizontal (padrão). Sugestão: -35 ou -45. */
+  labelAngle?: number;
 }
 
 interface Step {
