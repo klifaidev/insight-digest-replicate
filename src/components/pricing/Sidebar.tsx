@@ -117,7 +117,7 @@ export function Sidebar() {
             </h1>
           </div>
           {collapsed && (
-            <h1 className="hidden bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-base font-semibold tracking-tight text-transparent md:block">
+            <h1 className="hidden bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-xl font-bold tracking-tight text-transparent md:block">
               O4
             </h1>
           )}
